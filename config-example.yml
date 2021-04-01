@@ -1,0 +1,21 @@
+prefix: "?"
+token: "TOKEN HERE"
+
+# sentinel cog
+logchannel: 000000000000000
+
+# prisonbot cog
+muterole: 000000000000000
+verifiedrole: 000000000000000
+verificationroles:
+  republican: 000000000000000
+  independant: 000000000000000
+  democrat: 000000000000000
+verificationchannels:
+  republican: 000000000000000
+  independant: 000000000000000
+  democrat: 000000000000000
+authorizedroles:
+  - 000000000000000
+  - 000000000000000
+  - 000000000000000

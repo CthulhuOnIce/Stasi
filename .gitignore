@@ -1,0 +1,6 @@
+config.yml
+__pycache__
+__pycache__/*
+__pycache__/
+data/*
+!data/.gitkeep
