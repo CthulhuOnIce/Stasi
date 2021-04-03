@@ -20,13 +20,12 @@ class Staff_Board(commands.Cog):
 		embed = discord.Embed(title="Staff Board", description="Every Staff Member", color=0xbd6500)
 		for role in roles:
 			users = []
-			if not len(role.members):
-				continue
 			for member in role.members:
 				if member.top_role != role:
 					continue
 				users.append(member.mention)
-			embed.add_field(name=f"{role.name}", value=" / ".join(users), inline=False)
+			if len(users):	
+				embed.add_field(name=f"{role.name}", value=" / ".join(users), inline=False)
 		return embed
 
 	@commands.command(brief="Print the staff board.")
