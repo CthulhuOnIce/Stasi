@@ -23,9 +23,9 @@ class Staff_Board(commands.Cog):
 			for member in role.members:
 				if member.top_role != role:
 					continue
-				users.append(member.mention)
+				users.append(f" - {member.mention} ({member.name}#{member.discriminator})")
 			if len(users):	
-				embed.add_field(name=f"{role.name}", value=" / ".join(users), inline=False)
+				embed.add_field(name=f"{role.name}", value="\n".join(users), inline=False)
 		return embed
 
 	@commands.command(brief="Print the staff board.")
