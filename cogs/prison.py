@@ -243,7 +243,7 @@ class Prison(commands.Cog):
 			
 		unverified = ctx.guild.get_role(C["unverifiedrole"])
 		unverifieds2 = ctx.guild.get_role(C["unverifiedsteptwo"])
-		verified = ctx.guild.get_role(C["verified"])
+		verified = ctx.guild.get_role(C["verifiedrole"])
 
 		step2channel = ctx.guild.get_channel(C["verificationsteptwochannel"])
 
