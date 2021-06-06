@@ -12,7 +12,6 @@ sys.path.insert(1, "cogs")
 import prison
 import log
 import staffboard
-import scoreboard
 
 # from disputils import BotEmbedPaginator, BotConfirmation, BotMultipleChoice
 
@@ -37,7 +36,6 @@ bot = commands.Bot(
 prison.setup(bot, C)
 log.setup(bot, C)
 staffboard.setup(bot, C)
-scoreboard.setup(bot, C)
 
 @bot.event
 async def on_ready():  # I just like seeing basic info like this
