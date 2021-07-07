@@ -168,6 +168,7 @@ class Moderation(commands.Cog):
 				await ctx.send(banEntry.reason if banEntry.reason else "No reason recorded for ban.")
 			else:
 				await ctx.send("Could not fetch their ban record.")
+			return
 		else:
 			user = await self.bot.fetch_user(banEntryDb[0])
 			admin = await self.bot.fetch_user(banEntryDb[1])
