@@ -174,6 +174,8 @@ class Moderation(commands.Cog):
 
 	@commands.Command()
 	async def fixledger(self, ctx):
+		# if bot goes inactive and people are unbanned or banned for another reason,
+		# clear the now obsolete data
 		if not authorize(ctx.author, C):
 			await ctx.send("Not authorized to use this command!")
 			return
