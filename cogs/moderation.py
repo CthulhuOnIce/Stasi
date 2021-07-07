@@ -201,7 +201,7 @@ class Moderation(commands.Cog):
 			embeds.append(embed)
 			i = 1
 			for result in results:
-				embed=discord.Embed(title=f"Row {i}", description=str(result)[0:4000])
+				embed=discord.Embed(title=f"Row {i}", description="\n------\n".join(map(str, result))[0:4000])
 				embed.set_author(name=longform_username(ctx.author), icon_url=ctx.author.avatar_url_as(format="png"))
 				embeds.append(embed)
 				i += 1
