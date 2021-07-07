@@ -2,6 +2,8 @@ from discord.ext import commands
 import kevdb as db
 import discord
 import simplejson as json
+from disputils import BotEmbedPaginator
+from cyberkevsecurity import authorize, authorize_sudoer
 
 C = {}
 LOGCHANNEL = None
@@ -70,12 +72,6 @@ def list_subtract(l1, l2):  # return items that are in l1 but not l2
 
 def longform_username(user):
 	return f"{user.name}#{user.discriminator} ({user.id})"
-
-def authorize(user):
-	for role in user.roles:
-		if role.id in C["authorizedroles"]:
-			return True
-	return False
 
 class Moderation(commands.Cog):
 	def __init__(self, bot):
@@ -157,7 +153,7 @@ class Moderation(commands.Cog):
 	@commands.Command
 	async def fetchban(self, ctx, userid:int):
 		user = await self.bot.fetch_user(userid)
-		if not authorize(ctx.author):
+		if not authorize(ctx.author, C):
 			await ctx.send("You are not authorized to use this command.")
 			return
 		banEntryDb = db.get_ban(userid)
@@ -176,6 +172,30 @@ class Moderation(commands.Cog):
 			date = banEntryDb[3]
 			await ctx.send(f"User: `{longform_username(user)}`\nAdmin: `{longform_username(admin)}`\nTimestamp: `{date}`\nReason: `{reason}`")
 
+	@commands.Command
+	async def sql(self, ctx, *, statement:str):
+		if not authorize_sudoer(ctx.author, C):
+			await ctx.send("Not authorized to use this command!")
+			return
+		try:
+			results = db.sql_raw(statement)[::-1]
+			for result in results:
+				print("----")
+				print(result)
+			embeds = []
+			embed=discord.Embed(title="SQL Query", description=statement)
+			embed.set_author(name=longform_username(ctx.author), icon_url=ctx.author.avatar_url_as(format="png"))
+			embeds.append(embed)
+			i = 1
+			for result in results:
+				embed=discord.Embed(title=f"Row {i}", description=str(result)[0:4000])
+				embed.set_author(name=longform_username(ctx.author), icon_url=ctx.author.avatar_url_as(format="png"))
+				embeds.append(embed)
+				i += 1
+			paginator = BotEmbedPaginator(ctx, embeds)
+			await paginator.run()
+		except Exception as e:
+			await ctx.send(f"Error: {e}")
 			
 
 def setup(bot, config):

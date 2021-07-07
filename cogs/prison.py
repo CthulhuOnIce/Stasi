@@ -8,6 +8,7 @@ from disputils import BotEmbedPaginator, BotConfirmation, BotMultipleChoice
 import time
 import kevdb as db
 import simplejson as json
+from cyberkevsecurity import authorize, authorize_sudoer
 
 C = {}
 LOGCHANNEL = None
@@ -22,12 +23,6 @@ def get_list_of_role_ids(user, guild):
 		if role == guild.default_role:	continue
 		lst.append(role.id)
 	return lst
-
-def authorize(user):
-	for role in user.roles:
-		if role.id in C["authorizedroles"]:
-			return True
-	return False
 
 def time_to_seconds(time): # returns either an amount of minutes, or -1 to signify it's not a time at all, rather a part of the prison reason
 	matches = re.findall(timefinderregex, time)
@@ -107,7 +102,7 @@ class Prison(commands.Cog):
 
 	@commands.command(brief="Admins only: Prison a user.")
 	async def prison(self, ctx, member:discord.Member, jailtime:str="0", *, reason=None):
-		if not authorize(ctx.author):
+		if not authorize(ctx.author, C):
 			await ctx.send("You aren't authorized to do this.")
 			return
 
@@ -170,7 +165,7 @@ class Prison(commands.Cog):
 	@commands.command(brief="Admins only: Unprison a user.")
 	async def unprison(self, ctx, member:discord.Member, *, reason=None):
 
-		if not authorize(ctx.author):
+		if not authorize(ctx.author, C):
 			await ctx.send("You aren't authorized to do this.")
 			return
 
@@ -232,7 +227,7 @@ class Prison(commands.Cog):
 
 	@commands.command(brief="Admin only: Clear prison cache")
 	async def clearcache(self, ctx):
-		if not authorize(ctx.author):
+		if not authorize(ctx.author, C):
 			await ctx.send("You aren't authorized to do this.")
 			return
 		tally = 0
@@ -246,7 +241,7 @@ class Prison(commands.Cog):
 
 	@commands.command(brief="Admin Only: Verify a user. (Use twice or forceverify)")
 	async def verify(self, ctx, member:discord.Member, forceverify:bool=False):
-		if not authorize(ctx.author):
+		if not authorize(ctx.author, C):
 			await ctx.send("You aren't authorized to do this.")
 			return
 			
