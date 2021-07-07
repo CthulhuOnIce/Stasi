@@ -26,6 +26,11 @@ def get_ban(user):
 	cur = CON.cursor()
 	return cur.execute(f'SELECT * FROM `banledger` WHERE user = ?', (user,)).fetchall()[0]
 
+def get_all_bans():
+	CON = sqlite3.connect(dbname)
+	cur = CON.cursor()
+	return cur.execute(f'SELECT * FROM `banledger`').fetchall()
+
 def sql_raw(statement):
 	CON = sqlite3.connect(dbname)
 	cur = CON.cursor()

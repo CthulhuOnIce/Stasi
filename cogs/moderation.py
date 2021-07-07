@@ -172,16 +172,27 @@ class Moderation(commands.Cog):
 			date = banEntryDb[3]
 			await ctx.send(f"User: `{longform_username(user)}`\nAdmin: `{longform_username(admin)}`\nTimestamp: `{date}`\nReason: `{reason}`")
 
+	@commands.Command()
+	async def fixledger(self, ctx):
+		if not authorize(ctx.author, C):
+			await ctx.send("Not authorized to use this command!")
+			return
+		found = 0
+		bans = db.get_all_bans()
+		for entry in bans:
+			banEntry = await ctx.guild.fetch_ban(entry[0])
+			if not banEntry or banEntry.reason != entry[2]:
+				db.expunge_ban(entry[0])
+				found += 1
+		await ctx.send(f"Cleared {found} of {len(bans)}.")
+			
 	@commands.Command
-	async def sql(self, ctx, *, statement:str):
+	async def sql(self, ctx, *, statement:str):  # this command is incapable of making db changes, but it's still probably not a good idea to not require sudo
 		if not authorize_sudoer(ctx.author, C):
 			await ctx.send("Not authorized to use this command!")
 			return
 		try:
 			results = db.sql_raw(statement)[::-1]
-			for result in results:
-				print("----")
-				print(result)
 			embeds = []
 			embed=discord.Embed(title="SQL Query", description=statement)
 			embed.set_author(name=longform_username(ctx.author), icon_url=ctx.author.avatar_url_as(format="png"))
