@@ -187,6 +187,40 @@ class Moderation(commands.Cog):
 				db.expunge_ban(entry[0])
 				found += 1
 		await ctx.send(f"Cleared {found} of {len(bans)}.")
+
+	@commands.Command
+	async def al(self, ctx, *, mod:str=""):
+		if not authorize_sudoer(ctx.author, C):
+			await ctx.send("Not authorized to use this command!")
+			return
+		try:
+			formatted = f" WHERE {mod}" if mod else ""
+			results = db.sql_raw(f"SELECT * FROM 'auditlog'{formatted}")[::-1]
+
+			embeds = []
+			embed=discord.Embed(title="Auditlog Report", description=mod if mod else "No modifiers")
+			embed.add_field(name="SQL Query", value=f"SELECT * FROM 'auditlog'{formatted}", inline=False)
+			embed.set_author(name=longform_username(ctx.author), icon_url=ctx.author.avatar_url_as(format="png"))
+			embeds.append(embed)
+			i = 1
+			for result in results:
+				action = result[0]
+				actor = await self.bot.fetch_user(result[2])
+				desc = result[3]
+				desc_raw = json.loads(result[4])
+				timestamp = result[5]
+
+				embed=discord.Embed(title=action, description=desc)
+				embed.add_field(name="Description (Raw)", value=json.dumps(desc_raw, indent=". ")[0:1000], inline=False)
+				embed.add_field(name="Timestamp", value=timestamp, inline=False)
+				embed.set_author(name=longform_username(actor), icon_url=actor.avatar_url_as(format="png"))
+				embeds.append(embed)
+
+				i += 1
+			paginator = BotEmbedPaginator(ctx, embeds)
+			await paginator.run()
+		except Exception as e:
+			await ctx.send(f"Error: {e}")
 			
 	@commands.Command
 	async def sql(self, ctx, *, statement:str):  # this command is incapable of making db changes, but it's still probably not a good idea to not require sudo
