@@ -6,6 +6,8 @@ import re
 import asyncio
 from disputils import BotEmbedPaginator, BotConfirmation, BotMultipleChoice
 import time
+import kevdb as db
+import simplejson as json
 
 C = {}
 LOGCHANNEL = None
@@ -146,6 +148,10 @@ class Prison(commands.Cog):
 		await ctx.send(embed=embed)
 		await self.logchannel().send(embed=embed)
 
+		dbreason = f"\nReason: {reason}" if reason else None
+		dbtime = time_to_text(truetime) if truetime else "Indefinitely"
+		db.audit_log("UNPRISON", f"{ctx.author.name}#{ctx.author.discriminator}", ctx.author.id, f"{ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) unprisoned: {member.name}#{member.discriminator} ({member.id}) for {dbtime}{dbreason}", json.dumps({"user": ctx.author.id, "target":member.id, "reason":reason, "time": truetime}))
+
 		if jailtime == "0":  # perma jail
 			return
 
@@ -184,6 +190,9 @@ class Prison(commands.Cog):
 			await member.send(embed=embed)
 		except:
 			embed.set_footer(text="I couldn't DM them.")
+
+		dbreason = f"\nReason: {reason}" if reason else None
+		db.audit_log("UNPRISON", f"{ctx.author.name}#{ctx.author.discriminator}", ctx.author.id, f"{ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) prisoned: {member.name}#{member.discriminator} ({member.id}){dbreason}", json.dumps({"user": ctx.author.id, "target":member.id, "reason":reason}))
 
 		await ctx.send(embed=embed)
 		await self.logchannel().send(embed=embed)
