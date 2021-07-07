@@ -172,7 +172,7 @@ class Moderation(commands.Cog):
 			date = banEntryDb[3]
 			await ctx.send(f"User: `{longform_username(user)}`\nAdmin: `{longform_username(admin)}`\nTimestamp: `{date}`\nReason: `{reason}`")
 
-	@commands.Command()
+	@commands.Command
 	async def fixledger(self, ctx):
 		# if bot goes inactive and people are unbanned or banned for another reason,
 		# clear the now obsolete data
