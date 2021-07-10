@@ -178,7 +178,7 @@ class Moderation(commands.Cog):
 					embed.add_field(name="Reason", value=(banEntry.reason if banEntry.reason else "No reason recorded for ban."))
 			except discord.errors.NotFound:
 				await ctx.send("❎ Could not fetch their ban record.")
-			return
+				return
 		else:
 			getadmin = self.bot.get_user(banEntryDb[1])
 			admin = getadmin if getadmin else await self.bot.fetch_user(banEntryDb[1])
