@@ -4,6 +4,7 @@ import discord
 import simplejson as json
 from disputils import BotEmbedPaginator
 from cyberkevsecurity import authorize, authorize_sudoer
+from tqdm import tqdm
 
 C = {}
 LOGCHANNEL = None
@@ -196,14 +197,19 @@ class Moderation(commands.Cog):
 		try:
 			formatted = f" WHERE {mod}" if mod else ""
 			results = db.sql_raw(f"SELECT * FROM 'auditlog'{formatted}")[::-1][0:1000]
+			print("Fetched results")
 
 			embeds = []
+
 			embed=discord.Embed(title="Auditlog Report", description=mod if mod else "No modifiers")
 			embed.add_field(name="SQL Query", value=f"SELECT * FROM 'auditlog'{formatted}", inline=False)
 			embed.set_author(name=longform_username(ctx.author), icon_url=ctx.author.avatar_url_as(format="png"))
 			embeds.append(embed)
+
+			print("Embed first page created")
+			print("Creating other embeds...")
 			i = 1
-			for result in results:
+			for result in tqdm(results):
 				action = result[0]
 				actor = await self.bot.fetch_user(result[2])
 				desc = result[3]
@@ -217,6 +223,8 @@ class Moderation(commands.Cog):
 				embeds.append(embed)
 
 				i += 1
+			print("Created embeds.")
+			print("Running paginator...")
 			paginator = BotEmbedPaginator(ctx, embeds)
 			await paginator.run()
 		except Exception as e:
