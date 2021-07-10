@@ -43,6 +43,6 @@ def sql_raw(statement):
 def sql_write(statement):
 	CON = sqlite3.connect(dbname)
 	cur = CON.cursor()
-	result = cur.execute(statement)
+	result = cur.execute(statement).fetchall()
 	CON.commit()
 	return result
