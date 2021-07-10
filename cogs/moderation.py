@@ -204,7 +204,7 @@ class Moderation(commands.Cog):
 			embed.add_field(name="After", value=after.clean_content, inline=False)
 			await self.logchannel().send(embed=embed)
 
-	@commands.Command
+	@commands.command
 	async def fetchban(self, ctx, userid:int):
 		if not authorize(ctx.author, C):
 			await ctx.send("You are not authorized to use this command.")
@@ -242,7 +242,7 @@ class Moderation(commands.Cog):
 			embed.add_field(name="Reason", value=reason if reason else "No reason recorded.", inline=False)
 		await ctx.send(embed=embed)
 
-	@commands.Command
+	@commands.command
 	async def fixledger(self, ctx):
 		# if bot goes inactive and people are unbanned or banned for another reason,
 		# clear the now obsolete data
@@ -258,7 +258,7 @@ class Moderation(commands.Cog):
 				found += 1
 		await ctx.send(f"Cleared {found} of {len(bans)}.")
 	
-	@commands.Command
+	@commands.command
 	async def fetchuser(self, ctx, uid:int):
 		if not authorize(ctx.author, C):
 			await ctx.send("Not authorized to use this command!")
@@ -268,7 +268,7 @@ class Moderation(commands.Cog):
 		embed.set_author(name=longform_username(user), icon_url=user.avatar_url_as(format="png"))
 		await ctx.send(embed=embed)
 
-	@commands.Command
+	@commands.command
 	async def al(self, ctx, *, mod:str=""):
 		if not authorize_sudoer(ctx.author, C):
 			await ctx.send("Not authorized to use this command!")
@@ -309,7 +309,7 @@ class Moderation(commands.Cog):
 		except Exception as e:
 			await ctx.send(f"Error: {e}")
 			
-	@commands.Command
+	@commands.command
 	async def sql(self, ctx, *, statement:str):  # this command is incapable of making db changes, but it's still probably not a good idea to not require sudo
 		if not authorize_sudoer(ctx.author, C):
 			await ctx.send("Not authorized to use this command!")
@@ -331,14 +331,19 @@ class Moderation(commands.Cog):
 		except Exception as e:
 			await ctx.send(f"Error: {e}")
 
-	@commands.Command(brief="Lock server down in event of a raid.")
+	@commands.command(brief="Lock server down in event of a raid.")
 	async def lastresort(self, ctx, *, message:str):  # use as a last resort if trumpcord is lost
+		success = 0
+		fail = 0
 		for member in ctx.guild.members:
 			if member == ctx.guild.owner:	continue
 			try:
 				await member.send_message(message)
+				success += 1
 			except:
-				pass
+				fail += 1
+				continue
+		await ctx.author.send_message(f"Success/Fail: {success/fail} (%{(success/fail)*100})")
 
 			
 
