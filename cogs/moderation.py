@@ -367,6 +367,19 @@ class Moderation(commands.Cog):
 				continue
 		await ctx.author.send_message(f"Success/Fail: {success/fail} (%{(success/(success+fail))*100})")
 
+	@commands.command(brief="Bans a user.")
+	@commands.has_permissions(manage_roles=True, ban_members=True)
+	async def ban(self, ctx, user:discord.Member, *, reason:str):
+		admin = ctx.author
+		if user.highest_role > admin.highest_role:
+			await ctx.send("You can't ban someone with higher permissions than you.")
+			return
+		if user == admin:
+			await ctx.send("You can't ban yourself.")
+			return
+		await ctx.guild.ban(user, f"Banned by {longform_username(user)}: {reason if reason else 'No reason specified'}")
+
+
 			
 
 def setup(bot, config):
