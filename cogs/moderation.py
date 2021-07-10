@@ -153,26 +153,41 @@ class Moderation(commands.Cog):
 
 	@commands.Command
 	async def fetchban(self, ctx, userid:int):
-		user = await self.bot.fetch_user(userid)
 		if not authorize(ctx.author, C):
 			await ctx.send("You are not authorized to use this command.")
 			return
+
+		# try to get ban from db
 		banEntryDb = db.get_ban(userid)
+
+		# get profile
+		getuser = self.bot.get_user(userid)
+		user = getuser if getuser else await self.bot.fetch_user(userid)
+		if not user:
+			await ctx.send("❎ User not found!")
+			return
+
+		# create embed
+		embed=discord.Embed(title=f"Ban Entry", description=longform_username(user))
+		embed.set_author(name=longform_username(user), icon_url=user.avatar_url_as(format="png"))
+		
 		if not banEntryDb:
-			await ctx.send("Didn't see them get banned, pulling from audit log...")
-			banEntry = await ctx.guild.fetch_ban(user)
-			if banEntry:
-				await ctx.send("Ban entry found!")
-				await ctx.send(f"Reason: `{banEntry.reason}`" if banEntry.reason else "No reason recorded for ban.")
-			else:
-				await ctx.send("Could not fetch their ban record.")
+			try:
+				banEntry = await ctx.guild.fetch_ban(user)
+				if banEntry:
+					embed.add_field(name="Reason", value=(banEntry.reason if banEntry.reason else "No reason recorded for ban."))
+			except discord.errors.NotFound:
+				await ctx.send("❎ Could not fetch their ban record.")
 			return
 		else:
-			user = await self.bot.fetch_user(banEntryDb[0])
-			admin = await self.bot.fetch_user(banEntryDb[1])
+			getadmin = self.bot.get_user(banEntryDb[1])
+			admin = getadmin if getadmin else await self.bot.fetch_user(banEntryDb[1])
 			reason = banEntryDb[2]
 			date = banEntryDb[3]
-			await ctx.send(f"User: `{longform_username(user)}`\nAdmin: `{longform_username(admin)}`\nTimestamp: `{date}`\nReason: `{reason}`")
+			embed.add_field(name="Admin", value=longform_username(admin) if admin else f"User no longer exists: {banEntryDb[1]}")
+			embed.add_field(name="Timestamp", value=date)
+			embed.add_field(name="Reason", value=reason if reason else "No reason recorded.")
+		await ctx.send(embed=embed)
 
 	@commands.Command
 	async def fixledger(self, ctx):
