@@ -221,7 +221,8 @@ class Moderation(commands.Cog):
 			for result in tqdm(results):
 				action = result[0]
 				if result[2] not in actorcache:
-					actorcache[result[2]] = await self.bot.fetch_user(result[2])
+					getuser = self.bot.get_user(result[2])
+					actorcache[result[2]] = getuser if getuser else await self.bot.fetch_user(result[2])
 				actor = actorcache[result[2]]
 				desc = result[3]
 				desc_raw = json.loads(result[4])
