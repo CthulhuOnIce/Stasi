@@ -4,7 +4,6 @@ import discord
 import simplejson as json
 from disputils import BotEmbedPaginator
 from cyberkevsecurity import authorize, authorize_sudoer
-from tqdm import tqdm
 
 C = {}
 LOGCHANNEL = None
@@ -197,7 +196,6 @@ class Moderation(commands.Cog):
 		try:
 			formatted = f" WHERE {mod}" if mod else ""
 			results = db.sql_raw(f"SELECT * FROM 'auditlog'{formatted}")[::-1][0:1000]
-			print("Fetched results")
 
 			embeds = []
 
@@ -206,25 +204,37 @@ class Moderation(commands.Cog):
 			embed.set_author(name=longform_username(ctx.author), icon_url=ctx.author.avatar_url_as(format="png"))
 			embeds.append(embed)
 
-			print("Embed first page created")
-			print("Creating other embeds...")
 			i = 1
-			for result in tqdm(results):
+			for result in results:
+				print("Fetching action...")
 				action = result[0]
+				print("Fetched action.")
+				print("Fetching actor...")
 				actor = await self.bot.fetch_user(result[2])
+				print("Fetched actor.")
+				print("Loading plain desc...")
 				desc = result[3]
+				print("Loaded plain desc.")
+				print("Loading desc_raw...")
 				desc_raw = json.loads(result[4])
+				print("Loaded desc_raw.")
+				print("Loading timestamp...")
 				timestamp = result[5]
+				print("Loaded timestamp.")
 
+				print("Creating embed...")
+				print("Creating title and desc...")
 				embed=discord.Embed(title=action, description=desc)
+				print("Adding raw desc...")
 				embed.add_field(name="Description (Raw)", value=json.dumps(desc_raw, indent=". ")[0:1000], inline=False)
+				print("Adding timestamp...")
 				embed.add_field(name="Timestamp", value=timestamp, inline=False)
+				print("Adding author...")
 				embed.set_author(name=longform_username(actor), icon_url=actor.avatar_url_as(format="png"))
+				print("Appending to list...")
 				embeds.append(embed)
 
 				i += 1
-			print("Created embeds.")
-			print("Running paginator...")
 			paginator = BotEmbedPaginator(ctx, embeds)
 			await paginator.run()
 		except Exception as e:
