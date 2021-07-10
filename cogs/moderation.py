@@ -163,7 +163,7 @@ class Moderation(commands.Cog):
 			banEntry = await ctx.guild.fetch_ban(user)
 			if banEntry:
 				await ctx.send("Ban entry found!")
-				await ctx.send(f"Reason: {banEntry.reason}" if banEntry.reason else "No reason recorded for ban.")
+				await ctx.send(f"Reason: `{banEntry.reason}`" if banEntry.reason else "No reason recorded for ban.")
 			else:
 				await ctx.send("Could not fetch their ban record.")
 			return
