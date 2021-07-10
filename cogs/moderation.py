@@ -330,17 +330,6 @@ class Moderation(commands.Cog):
 			await paginator.run()
 		except Exception as e:
 			await ctx.send(f"Error: {e}")
-
-	@commands.Command
-	async def wsql(self, ctx, *, statement:str):  # this command ***is capable*** of making db changes
-		if not authorize_sudoer(ctx.author, C):
-			await ctx.send("Not authorized to use this command!")
-			return
-		try:
-			await ctx.send(db.sql_write(statement))
-
-		except Exception as e:
-			await ctx.send(f"Error: {e}")
 			
 
 def setup(bot, config):

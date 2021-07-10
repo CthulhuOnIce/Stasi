@@ -39,10 +39,3 @@ def sql_raw(statement):
 	CON = sqlite3.connect(dbname)
 	cur = CON.cursor()
 	return cur.execute(statement).fetchall()
-
-def sql_write(statement):
-	CON = sqlite3.connect(dbname)
-	cur = CON.cursor()
-	result = cur.execute(statement).fetchall()
-	CON.commit()
-	return result
