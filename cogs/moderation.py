@@ -195,7 +195,7 @@ class Moderation(commands.Cog):
 			return
 		try:
 			formatted = f" WHERE {mod}" if mod else ""
-			results = db.sql_raw(f"SELECT * FROM 'auditlog'{formatted}")[::-1]
+			results = db.sql_raw(f"SELECT * FROM 'auditlog'{formatted}")[::-1][0:1000]
 
 			embeds = []
 			embed=discord.Embed(title="Auditlog Report", description=mod if mod else "No modifiers")

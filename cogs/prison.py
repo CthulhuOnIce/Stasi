@@ -145,7 +145,7 @@ class Prison(commands.Cog):
 
 		dbreason = f"\nReason: {reason}" if reason else None
 		dbtime = time_to_text(truetime) if truetime else "Indefinitely"
-		db.audit_log("UNPRISON", f"{ctx.author.name}#{ctx.author.discriminator}", ctx.author.id, f"{ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) unprisoned: {member.name}#{member.discriminator} ({member.id}) for {dbtime}{dbreason}", json.dumps({"user": ctx.author.id, "target":member.id, "reason":reason, "time": truetime}))
+		db.audit_log("PRISON", f"{ctx.author.name}#{ctx.author.discriminator}", ctx.author.id, f"{ctx.author.name}#{ctx.author.discriminator} ({ctx.author.id}) prisoned: {member.name}#{member.discriminator} ({member.id}) for {dbtime}{dbreason}", json.dumps({"user": ctx.author.id, "target":member.id, "reason":reason, "time": truetime}))
 
 		if jailtime == "0":  # perma jail
 			return

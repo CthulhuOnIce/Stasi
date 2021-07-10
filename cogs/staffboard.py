@@ -13,7 +13,7 @@ BOARD = None
 class Staff_Board(commands.Cog):
 	def generate_new_board(self, guild):
 		roles = []
-		for role in C["authorizedroles"]:
+		for role in C["authorized"]:
 			roleobj = guild.get_role(role)
 			if roleobj:
 				roles.append(roleobj)
