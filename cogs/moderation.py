@@ -204,13 +204,20 @@ class Moderation(commands.Cog):
 			embed.set_author(name=longform_username(ctx.author), icon_url=ctx.author.avatar_url_as(format="png"))
 			embeds.append(embed)
 
+			actorcache = {}  # speeds up processing by not fetching every actor
+
 			i = 1
 			for result in results:
 				print("Fetching action...")
 				action = result[0]
 				print("Fetched action.")
 				print("Fetching actor...")
-				actor = await self.bot.fetch_user(result[2])
+				if result[2] not in actorcache:
+					print("Adding to cache...")
+					actorcache[result[2]] = await self.bot.fetch_user(result[2])
+				else:
+					print("Already in cache...")
+				actor = actorcache[result[2]]
 				print("Fetched actor.")
 				print("Loading plain desc...")
 				desc = result[3]
