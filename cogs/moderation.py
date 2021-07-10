@@ -379,7 +379,7 @@ class Moderation(commands.Cog):
 		if user == admin:
 			await ctx.send("You can't ban yourself.")
 			return
-		await ctx.guild.ban(user, reason=f"Banned by {longform_username(user)}: {reason if reason else 'No reason specified'}")
+		await ctx.guild.ban(user, reason=f"Banned by {longform_username(user)}: {reason if reason else 'No reason specified'}", delete_message_days=0)
 		embed=discord.Embed(title=f"Banned", description=f"{longform_username(user)} banned by {longform_username(admin)}: {reason if reason else 'No reason specified'}")
 		embed.set_author(name=longform_username(user), icon_url=user.avatar_url_as(format="png"))
 		await ctx.send(embed=embed)
