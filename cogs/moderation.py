@@ -373,7 +373,7 @@ class Moderation(commands.Cog):
 		admin = ctx.author
 		member = ctx.guild.get_member(user.id) if user in ctx.guild.members else None
 		if member:
-			if member.highest_role > admin.highest_role:
+			if member.top_role > admin.top_role:
 				await ctx.send("You can't ban someone with higher permissions than you.")
 				return
 		if user == admin:
