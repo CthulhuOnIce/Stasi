@@ -186,8 +186,8 @@ class Moderation(commands.Cog):
 			
 			embed=discord.Embed(title=f"Nickname Update", description=f"{longform_username(entry.user)} changed {longform_username(entry.target)}'s nickname")
 			embed.set_author(name=longform_username(entry.user), icon_url=entry.user.avatar_url_as(format="png"))
-			if len(added):		embed.add_field(name="Before", value=before.display_name, inline=False)
-			if len(removed):	embed.add_field(name="After", value=after.display_name, inline=False)
+			embed.add_field(name="Before", value=before.display_name, inline=False)
+			embed.add_field(name="After", value=after.display_name, inline=False)
 			await self.logchannel().send(embed=embed)
 
 	@commands.Command
