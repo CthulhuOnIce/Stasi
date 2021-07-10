@@ -184,9 +184,9 @@ class Moderation(commands.Cog):
 			admin = getadmin if getadmin else await self.bot.fetch_user(banEntryDb[1])
 			reason = banEntryDb[2]
 			date = banEntryDb[3]
-			embed.add_field(name="Admin", value=longform_username(admin) if admin else f"User no longer exists: {banEntryDb[1]}")
-			embed.add_field(name="Timestamp", value=date)
-			embed.add_field(name="Reason", value=reason if reason else "No reason recorded.")
+			embed.add_field(name="Admin", value=longform_username(admin) if admin else f"User no longer exists: {banEntryDb[1]}", inline=False)
+			embed.add_field(name="Timestamp", value=date, inline=False)
+			embed.add_field(name="Reason", value=reason if reason else "No reason recorded.", inline=False)
 		await ctx.send(embed=embed)
 
 	@commands.Command
