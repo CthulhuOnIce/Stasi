@@ -369,7 +369,7 @@ class Moderation(commands.Cog):
 
 	@commands.command(brief="Bans a user.")
 	@commands.has_permissions(manage_roles=True, ban_members=True)
-	async def ban(self, ctx, user:discord.Member, *, reason:str):
+	async def ban(self, ctx, user:discord.User, *, reason:str=None):
 		admin = ctx.author
 		if user.highest_role > admin.highest_role:
 			await ctx.send("You can't ban someone with higher permissions than you.")
@@ -377,12 +377,25 @@ class Moderation(commands.Cog):
 		if user == admin:
 			await ctx.send("You can't ban yourself.")
 			return
-		await ctx.guild.ban(user, f"Banned by {longform_username(user)}: {reason if reason else 'No reason specified'}")
+		await ctx.guild.ban(user, reason=f"Banned by {longform_username(user)}: {reason if reason else 'No reason specified'}")
 		embed=discord.Embed(title=f"Banned", description=f"{longform_username(user)} banned by {longform_username(admin)}: {reason if reason else 'No reason specified'}")
 		embed.set_author(name=longform_username(user), icon_url=user.avatar_url_as(format="png"))
 		await ctx.send(embed=embed)
 
-			
+	@commands.command(brief="Unbans a user.")
+	@commands.has_permissions(manage_roles=True, ban_members=True)
+	async def unban(self, ctx, user:discord.User, *, reason:str=None):
+		admin = ctx.author
+		if user.highest_role > admin.highest_role:
+			await ctx.send("You can't ban someone with higher permissions than you.")
+			return
+		if user == admin:
+			await ctx.send("You can't ban yourself.")
+			return
+		await ctx.guild.unban(user, reason=f"Unbanned by {longform_username(user)}: {reason if reason else 'No reason specified'}")
+		embed=discord.Embed(title=f"Unbanned", description=f"{longform_username(user)} unbanned by {longform_username(admin)}: {reason if reason else 'No reason specified'}")
+		embed.set_author(name=longform_username(user), icon_url=user.avatar_url_as(format="png"))
+		await ctx.send(embed=embed)
 
 def setup(bot, config):
 	global C
