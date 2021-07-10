@@ -388,11 +388,8 @@ class Moderation(commands.Cog):
 	@commands.has_permissions(manage_roles=True, ban_members=True)
 	async def unban(self, ctx, user:discord.User, *, reason:str=None):
 		admin = ctx.author
-		if user.highest_role > admin.highest_role:
-			await ctx.send("You can't ban someone with higher permissions than you.")
-			return
 		if user == admin:
-			await ctx.send("You can't ban yourself.")
+			await ctx.send("You can't unban yourself.")
 			return
 		await ctx.guild.unban(user, reason=f"Unbanned by {longform_username(user)}: {reason if reason else 'No reason specified'}")
 		embed=discord.Embed(title=f"Unbanned", description=f"{longform_username(user)} unbanned by {longform_username(admin)}: {reason if reason else 'No reason specified'}")
