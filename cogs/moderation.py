@@ -92,7 +92,7 @@ class Moderation(commands.Cog):
 		entry = await message.guild.audit_logs(limit=1, action=discord.AuditLogAction.message_delete).flatten()
 		entry = entry[0]
 		user = entry.user if entry.target == message.author else message.author
-		db.audit_log("MESSAGE_DELETE", f"{user.name}#{user.discriminator}", user.id, f"{longform_username(user)} Deleted a message from {longform_username(message.author)}", jsql(message_to_json(message)))
+		db.audit_log("MESSAGEDELETE", f"{user.name}#{user.discriminator}", user.id, f"{longform_username(user)} Deleted a message from {longform_username(message.author)}", jsql(message_to_json(message)))
 		await self.logchannel().send(f"Message deleted by `{longform_username(user)}`.")
 		for embed in message_to_list(message):
 			await self.logchannel().send(embed=embed)
@@ -103,7 +103,7 @@ class Moderation(commands.Cog):
 		entry = await messages[0].guild.audit_logs(limit=1, action=discord.AuditLogAction.message_bulk_delete).flatten()
 		entry = entry[0]
 		user = entry.user
-		db.audit_log("MESSAGE_BULK_DELETE", f"{user.name}#{user.discriminator}", user.id, f"{longform_username(user)} Deleted {len(messages)} messages.", jsql(messages_to_json(messages)))
+		db.audit_log("MESSAGEBULKDELETE", f"{user.name}#{user.discriminator}", user.id, f"{longform_username(user)} Deleted {len(messages)} messages.", jsql(messages_to_json(messages)))
 		await self.logchannel().send(f"{len(messages)} messages deleted by `{longform_username(user)})`.")
 		for message in messages:
 			for embed in message_to_list(message):
@@ -196,7 +196,7 @@ class Moderation(commands.Cog):
 
 			user = after.author
 
-			db.audit_log("MESSAGE_EDIT", f"{user.name}#{user.discriminator}", user.id, f"{longform_username(user)} edited a message from `{before.clean_content}` to `{after.clean_content}`", jsql({"target": user.id, "before": before.clean_content, "after":after.clean_content}))
+			db.audit_log("MESSAGEEDIT", f"{user.name}#{user.discriminator}", user.id, f"{longform_username(user)} edited a message from `{before.clean_content}` to `{after.clean_content}`", jsql({"target": user.id, "before": before.clean_content, "after":after.clean_content}))
 			
 			embed=discord.Embed(title=f"Message Edit", description=f"{longform_username(user)} edited a message.")
 			embed.set_author(name=longform_username(user), icon_url=user.avatar_url_as(format="png"))
