@@ -331,6 +331,28 @@ class Moderation(commands.Cog):
 		except Exception as e:
 			await ctx.send(f"Error: {e}")
 
+	@commands.command()
+	async def wsql(self, ctx, *, statement:str):  # this command ***is capable*** of making db changes
+		if not authorize_sudoer(ctx.author, C):
+			await ctx.send("Not authorized to use this command!")
+			return
+		try:
+			results = db.sql_wraw(statement)[::-1]
+			embeds = []
+			embed=discord.Embed(title="SQL Query", description=statement)
+			embed.set_author(name=longform_username(ctx.author), icon_url=ctx.author.avatar_url_as(format="png"))
+			embeds.append(embed)
+			i = 1
+			for result in results:
+				embed=discord.Embed(title=f"Row {i}", description="\n------\n".join(map(str, result))[0:4000])
+				embed.set_author(name=longform_username(ctx.author), icon_url=ctx.author.avatar_url_as(format="png"))
+				embeds.append(embed)
+				i += 1
+			paginator = BotEmbedPaginator(ctx, embeds)
+			await paginator.run()
+		except Exception as e:
+			await ctx.send(f"Error: {e}")
+
 	@commands.command(brief="Lock server down in event of a raid.")
 	async def lastresort(self, ctx, *, message:str):  # use as a last resort if trumpcord is lost
 		success = 0
