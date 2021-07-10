@@ -215,13 +215,14 @@ class Moderation(commands.Cog):
 			embed.set_author(name=longform_username(ctx.author), icon_url=ctx.author.avatar_url_as(format="png"))
 			embeds.append(embed)
 
-			actorcache = {}  # speeds up processing by not fetching every actor
+			actorcache = {}  # speeds up processing by not fetching every actor every time
 
 			i = 1
-			for result in tqdm(results):
+			for result in results:
 				action = result[0]
 				if result[2] not in actorcache:
 					getuser = self.bot.get_user(result[2])
+					# speed up processing by trying to get their user profile from mutual servers (faster) before using fetch_user (slower, rate limited)
 					actorcache[result[2]] = getuser if getuser else await self.bot.fetch_user(result[2])
 				actor = actorcache[result[2]]
 				desc = result[3]
