@@ -116,9 +116,14 @@ class Moderation(commands.Cog):
 		reason = ""
 		if entry.reason:
 			reason = f"\nReason: `{entry.reason}`"
-		await self.logchannel().send(f"{longform_username(entry.user)} unbanned: {longform_username(entry.target)}{reason}")
+
 		db.audit_log("UNBAN", f"{entry.user.name}#{entry.user.discriminator}", user.id, f"{entry.user.name}#{entry.user.discriminator} ({entry.user.id}) unbanned: {entry.target.name}#{entry.target.discriminator} ({entry.target.id}){reason}", jsql({"user": entry.user.id, "target":entry.target.id, "reason": entry.reason}))
 		db.expunge_ban(user.id)
+
+		embed=discord.Embed(title=f"Member Unbanned", description=f"{longform_username(entry.user)} unbanned {longform_username(entry.target)}")
+		embed.set_author(name=longform_username(entry.user), icon_url=entry.user.avatar_url_as(format="png"))
+		if entry.reason:	embed.add_field(name="Reason", value=entry.reason, inline=False)
+		await self.logchannel().send(embed=embed)
 
 	@commands.Cog.listener()
 	async def on_member_ban(self, guild, user):
@@ -127,9 +132,29 @@ class Moderation(commands.Cog):
 		reason = ""
 		if entry.reason:
 			reason = f"\nReason: `{entry.reason}`"
-		await self.logchannel().send(f"{longform_username(entry.user)} banned: {longform_username(entry.target)}){reason}")
-		db.audit_log("BAN", f"{entry.user.name}#{entry.user.discriminator}", entry.user.id, f"{longform_username(entry.user)} unbanned: {longform_username(entry.target)}{reason}", jsql({"user": entry.user.id, "target":entry.target.id, "reason":entry.reason}))
+
+		db.audit_log("BAN", f"{entry.user.name}#{entry.user.discriminator}", entry.user.id, f"{longform_username(entry.user)} banned: {longform_username(entry.target)}{reason}", jsql({"user": entry.user.id, "target":entry.target.id, "reason":entry.reason}))
 		db.record_ban(entry.user.id, entry.target.id, entry.reason)
+
+		embed=discord.Embed(title=f"Member Banned", description=f"{longform_username(entry.user)} banned {longform_username(entry.target)}")
+		embed.set_author(name=longform_username(entry.user), icon_url=entry.user.avatar_url_as(format="png"))
+		if entry.reason:	embed.add_field(name="Reason", value=entry.reason)
+		await self.logchannel().send(embed=embed)
+	
+	@commands.Cog.listener()
+	async def on_member_kick(self, guild, user):
+		entry = await guild.audit_logs(limit=1, action=discord.AuditLogAction.kick).flatten()
+		entry = entry[0]
+		reason = ""
+		if entry.reason:
+			reason = f"\nReason: `{entry.reason}`"
+
+		db.audit_log("KICK", f"{entry.user.name}#{entry.user.discriminator}", entry.user.id, f"{longform_username(entry.user)} kicked: {longform_username(entry.target)}{reason}", jsql({"user": entry.user.id, "target":entry.target.id, "reason":entry.reason}))
+
+		embed=discord.Embed(title=f"Member Kicked", description=f"{longform_username(entry.user)} kicked {longform_username(entry.target)}")
+		embed.set_author(name=longform_username(entry.user), icon_url=entry.user.avatar_url_as(format="png"))
+		if entry.reason:	embed.add_field(name="Reason", value=entry.reason)
+		await self.logchannel().send(embed=embed)
 	
 	@commands.Cog.listener()
 	async def on_member_update(self, before, after):
@@ -143,13 +168,27 @@ class Moderation(commands.Cog):
 			reason = ""
 			if entry.reason:
 				reason = f"\nReason: `{entry.reason}`"
+
 			db.audit_log("ROLEUPDATE", f"{entry.user.name}#{entry.user.discriminator}", entry.user.id, f"{longform_username(entry.user)} updated roles for {longform_username(entry.target)}{added_text}{removed_text}{reason}", jsql({"added": [role.id for role in added], "removed": [role.id for role in removed], "reason": reason, "target": entry.target.id}))
-			await self.logchannel().send(f"{longform_username(entry.user)} updated roles for {longform_username(entry.target)}{added_text}{removed_text}{reason}")
+			
+			embed=discord.Embed(title=f"Role Update", description=f"{longform_username(entry.user)} updated roles for {longform_username(entry.target)}")
+			embed.set_author(name=longform_username(entry.user), icon_url=entry.user.avatar_url_as(format="png"))
+			if len(added):		embed.add_field(name="Added", value=str([i.name for i in added]), inline=False)
+			if len(removed):	embed.add_field(name="Removed", value=str([i.name for i in removed]), inline=False)
+			if entry.reason:	embed.add_field(name="Reason", value=entry.reason)
+			await self.logchannel().send(embed=embed)
+		
 		if before.display_name != after.display_name:  # nickname update
 			entry = await after.guild.audit_logs(limit=1, action=discord.AuditLogAction.member_update).flatten()
 			entry = entry[0]
+
 			db.audit_log("NICKNAMEUPDATE", f"{entry.user.name}#{entry.user.discriminator}", entry.user.id, f"{longform_username(entry.user)} changed {longform_username(entry.target)}'s name from `{before.display_name}` to `{after.display_name}`", jsql({"target": entry.target.id, "before": before.display_name, "after":after.display_name}))
-			await self.logchannel().send(f"{longform_username(entry.user)} changed {longform_username(entry.target)}'s name from `{before.display_name}` to `{after.display_name}`")
+			
+			embed=discord.Embed(title=f"Nickname Update", description=f"{longform_username(entry.user)} changed {longform_username(entry.target)}'s nickname")
+			embed.set_author(name=longform_username(entry.user), icon_url=entry.user.avatar_url_as(format="png"))
+			if len(added):		embed.add_field(name="Before", value=before.display_name, inline=False)
+			if len(removed):	embed.add_field(name="After", value=after.display_name, inline=False)
+			await self.logchannel().send(embed=embed)
 
 	@commands.Command
 	async def fetchban(self, ctx, userid:int):
