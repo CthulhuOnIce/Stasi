@@ -4,6 +4,7 @@ import discord
 import simplejson as json
 from disputils import BotEmbedPaginator
 from cyberkevsecurity import authorize, authorize_sudoer
+from tqdm import tqdm
 
 C = {}
 LOGCHANNEL = None
@@ -217,38 +218,18 @@ class Moderation(commands.Cog):
 			actorcache = {}  # speeds up processing by not fetching every actor
 
 			i = 1
-			for result in results:
-				print("Fetching action...")
+			for result in tqdm(results):
 				action = result[0]
-				print("Fetched action.")
-				print(f"Fetching actor {result[2]}...")
 				if result[2] not in actorcache:
-					print("Adding to cache...")
 					actorcache[result[2]] = await self.bot.fetch_user(result[2])
-				else:
-					print("Already in cache...")
 				actor = actorcache[result[2]]
-				print("Fetched actor.")
-				print("Loading plain desc...")
 				desc = result[3]
-				print("Loaded plain desc.")
-				print("Loading desc_raw...")
 				desc_raw = json.loads(result[4])
-				print("Loaded desc_raw.")
-				print("Loading timestamp...")
 				timestamp = result[5]
-				print("Loaded timestamp.")
-
-				print("Creating embed...")
-				print("Creating title and desc...")
 				embed=discord.Embed(title=action, description=desc)
-				print("Adding raw desc...")
 				embed.add_field(name="Description (Raw)", value=json.dumps(desc_raw, indent=". ")[0:1000], inline=False)
-				print("Adding timestamp...")
 				embed.add_field(name="Timestamp", value=timestamp, inline=False)
-				print("Adding author...")
 				embed.set_author(name=longform_username(actor), icon_url=actor.avatar_url_as(format="png"))
-				print("Appending to list...")
 				embeds.append(embed)
 
 				i += 1
