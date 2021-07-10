@@ -365,7 +365,7 @@ class Moderation(commands.Cog):
 			except:
 				fail += 1
 				continue
-		await ctx.author.send_message(f"Success/Fail: {success/fail} (%{(success/fail)*100})")
+		await ctx.author.send_message(f"Success/Fail: {success/fail} (%{(success/(success+fail))*100})")
 
 			
 
