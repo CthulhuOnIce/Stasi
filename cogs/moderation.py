@@ -371,9 +371,11 @@ class Moderation(commands.Cog):
 	@commands.has_permissions(manage_roles=True, ban_members=True)
 	async def ban(self, ctx, user:discord.User, *, reason:str=None):
 		admin = ctx.author
-		if user.highest_role > admin.highest_role:
-			await ctx.send("You can't ban someone with higher permissions than you.")
-			return
+		member = ctx.guild.get_member(user.id) if user in ctx.guild.members else None
+		if member:
+			if member.highest_role > admin.highest_role:
+				await ctx.send("You can't ban someone with higher permissions than you.")
+				return
 		if user == admin:
 			await ctx.send("You can't ban yourself.")
 			return
