@@ -187,6 +187,16 @@ class Moderation(commands.Cog):
 				db.expunge_ban(entry[0])
 				found += 1
 		await ctx.send(f"Cleared {found} of {len(bans)}.")
+	
+	@commands.Command
+	async def fetchuser(self, ctx, uid:int):
+		if not authorize(ctx.author, C):
+			await ctx.send("Not authorized to use this command!")
+			return
+		user = await self.bot.fetch_user(uid)
+		embed=discord.Embed(title=f"{user.name}#{user.discriminator}", description="User Info")
+		embed.set_author(name=longform_username(user), icon_url=user.avatar_url_as(format="png"))
+		await ctx.send(embed=embed)
 
 	@commands.Command
 	async def al(self, ctx, *, mod:str=""):
