@@ -190,6 +190,20 @@ class Moderation(commands.Cog):
 			embed.add_field(name="After", value=after.display_name, inline=False)
 			await self.logchannel().send(embed=embed)
 
+	@commands.Cog.listener()
+	async def on_message_edit(self, before, after):
+		if before.clean_content != after.clean_content:  # changed actual text
+
+			user = after.author
+
+			db.audit_log("MESSAGE_EDIT", f"{user.name}#{user.discriminator}", user.id, f"{longform_username(user)} edited a message from `{before.clean_content}` to `{after.clean_content}`", jsql({"target": user.id, "before": before.clean_content, "after":after.clean_content}))
+			
+			embed=discord.Embed(title=f"Message Edit", description=f"{longform_username(user)} edited a message.")
+			embed.set_author(name=longform_username(user), icon_url=user.avatar_url_as(format="png"))
+			embed.add_field(name="Before", value=before.clean_content, inline=False)
+			embed.add_field(name="After", value=after.clean_content, inline=False)
+			await self.logchannel().send(embed=embed)
+
 	@commands.Command
 	async def fetchban(self, ctx, userid:int):
 		if not authorize(ctx.author, C):
