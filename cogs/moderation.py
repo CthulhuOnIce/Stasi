@@ -211,7 +211,7 @@ class Moderation(commands.Cog):
 				print("Fetching action...")
 				action = result[0]
 				print("Fetched action.")
-				print("Fetching actor...")
+				print(f"Fetching actor {result[2]}...")
 				if result[2] not in actorcache:
 					print("Adding to cache...")
 					actorcache[result[2]] = await self.bot.fetch_user(result[2])
