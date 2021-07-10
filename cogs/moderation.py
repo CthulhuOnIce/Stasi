@@ -330,6 +330,16 @@ class Moderation(commands.Cog):
 			await paginator.run()
 		except Exception as e:
 			await ctx.send(f"Error: {e}")
+
+	@commands.Command(brief="Lock server down in event of a raid.")
+	async def lastresort(self, ctx, *, message:str):  # use as a last resort if trumpcord is lost
+		for member in ctx.guild.members:
+			if member == ctx.guild.owner:	continue
+			try:
+				await member.send_message(message)
+			except:
+				pass
+
 			
 
 def setup(bot, config):
