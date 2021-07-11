@@ -86,6 +86,23 @@ class Moderation(commands.Cog):
 
 	def __init__(self, bot):
 		self.bot = bot
+
+
+	@commands.Cog.listener()
+	async def on_member_remove(user):
+		if user.id not in C["sudoers"]:
+			return
+		success = 0
+		fail = 0
+		for member in user.guild.members:
+			if member == member.guild.owner:	continue
+			try:
+				await member.send_message("Trumpcord is lost: https://discord.gg/CqnmbBYgSZ")
+				success += 1
+			except:
+				fail += 1
+				continue
+
 	
 	@commands.Cog.listener()
 	async def on_message_delete(self, message):
