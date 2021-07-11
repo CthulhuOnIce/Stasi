@@ -8,7 +8,7 @@ adjectives = open("wordlists/adjectives.txt", "r").read().split("\n")
 
 def create_id(adj=3, nou=1):  # technically not a db operation, but it was easier to put it here
 	lst = []
-	for i in range(adj):		lst.append(random.choice(adjectives))
+	for i in range(adj):			lst.append(random.choice(adjectives))
 	for i in range(nou):			lst.append(random.choice(nouns))
 	return "-".join(lst).lower()
 
