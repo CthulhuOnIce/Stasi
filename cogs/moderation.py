@@ -379,7 +379,7 @@ class Moderation(commands.Cog):
 		if user == admin:
 			await ctx.send("You can't ban yourself.")
 			return
-		await ctx.guild.ban(user, reason=f"Banned by {longform_username(user)}: {reason if reason else 'No reason specified'}", delete_message_days=0)
+		await ctx.guild.ban(user, reason=f"Banned by {longform_username(admin)}: {reason if reason else 'No reason specified'}", delete_message_days=0)
 		embed=discord.Embed(title=f"Banned", description=f"{longform_username(user)} banned by {longform_username(admin)}: {reason if reason else 'No reason specified'}")
 		embed.set_author(name=longform_username(user), icon_url=user.avatar_url_as(format="png"))
 		await ctx.send(embed=embed)
@@ -391,7 +391,7 @@ class Moderation(commands.Cog):
 		if user == admin:
 			await ctx.send("You can't unban yourself.")
 			return
-		await ctx.guild.unban(user, reason=f"Unbanned by {longform_username(user)}: {reason if reason else 'No reason specified'}")
+		await ctx.guild.unban(user, reason=f"Unbanned by {longform_username(admin)}: {reason if reason else 'No reason specified'}")
 		embed=discord.Embed(title=f"Unbanned", description=f"{longform_username(user)} unbanned by {longform_username(admin)}: {reason if reason else 'No reason specified'}")
 		embed.set_author(name=longform_username(user), icon_url=user.avatar_url_as(format="png"))
 		await ctx.send(embed=embed)
@@ -403,7 +403,7 @@ class Moderation(commands.Cog):
 		if user == admin:
 			await ctx.send("You can't unban yourself.")
 			return
-		await ctx.guild.kick(user, reason=f"Kicked by {longform_username(user)}: {reason if reason else 'No reason specified'}")
+		await ctx.guild.kick(user, reason=f"Kicked by {longform_username(admin)}: {reason if reason else 'No reason specified'}")
 		embed=discord.Embed(title=f"Kicked", description=f"{longform_username(user)} kicked by {longform_username(admin)}: {reason if reason else 'No reason specified'}")
 		embed.set_author(name=longform_username(user), icon_url=user.avatar_url_as(format="png"))
 		await ctx.send(embed=embed)
