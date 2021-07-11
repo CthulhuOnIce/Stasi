@@ -383,10 +383,7 @@ class Moderation(commands.Cog):
 	async def warn(self, ctx, user:discord.Member, *, reason:str):
 		if not authorize(ctx.author, C):
 			await ctx.send("You aren't authorized to use this command.")
-		try:
-			db.create_warn(user.id, ctx.author.id, reason)
-		except Exception as E:
-			await ctx.send(f"ERROR: {E}")
+		db.create_warn(user.id, ctx.author.id, reason)
 		await ctx.send(f"Warned {user.mention}: `{reason}`.")
 
 	@commands.command(brief="Deletes a warn by ID")
