@@ -6,10 +6,10 @@ dbname = 'cyberkevdb.db'
 nouns = open("wordlists/nouns.txt", "r").read().split("\n")
 adjectives = open("wordlists/adjectives.txt", "r").read().split("\n")
 
-def create_id(adjectives=3, nouns=1):  # technically not a db operation, but it was easier to put it here
+def create_id(adj=3, nou=1):  # technically not a db operation, but it was easier to put it here
 	lst = []
-	for i in range(adjectives):		lst.append(random.choice(adjectives))
-	for i in range(nouns):			lst.append(random.choice(nouns))
+	for i in range(adj):		lst.append(random.choice(adjectives))
+	for i in range(nou):			lst.append(random.choice(nouns))
 	return "-".join(lst).lower()
 
 def audit_log(action, actorname, actorid, description, description_raw):
