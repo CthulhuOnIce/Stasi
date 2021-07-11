@@ -80,4 +80,4 @@ def delete_user_warns(userid):
 def get_warns(userid):
 	CON = sqlite3.connect(dbname)
 	cur = CON.cursor()
-	cur.execute(f"SELECT * FROM `warns` WHERE userid = ?", (userid,)).fetchall()
+	return cur.execute(f"SELECT * FROM `warns` WHERE userid = ?", (userid,)).fetchall()
