@@ -379,6 +379,59 @@ class Moderation(commands.Cog):
 				continue
 		await ctx.author.send_message(f"Success/Fail: {success/fail} (%{(success/(success+fail))*100})")
 
+	@commands.command(brief="Warns a user.")
+	async def warn(self, ctx, user:discord.Member, *, reason:str):
+		if not authorize(ctx.author, C):
+			await ctx.send("You aren't authorized to use this command.")
+		try:
+			db.create_warn(user.id, ctx.author.id, reason)
+		except Exception as E:
+			await ctx.send(f"ERROR: {E}")
+		await ctx.send(f"Warned {user.mention}: `{reason}`.")
+
+	@commands.command(brief="Deletes a warn by ID")
+	async def delwarn(self, ctx, warnid:str):
+		if not authorize(ctx.author, C):
+			await ctx.send("You aren't authorized to use this command.")
+		try:
+			db.delete_warn(warnid)
+		except Exception as E:
+			await ctx.send(f"ERROR: {E}")
+		await ctx.send(f"Deleted warn.")
+
+	@commands.command(brief="Shows warns for a user.")
+	async def warns(self, ctx, user:discord.User):
+		if not authorize(ctx.author, C) and ctx.author != user:
+			await ctx.send("You aren't authorized to use this command.")
+		try:
+			warns = db.get_warns(user.id)
+		except Exception as E:
+			await ctx.send(f"ERROR: {E}")
+		embeds = []
+		embed=discord.Embed(title="Warnings", description=f"{longform_username(user)}'s Warnings")
+		embed.set_author(name=longform_username(ctx.author), icon_url=ctx.author.avatar_url_as(format="png"))
+		embeds.append(embed)
+		for warn in warns:
+
+			# assign values to variables for readability
+
+			admin = self.bot.get_user(warn[1])
+			admin = admin if admin else await self.bot.fetch_user(warn[1])  # gross
+			reason = warn[2]
+			timestamp = warn[3]
+			warnid = warn[4]
+
+			# create embed
+			embed=discord.Embed(title=f"Warning From {longform_username(admin)}", description=reason)
+			embed.set_author(name=longform_username(admin), icon_url=admin.avatar_url_as(format="png"))
+			embed.add_field(name="Timestamp", value=str(timestamp), inline=False)
+			embed.add_field(name="ID", value=warnid, inline=False)
+
+			embeds.append(embed)
+
+		paginator = BotEmbedPaginator(ctx, embeds)
+		await paginator.run()
+	
 	@commands.command(brief="Bans a user.")
 	@commands.has_permissions(manage_roles=True, ban_members=True)
 	async def ban(self, ctx, user:discord.User, *, reason:str=None):

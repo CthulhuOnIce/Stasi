@@ -1,7 +1,16 @@
 from datetime import datetime
 import sqlite3
+import random
 
 dbname = 'cyberkevdb.db'
+nouns = open("wordlists/nouns.txt", "r").read().split("\n")
+adjectives = open("wordlists/adjectives.txt", "r").read().split("\n")
+
+def create_id(adjectives=3, nouns=1):  # technically not a db operation, but it was easier to put it here
+	lst = []
+	for i in range(adjectives):		lst.append(random.choice(adjectives))
+	for i in range(nouns):			lst.append(random.choice(nouns))
+	return "-".join(lst).lower()
 
 def audit_log(action, actorname, actorid, description, description_raw):
 	CON = sqlite3.connect(dbname)
@@ -46,3 +55,29 @@ def sql_wraw(statement):
 	ret = cur.execute(statement).fetchall()
 	CON.commit()
 	return ret
+
+def create_warn(userid, adminid, reason):
+	CON = sqlite3.connect(dbname)
+	cur = CON.cursor()
+	warnid = create_id()
+	while len(cur.execute(f'SELECT * FROM `warns` WHERE id = ?', (warnid,)).fetchall()):  # find a random id, this is just security though and should never actually run more than once
+		warnid = create_id()
+	cur.execute(f"INSERT INTO `warns` VALUES (?, ?, ?, ?, ?)", (userid, adminid, reason, datetime.now(), warnid))
+	CON.commit()
+
+def delete_warn(warnid):
+	CON = sqlite3.connect(dbname)
+	cur = CON.cursor()
+	cur.execute(f"DELETE FROM `warns` WHERE id = ?", (warnid,))
+	CON.commit()
+
+def delete_user_warns(userid):
+	CON = sqlite3.connect(dbname)
+	cur = CON.cursor()
+	cur.execute(f"DELETE FROM `warns` WHERE userid = ?", (userid,))
+	CON.commit()
+
+def get_warns(userid):
+	CON = sqlite3.connect(dbname)
+	cur = CON.cursor()
+	cur.execute(f"SELECT * FROM `warns` WHERE userid = ?", (userid,)).fetchall()

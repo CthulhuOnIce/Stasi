@@ -13,3 +13,11 @@ CREATE TABLE banledger(
 	'reason' TEXT NOT NULL,
 	'timestamp' DATETIME NOT NULL
 );
+
+CREATE TABLE warns(
+	'userid' INTEGER NOT NULL,
+	'adminid' INTEGER NOT NULL,
+	'reason' INTEGER NOT NULL,
+	'timestamp' DATETIME NOT NULL,
+	'id' TEXT NOT NULL UNIQUE
+)
