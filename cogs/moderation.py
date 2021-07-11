@@ -402,7 +402,7 @@ class Moderation(commands.Cog):
 		await ctx.send(embed=embed)
 
 	@commands.command(brief="Unbans a user.")
-	@commands.has_permissions(manage_roles=True, unban_members=True)
+	@commands.has_permissions(manage_roles=True, ban_members=True)
 	async def unban(self, ctx, user:discord.User, *, reason:str=None):
 		admin = ctx.author
 		if user == admin:
