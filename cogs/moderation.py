@@ -390,18 +390,18 @@ class Moderation(commands.Cog):
 	async def delwarn(self, ctx, warnid:str):
 		if not authorize(ctx.author, C):
 			await ctx.send("You aren't authorized to use this command.")
-		try:
-			db.delete_warn(warnid)
-		except Exception as E:
-			await ctx.send(f"ERROR: {E}")
-		await ctx.send(f"Deleted warn.")
+		if not db.get_warn(warnid):
+			await ctx.send("No warn found with this ID.")
+			return
+		db.delete_warn(warnid)
+		await ctx.send(f"Deleted warn {warnid}.")
 
 	@commands.command(brief="Shows warns for a user.")
 	async def warns(self, ctx, user:discord.User):
 		if not authorize(ctx.author, C) and ctx.author != user:
 			await ctx.send("You aren't authorized to use this command.")
 		try:
-			warns = db.get_warns(user.id)
+			warns = db.get_warns(user.id)[::-1]
 		except Exception as E:
 			await ctx.send(f"ERROR: {E}")
 		embeds = []

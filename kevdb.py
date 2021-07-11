@@ -81,3 +81,10 @@ def get_warns(userid):
 	CON = sqlite3.connect(dbname)
 	cur = CON.cursor()
 	return cur.execute(f"SELECT * FROM `warns` WHERE userid = ?", (userid,)).fetchall()
+
+def get_warn(warnid): # returns a warn with an id, used for checking if it exists
+	CON = sqlite3.connect(dbname)
+	cur = CON.cursor()
+	warn = cur.execute(f"SELECT * FROM `warns` WHERE userid = ?", (userid,)).fetchall()
+	if len(warn):	return warn[0]
+	else:			return None
