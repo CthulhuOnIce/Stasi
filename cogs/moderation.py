@@ -387,7 +387,8 @@ class Moderation(commands.Cog):
 		await ctx.send(f"Warned {user.mention}: `{reason}`.")
 
 	@commands.command(brief="Deletes a warn by ID")
-	async def delwarn(self, ctx, warnid:str):
+	async def delwarn(self, ctx, *, warnid:str):
+		warnid = warnid.replace(" ", "-")  # makes it considerably more mobile friendly
 		if not authorize(ctx.author, C):
 			await ctx.send("You aren't authorized to use this command.")
 		if not db.get_warn(warnid):
