@@ -401,6 +401,7 @@ class Moderation(commands.Cog):
 	async def warns(self, ctx, user:discord.User):
 		if not authorize(ctx.author, C) and ctx.author != user:
 			await ctx.send("You aren't authorized to use this command.")
+			return
 		try:
 			warns = db.get_warns(user.id)[::-1]
 		except Exception as E:
