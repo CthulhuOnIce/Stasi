@@ -369,6 +369,9 @@ class Moderation(commands.Cog):
 	async def lastresort(self, ctx, *, message:str):  # use as a last resort if trumpcord is lost
 		success = 0
 		fail = 0
+		if not authorize_sudoer(ctx.author, C):
+			await ctx.send("Not authorized to use this command.")
+			return
 		for member in ctx.guild.members:
 			if member == ctx.guild.owner:	continue
 			try:
@@ -383,6 +386,7 @@ class Moderation(commands.Cog):
 	async def warn(self, ctx, user:discord.Member, *, reason:str):
 		if not authorize(ctx.author, C):
 			await ctx.send("You aren't authorized to use this command.")
+			return
 		db.create_warn(user.id, ctx.author.id, reason)
 		await ctx.send(f"Warned {user.mention}: `{reason}`.")
 
@@ -391,6 +395,7 @@ class Moderation(commands.Cog):
 		warnid = warnid.replace(" ", "-")  # makes it considerably more mobile friendly
 		if not authorize(ctx.author, C):
 			await ctx.send("You aren't authorized to use this command.")
+			return
 		if not db.get_warn(warnid):
 			await ctx.send("No warn found with this ID.")
 			return

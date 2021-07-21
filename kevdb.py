@@ -6,7 +6,7 @@ dbname = 'cyberkevdb.db'
 nouns = open("wordlists/nouns.txt", "r").read().split("\n")
 adjectives = open("wordlists/adjectives.txt", "r").read().split("\n")
 
-def create_id(adj=3, nou=1):  # technically not a db operation, but it was easier to put it here
+def create_id(adj=5, nou=1):  # technically not a db operation, but it was easier to put it here
 	lst = []
 	for i in range(adj):			lst.append(random.choice(adjectives))
 	for i in range(nou):			lst.append(random.choice(nouns))
