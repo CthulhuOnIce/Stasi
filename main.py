@@ -4,6 +4,9 @@ import yaml
 import asyncio
 import sys
 import traceback
+from cyberkevsecurity import authorize_sudoer
+import os
+import subprocess
 
 # add cogs
 sys.path.insert(1, "cogs")
@@ -69,5 +72,22 @@ async def on_command_error(ctx, error):  # share certain errors with the user
 	if(ctx):
 		print(f"Author: {ctx.author}")
 		print(f"Command: {ctx.message.clean_content}")
+
+@bot.command(brief="Updates the bot.")
+async def update(ctx):
+	if not authorize_sudoer(ctx.author, C):
+		return await ctx.send("⚠ Access Denied")
+
+	message = await ctx.send("Pulling from git...")
+	subprocess.run(["git", "clone", "https://github.com/cthulhuonice/stasi", "updateStaging"], capture_output=True)
+
+	await message.edit(content="Checking code...")
+	subprocess.run([sys.executable, "updateStaging/main.py"])
+
+	await message.edit(content="Code check passed, updating to main...")
+	subprocess.run(["git", "pull"])
+
+	await message.edit(content="Restarting...")
+	os.execv(sys.argv[0], sys.argv)
 
 bot.run(C["token"])
