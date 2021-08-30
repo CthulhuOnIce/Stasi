@@ -66,6 +66,7 @@ async def on_command_error(ctx, error):  # share certain errors with the user
 		if isinstance(original, IndexError):
 			await ctx.send(f"IndexError: {original}\n[This might mean your search found no results]")
 			return
+	await ctx.send("😖 Sorry, that command caused an error! Devs are investigating the issue.")
 	print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
 	traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
 	if(ctx):
