@@ -72,8 +72,4 @@ async def on_command_error(ctx, error):  # share certain errors with the user
 		print(f"Author: {ctx.author}")
 		print(f"Command: {ctx.message.clean_content}")
 
-def test_pytest():
-	assert 1 == 1  # placeholder while actual tests are developed
-
-
 bot.run(C["token"])
