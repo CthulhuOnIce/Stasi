@@ -1,0 +1,6 @@
+discord.py
+pyyaml
+asyncio
+disputils
+simplejson
+pysqlite3

@@ -72,5 +72,4 @@ async def on_command_error(ctx, error):  # share certain errors with the user
 		print(f"Author: {ctx.author}")
 		print(f"Command: {ctx.message.clean_content}")
 
-
 bot.run(C["token"])
