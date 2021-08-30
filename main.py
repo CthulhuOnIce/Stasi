@@ -45,11 +45,6 @@ async def on_ready():  # I just like seeing basic info like this
 	await bot.change_presence(activity=discord.Game(name=f'{C["prefix"]}help')) 
 	print("-----------------Info-----------------")
 	print(f"Total Servers: {len(bot.guilds)}")
-	print("20 most populous:")
-	servers = sorted(bot.guilds, key=lambda x: len(x.members), reverse=True)
-	for server in servers[0:20]:
-		prettycount = "{:,}".format(len(server.members))
-		print(f"\t{server.name} - {prettycount}")
 
 @bot.event
 async def on_command_error(ctx, error):  # share certain errors with the user
