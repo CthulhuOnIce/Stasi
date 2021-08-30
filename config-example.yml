@@ -18,3 +18,7 @@ sudoers:  # role/user id's (any combination) that can use advanced bot functions
   - 000000000000000
   - 000000000000000
   - 000000000000000
+
+# democracy cog
+votechannel: 0000000000
+decidelength: 4320 # in minutes, 1440 = 1 day, 4320 = 3 days, 10080 = 7 days

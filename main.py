@@ -12,6 +12,7 @@ sys.path.insert(1, "cogs")
 import prison
 import staffboard
 import moderation
+import democracy
 
 # import modules
 import kevdb
@@ -39,6 +40,7 @@ bot = commands.Bot(
 prison.setup(bot, C)
 staffboard.setup(bot, C)
 moderation.setup(bot, C)
+democracy.setup(bot, C)
 
 @bot.event
 async def on_ready():  # I just like seeing basic info like this
