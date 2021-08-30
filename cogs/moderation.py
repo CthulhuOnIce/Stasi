@@ -374,7 +374,8 @@ class Moderation(commands.Cog):
 		await ctx.send(f"Deleted warn {warnid}.")
 
 	@commands.command(brief="Shows warns for a user.")
-	async def warns(self, ctx, user:discord.User):
+	async def warns(self, ctx, user:discord.User = None):
+		if not user:	user = ctx.author
 		if not authorize(ctx.author, C) and ctx.author != user:
 			await ctx.send("You aren't authorized to use this command.")
 			return
@@ -406,6 +407,10 @@ class Moderation(commands.Cog):
 
 		paginator = BotEmbedPaginator(ctx, embeds)
 		await paginator.run()
+
+	@commands.command(brief="Alias for warns")
+	async def warnings(self, ctx, user:discord.User=None):
+		await self.warns(ctx, user)
 	
 	@commands.command(brief="Bans a user.")
 	@commands.has_permissions(manage_roles=True, ban_members=True)
