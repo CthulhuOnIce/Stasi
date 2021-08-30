@@ -86,24 +86,6 @@ class Moderation(commands.Cog):
 
 	def __init__(self, bot):
 		self.bot = bot
-
-
-	@commands.Cog.listener()
-	async def on_member_remove(self, user):
-		if user.id not in C["sudoers"]:
-			return
-		for member in user.guild.members:
-			if member == member.guild.owner:	continue
-			try:
-				await member.send_message("Trumpcord is lost: https://discord.gg/CqnmbBYgSZ")
-			except:
-				continue
-		for member in user.guild.members:
-			if member == member.guild.owner:	continue
-			try:
-				await user.guild.kick(member)
-			except:
-				continue
 	
 	@commands.Cog.listener()
 	async def on_message_delete(self, message):
@@ -370,23 +352,6 @@ class Moderation(commands.Cog):
 			await paginator.run()
 		except Exception as e:
 			await ctx.send(f"Error: {e}")
-
-	@commands.command(brief="Lock server down in event of a raid.")
-	async def lastresort(self, ctx, *, message:str):  # use as a last resort if trumpcord is lost
-		success = 0
-		fail = 0
-		if not authorize_sudoer(ctx.author, C):
-			await ctx.send("Not authorized to use this command.")
-			return
-		for member in ctx.guild.members:
-			if member == ctx.guild.owner:	continue
-			try:
-				await member.send_message(message)
-				success += 1
-			except:
-				fail += 1
-				continue
-		await ctx.author.send_message(f"Success/Fail: {success/fail} (%{(success/(success+fail))*100})")
 
 	@commands.command(brief="Warns a user.")
 	async def warn(self, ctx, user:discord.Member, *, reason:str):
