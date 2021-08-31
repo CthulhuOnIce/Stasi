@@ -10,7 +10,7 @@ CREATE TABLE auditlog(
 CREATE TABLE banledger(
 	'user' INTEGER NOT NULL,
 	'admin' INTEGER,
-	'reason' TEXT NOT NULL,
+	'reason' TEXT,
 	'timestamp' DATETIME NOT NULL
 );
 

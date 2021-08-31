@@ -4,6 +4,7 @@ from discord.ext import commands
 from cyberkevsecurity import authorize, authorize_sudoer
 import discord
 import asyncio
+from discord.utils import get
 
 C = {}
 
@@ -18,19 +19,20 @@ class Democracy(commands.Cog):
 		channel = ctx.guild.get_channel(C["votechannel"])
 
 		embed = discord.Embed(title="Vote", description=explan)
-		embed.add_field(name="Proposal Made By", value=f"{ctx.author.mention} ({ctx.author.name}#{ctx.author.discriminator})", inline=False)
-		
+		embed.add_field(name="Proposal Made By", value=f"{ctx.author.mention} ({ctx.author.name}#{ctx.author.discriminator})", inline=False)		
+
 		message = await channel.send(embed=embed)
 		await message.add_reaction("✅")
 		await message.add_reaction("❌")
 
-		await asyncio.sleep(C["decidelength"])
+		await ctx.message.add_reaction("🗳")
 
-		yes = 0
-		no = 0
-		for reaction in message.reactions:
-			if reaction.emoji == "✅":	yes += 1
-			if reaction.emoji == "❌":	no += 1
+		await asyncio.sleep(C["decidelength"]*60)
+
+		message = await channel.fetch_message(message.id)  # to update reactions in the cache, we have to fetch a new message obj from the old id
+
+		yes = get(message.reactions, emoji="✅").count
+		no = get(message.reactions, emoji="❌").count
 		
 		if yes > no:
 			await message.reply(f"{ctx.author.mention}: This vote passed! ({yes}Y/{no}N)")
