@@ -8,6 +8,21 @@ from discord.utils import get
 
 C = {}
 
+def time_to_text(length): # TODO: atm it only allows one number and one unit, ie "5h", allow it to split and do multiple units, ie "1h30m"
+	days = round(length // (24 * 3600))
+	length = length % (24 * 3600)
+	hours = round(length // 3600)
+	length %= 3600
+	minutes = round(length // 60)
+	length %= 60
+	seconds = round(length)
+	txt = ""
+	if seconds:  txt = f"{seconds} second{'s' if seconds != 1  else ''}"
+	if minutes:   txt = f"{minutes} minute{'s' if minutes != 1 else ''}, " + txt
+	if hours:     txt = f"{hours} hour{'s' if hours != 1 else ''}, " + txt
+	if days:      txt = f"{days} day{'s' if days != 1 else ''}, " + txt
+	return txt.strip(", ")
+
 class Democracy(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
@@ -20,6 +35,8 @@ class Democracy(commands.Cog):
 
 		embed = discord.Embed(title="Vote", description=explan)
 		embed.add_field(name="Proposal Made By", value=f"{ctx.author.mention} ({ctx.author.name}#{ctx.author.discriminator})", inline=False)		
+		embed.set_footer(content=f"Vote ends in {time_to_text(C['decidelength'])}")
+
 
 		message = await channel.send(embed=embed)
 		await message.add_reaction("✅")
