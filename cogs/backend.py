@@ -7,12 +7,20 @@ import sys
 import subprocess
 import git
 import asyncio
+import discord
 
 C = {}
 
 class Backend(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
+
+	@commands.command(brief="See system info.")
+	async def sysinfo(self, ctx):
+		repo = git.Repo('.')
+		embed = discord.Embed(title="Sysinfo", description="Currently running environment info.")
+		embed.add_field(name="Current Git Revision", value=repo.head.commit.hexsha)
+		await ctx.send(embed=embed)
 
 	@commands.command(brief="Updates the bot.")
 	async def update(self, ctx):
