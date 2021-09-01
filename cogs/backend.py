@@ -52,7 +52,7 @@ class Backend(commands.Cog):
 		subprocess.Popen(["git", "pull"])
 		p.wait()
 		await message.edit(content="💤 Restarting...")
-		os.execv(sys.executable, sys.argv)
+		os.execv(sys.argv[0], sys.argv)
 	
 def setup(bot, config):
 	global C
