@@ -1,6 +1,9 @@
 prefix: "?"
 token: "TOKEN HERE"
 
+# backend cog
+repourl: https://github.com/cthulhuonice/stasi # the url to the git repo, current dir must be a git repo
+
 # sentinel cog
 logchannel: 000000000000000
 

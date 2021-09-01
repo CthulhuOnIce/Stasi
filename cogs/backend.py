@@ -23,6 +23,7 @@ class Backend(commands.Cog):
 		embed.add_field(name="Committed Date", value=repo.head.commit.committed_datetime, inline=False)
 		embed.add_field(name="Authored By", value=repo.head.commit.author, inline=False)
 		embed.add_field(name="Description", value=repo.head.commit.message, inline=False)
+		embed.set_footer(text=C["repourl"])
 		await ctx.send(embed=embed)
 
 	@commands.command(brief="Updates the bot.")
@@ -30,7 +31,7 @@ class Backend(commands.Cog):
 		if not authorize_sudoer(ctx.author, C):
 			return await ctx.send("⚠ Access Denied!")
 
-		URL = "https://github.com/cthulhuonice/CyberKev"
+		URL = C["repourl"]
 
 		message = await ctx.send("💾 Cloning update...")
 		p = subprocess.Popen(["git", "clone", URL, "staged-update"])
