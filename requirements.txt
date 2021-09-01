@@ -4,3 +4,6 @@ asyncio
 disputils
 simplejson
 pysqlite3
+dill
+tqdm
+gitpython

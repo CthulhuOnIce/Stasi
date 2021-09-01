@@ -4,6 +4,9 @@ import yaml
 import asyncio
 import sys
 import traceback
+from cyberkevsecurity import authorize_sudoer
+import os
+import subprocess
 
 # add cogs
 sys.path.insert(1, "cogs")
@@ -13,6 +16,7 @@ import prison
 import staffboard
 import moderation
 import democracy
+import backend
 
 # import modules
 import kevdb
@@ -41,6 +45,7 @@ prison.setup(bot, C)
 staffboard.setup(bot, C)
 moderation.setup(bot, C)
 democracy.setup(bot, C)
+backend.setup(bot, C)
 
 @bot.event
 async def on_ready():  # I just like seeing basic info like this
