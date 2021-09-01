@@ -19,7 +19,10 @@ class Backend(commands.Cog):
 	async def sysinfo(self, ctx):
 		repo = git.Repo('.')
 		embed = discord.Embed(title="Sysinfo", description="Currently running environment info.")
-		embed.add_field(name="Current Git Revision", value=repo.head.commit.hexsha)
+		embed.add_field(name="Current Git Revision", value=repo.head.commit.hexsha, inline=False)
+		embed.add_field(name="Committed Date", value=repo.head.commit.committed_datetime, inline=False)
+		embed.add_field(name="Authored By", value=repo.head.commit.author, inline=False)
+		embed.add_field(name="Description", value=repo.head.commit.message, inline=False)
 		await ctx.send(embed=embed)
 
 	@commands.command(brief="Updates the bot.")
