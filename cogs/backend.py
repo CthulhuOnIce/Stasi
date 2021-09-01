@@ -32,7 +32,7 @@ class Backend(commands.Cog):
 		p.wait()
 		await message.edit(content="🧪 Testing update...")
 		process = subprocess.Popen([sys.executable, "staged-update/main.py"])
-		asyncio.sleep(10)
+		await asyncio.sleep(10)
 		if process.returncode:
 			if process.returncode == 0:
 				await message.edit(content="✅ No Crashes Detected!")
@@ -52,7 +52,7 @@ class Backend(commands.Cog):
 		subprocess.Popen(["git", "pull"])
 		p.wait()
 		await message.edit(content="💤 Restarting...")
-		os.execv(__file__, sys.argv)
+		os.execv(sys.executable, sys.argv)
 	
 def setup(bot, config):
 	global C
