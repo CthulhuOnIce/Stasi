@@ -35,7 +35,7 @@ class Democracy(commands.Cog):
 
 		embed = discord.Embed(title="Vote", description=explan)
 		embed.add_field(name="Proposal Made By", value=f"{ctx.author.mention} ({ctx.author.name}#{ctx.author.discriminator})", inline=False)		
-		embed.set_footer(text=f"Vote ends in {time_to_text(C['decidelength'])}")
+		embed.set_footer(text=f"Vote ends in {time_to_text(C['decidelength']*60)}")
 
 
 		message = await channel.send(embed=embed)
