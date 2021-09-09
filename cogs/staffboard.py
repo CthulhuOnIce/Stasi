@@ -21,7 +21,7 @@ class Staff_Board(commands.Cog):
 		for role in roles:
 			users = []
 			for member in role.members:
-				if member.top_role != role:
+				if member.top_role != role and (member.top_role.id in C["authorized"]):
 					continue
 				users.append(f" - {member.mention} ({member.name}#{member.discriminator})")
 			if len(users):	
