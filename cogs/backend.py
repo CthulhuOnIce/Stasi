@@ -63,7 +63,7 @@ class Backend(commands.Cog):
 		await message.edit(content="🔃 Applying update...")
 		subprocess.Popen(["git", "pull"])
 		p.wait()
-		await asyncio.sleep(3)  # do what its gotta do
+		await asyncio.sleep(10)  # do what its gotta do
 		await message.edit(content="💤 Restarting...")
 		os.execv(sys.executable, ['python'] + sys.argv)
 	
