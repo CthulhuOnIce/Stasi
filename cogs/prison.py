@@ -18,11 +18,7 @@ prison_ledger = {}
 timefinderregex = r"([0-9]+[A-z])"
 
 def get_list_of_role_ids(user, guild):
-	lst = []
-	for role in user.roles:
-		if role == guild.default_role:	continue
-		lst.append(role.id)
-	return lst
+	return [role.id for role in user.roles if role != guild.default_role]
 
 def time_to_seconds(time): # returns either an amount of minutes, or -1 to signify it's not a time at all, rather a part of the prison reason
 	matches = re.findall(timefinderregex, time)
@@ -32,10 +28,7 @@ def time_to_seconds(time): # returns either an amount of minutes, or -1 to signi
 			return int(time)
 		except:
 			return -1
-	finaltime = 0
-	for match in matches:
-		finaltime += int(match[:-1]) * time_convert[match[-1]]
-	return finaltime
+	return sum(int(match[:-1]) * time_convert[match[-1]] for match in matches)
 
 def longform_name(user):
 	return f"{user.mention} ({user.name}#{user.discriminator})"
@@ -48,8 +41,7 @@ def time_to_text(length): # TODO: atm it only allows one number and one unit, ie
 	minutes = round(length // 60)
 	length %= 60
 	seconds = round(length)
-	txt = ""
-	if seconds:  txt = f"{seconds} second{'s' if seconds != 1  else ''}"
+	txt = f"{seconds} second{'s' if seconds != 1  else ''}" if seconds else ""
 	if minutes:   txt = f"{minutes} minute{'s' if minutes != 1 else ''}, " + txt
 	if hours:     txt = f"{hours} hour{'s' if hours != 1 else ''}, " + txt
 	if days:      txt = f"{days} day{'s' if days != 1 else ''}, " + txt
@@ -61,10 +53,8 @@ async def prison_man(user, guild, ledger, summary=None):
 	prison_ledger[str(user.id)] = ledger
 	roles = global_prison_log[str(user.id)]
 
-	delroles = []
+	delroles = [guild.get_role(i) for i in roles]
 
-	for i in roles:
-		delroles.append(guild.get_role(i))
 	await user.remove_roles(*delroles, reason=summary)
 	await user.add_roles(guild.get_role(C["muterole"]), reason=summary)
 
@@ -75,14 +65,12 @@ async def unprison_man(user, guild, reason=None):
 		return
 
 	print(f"Unprisoning {user.name}")
-	
+
 	prisoner = guild.get_role(C["muterole"])
 
-	if(prisoner in user.roles) and (user in guild.members):
+	if (prisoner in user.roles) and (user in guild.members):
 		roles = global_prison_log[str(user.id)]
-		addroles = []
-		for i in roles:
-			addroles.append(guild.get_role(i))
+		addroles = [guild.get_role(i) for i in roles]
 		await user.add_roles(*addroles, reason=reason)
 		await user.remove_roles(prisoner, reason=reason)
 
@@ -169,7 +157,7 @@ class Prison(commands.Cog):
 			await ctx.send("You aren't authorized to do this.")
 			return
 
-		if not f"{member.id}" in global_prison_log:
+		if f"{member.id}" not in global_prison_log:
 			await ctx.send("I didn't prison them, you'll have to do it manually.")
 			return
 
@@ -200,9 +188,17 @@ class Prison(commands.Cog):
 			return
 		sentence_log = prison_ledger[str(member.id)]
 		timeremainingsec = sentence_log["time_jailed"] + sentence_log["sentence"] - time.time()
-		embed = discord.Embed(title=f"Prison Info", description=f"{longform_name(member)}'s Prison Info", colour=discord.Colour.light_gray())
+		embed = discord.Embed(
+		    title='Prison Info',
+		    description=f"{longform_name(member)}'s Prison Info",
+		    colour=discord.Colour.light_gray(),
+		)
 		embed.add_field(name="Moderator: ", value=longform_name(sentence_log["admin"]), inline=False)
-		embed.add_field(name="Reason: ", value=sentence_log["reason"] if sentence_log["reason"] else "None given.", inline=False)
+		embed.add_field(
+		    name="Reason: ",
+		    value=sentence_log["reason"] or "None given.",
+		    inline=False,
+		)
 		embed.add_field(name="Sentence: ", value=time_to_text(sentence_log["sentence"]) if sentence_log["sentence"] else "Indefinitely", inline=False)
 		embed.add_field(name="Time Left:", value=time_to_text(timeremainingsec) if sentence_log["sentence"] else "Indefinitely", inline=False)
 		await ctx.send(embed=embed)
@@ -213,9 +209,14 @@ class Prison(commands.Cog):
 		for prisoner_id in prison_ledger:
 			prisoner = prison_ledger[prisoner_id]
 			timeremainingsec = prisoner["time_jailed"] + prisoner["sentence"] - time.time()
-			embed = discord.Embed(title=f"Current Prisoners", description=longform_name(prisoner["member"]), colour=discord.Colour.light_gray())
+			embed = discord.Embed(
+			    title='Current Prisoners',
+			    description=longform_name(prisoner["member"]),
+			    colour=discord.Colour.light_gray(),
+			)
 			embed.add_field(name="Moderator: ", value=longform_name(prisoner["admin"]), inline=False)
-			embed.add_field(name="Reason: ", value=prisoner["reason"] if prisoner["reason"] else "None given.", inline=False)
+			embed.add_field(
+			    name="Reason: ", value=prisoner["reason"] or "None given.", inline=False)
 			embed.add_field(name="Sentence: ", value=time_to_text(prisoner["sentence"]) if prisoner["sentence"] else "Indefinitely", inline=False)
 			embed.add_field(name="Time Left:", value=time_to_text(timeremainingsec) if prisoner["sentence"] else "Indefinitely", inline=False)
 			pages.append(embed)

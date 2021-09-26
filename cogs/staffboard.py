@@ -19,11 +19,11 @@ class Staff_Board(commands.Cog):
 				roles.append(roleobj)
 		embed = discord.Embed(title="Staff Board", description="Every Staff Member", color=0xbd6500)
 		for role in roles:
-			users = []
-			for member in role.members:
-				if member.top_role != role and (member.top_role.id in C["authorized"]):
-					continue
-				users.append(f" - {member.mention} ({member.name}#{member.discriminator})")
+			users = [
+			    f" - {member.mention} ({member.name}#{member.discriminator})"
+			    for member in role.members
+			    if member.top_role == role or member.top_role.id not in C["authorized"]
+			]
 			if len(users):	
 				embed.add_field(name=f"{role.name}", value="\n".join(users), inline=False)
 		return embed
