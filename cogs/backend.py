@@ -45,17 +45,14 @@ class Backend(commands.Cog):
 		await message.edit(content="🧪 Testing update...")
 		process = subprocess.Popen([sys.executable, "staged-update/main.py"])
 		await asyncio.sleep(10)
-		if process.returncode:
-			if process.returncode == 0:
-				await message.edit(content="✅ No Crashes Detected!")
-			else:
-				await message.edit(content="❎ Code Crashed, update terminated.")
-				p = subprocess.Popen(["rm", "-rf", "staged-update"])
-				p.wait()
-				await message.edit(content="⚠ Update failed: Code unexecutable.")
-				return
-		else:
+		if process.returncode and process.returncode == 0 or not process.returncode:
 			await message.edit(content="✅ No Crashes Detected!")
+		else:
+			await message.edit(content="❎ Code Crashed, update terminated.")
+			p = subprocess.Popen(["rm", "-rf", "staged-update"])
+			p.wait()
+			await message.edit(content="⚠ Update failed: Code unexecutable.")
+			return
 		process.kill()
 		await message.edit(content="🧹 Cleaning up...")
 		p = subprocess.Popen(["rm", "-rf", "staged-update"])

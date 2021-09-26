@@ -16,8 +16,7 @@ def time_to_text(length): # TODO: atm it only allows one number and one unit, ie
 	minutes = round(length // 60)
 	length %= 60
 	seconds = round(length)
-	txt = ""
-	if seconds:  txt = f"{seconds} second{'s' if seconds != 1  else ''}"
+	txt = f"{seconds} second{'s' if seconds != 1  else ''}" if seconds else ""
 	if minutes:   txt = f"{minutes} minute{'s' if minutes != 1 else ''}, " + txt
 	if hours:     txt = f"{hours} hour{'s' if hours != 1 else ''}, " + txt
 	if days:      txt = f"{days} day{'s' if days != 1 else ''}, " + txt
