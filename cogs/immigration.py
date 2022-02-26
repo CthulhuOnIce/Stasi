@@ -93,8 +93,10 @@ class Immigration(commands.Cog):
 			await ctx.author.remove_roles(unverified)
 
 			if right or (left and right):
+				print("Adding rightist role")
 				await ctx.author.add_roles(rightist)
 			else:
+				print("Adding leftist role")
 				await ctx.author.add_roles(leftist)
 			
 			await ctx.message.reply(f"Verified as {ideology.lower()}.")
