@@ -239,29 +239,6 @@ class Prison(commands.Cog):
 				tally += 1
 		await ctx.send(f"Cleared cache, removed **{tally}** prisoners from ledger who either left or were released manually.")
 
-	@commands.command(brief="Admin Only: Verify a user. (Use twice or forceverify)")
-	async def verify(self, ctx, member:discord.Member, forceverify:bool=False):
-		if not authorize(ctx.author, C):
-			await ctx.send("You aren't authorized to do this.")
-			return
-			
-		unverified = ctx.guild.get_role(C["unverifiedrole"])
-		unverifieds2 = ctx.guild.get_role(C["unverifiedsteptwo"])
-		verified = ctx.guild.get_role(C["verifiedrole"])
-
-		step2channel = ctx.guild.get_channel(C["verificationsteptwochannel"])
-
-		if unverified in member.roles and unverifieds2 not in member.roles and not forceverify:
-			await member.add_roles(unverifieds2)
-			await step2channel.send(f"""Welcome, {member.mention}. Please get roles if you haven't already. This is the last step of our verification process.
-All we ask you to do is elaborate on your political views (approval of Trump, opinion on abortion, immigration, gun control, LGBTQ+ rights) and then end off by explaining why you align with your party.""")
-
-		elif (unverified in member.roles and unverifieds2 in member.roles) or forceverify:
-				await member.remove_roles(*[unverifieds2, unverified])
-				await member.add_roles(verified)
-
-		await ctx.message.add_reaction("✅")
-
 def setup(bot, config):
 	global C
 	C = config

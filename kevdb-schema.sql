@@ -21,3 +21,19 @@ CREATE TABLE warns(
 	'timestamp' DATETIME NOT NULL,
 	'id' TEXT NOT NULL UNIQUE
 )
+
+CREATE TABLE verification(
+	'userid' INT NOT NULL UNIQUE,
+	'timestamp' DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	'ideology' TEXT NOT NULL,
+	'Q1' TEXT,
+	'A1' TEXT,
+	'Q2' TEXT,
+	'A2' TEXT,
+	'Q3' TEXT,
+	'A3' TEXT,
+	'Q4' TEXT,
+	'A4' TEXT,
+	'Q5' TEXT,
+	'A5' TEXT 
+)
