@@ -10,18 +10,14 @@ logchannel: 000000000000000
 # prisonbot cog
 muterole: 000000000000000
 verifiedrole: 000000000000000
+rightwingverifiedrole: 946961687783821325
 unverifiedrole: 000000000000000
-unverifiedsteptwo: 000000000000000
-verificationsteptwochannel: 000000000000000
 authorized:  # role/user id's (any combination) that can use basic bot functions like moderation features
-  - 000000000000000
-  - 000000000000000
-  - 000000000000000
-sudoers:  # role/user id's (any combination) that can use advanced bot functions like sql, anyone here is also authorized
-  - 000000000000000
-  - 000000000000000
-  - 000000000000000
+  - 863539767600480315
 
-# democracy cog
-votechannel: 0000000000
-decidelength: 4320 # in minutes, 1440 = 1 day, 4320 = 3 days, 10080 = 7 days
+sudoers:  # role/user id's (any combination) that can use advanced bot functions like sql, anyone here is also authorized
+  - 291321148715696138
+
+ideology: 
+  - rightist: 863539767396139056
+  - leftist: 863539767396139057

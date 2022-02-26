@@ -56,6 +56,18 @@ def sql_wraw(statement):
 	CON.commit()
 	return ret
 
+def verify_user(userid, ideology, questionbank):
+	CON = sqlite3.connect(dbname)
+	cur = CON.cursor()
+
+	arguments = [userid, ideology]
+	for i in range(5):
+		arguments.append(questionbank[i][0])
+		arguments.append(questionbank[i][1])
+
+	ret = cur.execute("INSERT INTO `verification` ('userid', 'ideology', 'Q1', 'A1', 'Q2', 'A2', 'Q3', 'A3', 'Q4', 'A4', 'Q5', 'A5') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+	arguments)
+
 def create_warn(userid, adminid, reason):
 	CON = sqlite3.connect(dbname)
 	cur = CON.cursor()

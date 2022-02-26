@@ -17,6 +17,7 @@ import staffboard
 import moderation
 import democracy
 import backend
+import immigration
 
 # import modules
 import kevdb
@@ -46,6 +47,7 @@ staffboard.setup(bot, C)
 moderation.setup(bot, C)
 democracy.setup(bot, C)
 backend.setup(bot, C)
+immigration.setup(bot, C)
 
 @bot.event
 async def on_ready():  # I just like seeing basic info like this
