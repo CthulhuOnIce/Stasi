@@ -95,11 +95,14 @@ class Immigration(commands.Cog):
 				await ctx.author.add_roles(rightist)
 			else:
 				await ctx.author.add_roles(leftist)
+			
+			await ctx.message.reply(f"Verified as {ideology.lower()}.")
 
 			await channel.send("Welcome to the server!")	
 
 		else:
 			await ctx.author.kick(reason="Failed verification")
+			await ctx.message.reply("Kicked for non-agreement to the rules.")
 		
 	@commands.command(brief="[Admins Only] See a User's response to the verification questions.")
 	async def passport(self, ctx, user:discord.User):
