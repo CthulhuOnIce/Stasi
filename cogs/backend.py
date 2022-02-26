@@ -65,7 +65,7 @@ class Backend(commands.Cog):
 		p.wait()
 		await asyncio.sleep(10)  # do what its gotta do
 		await message.edit(content="💤 Restarting...")
-		os.execv(sys.executable, ['python'] + sys.argv)
+		os.execv(sys.executable, ['python3'] + sys.argv)
 	
 def setup(bot, config):
 	global C

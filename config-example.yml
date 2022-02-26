@@ -21,5 +21,5 @@ sudoers:  # role/user id's (any combination) that can use advanced bot functions
   - 291321148715696138
 
 ideology: 
-  - rightist: 863539767396139056
-  - leftist: 863539767396139057
+  rightist: 863539767396139056
+  leftist: 863539767396139057

@@ -67,6 +67,16 @@ def verify_user(userid, ideology, questionbank):
 
 	ret = cur.execute("INSERT INTO `verification` ('userid', 'ideology', 'Q1', 'A1', 'Q2', 'A2', 'Q3', 'A3', 'Q4', 'A4', 'Q5', 'A5') VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 	arguments)
+	CON.commit()
+
+def fetch_verification(userid):
+	CON = sqlite3.connect(dbname)
+	cur = CON.cursor()
+	res = cur.execute("SELECT * FROM `verification` WHERE userid = ?", (userid,)).fetchall()
+	if not len(res):
+		return None
+	else:
+		return res[0]
 
 def create_warn(userid, adminid, reason):
 	CON = sqlite3.connect(dbname)
