@@ -95,7 +95,7 @@ class Immigration(commands.Cog):
 			if right or (left and right):
 				await ctx.author.add_roles(rwverified)
 			else:
-				await ctx.author.add_roles(verified
+				await ctx.author.add_roles(verified)
 			
 			await ctx.message.reply(f"Verified as {ideology.lower()}.")
 
