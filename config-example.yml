@@ -7,11 +7,13 @@ repourl: https://github.com/cthulhuonice/stasi # the url to the git repo, curren
 # sentinel cog
 logchannel: 000000000000000
 
-# prisonbot cog
-muterole: 000000000000000
+# immigration cog
 verifiedrole: 000000000000000
 rightwingverifiedrole: 946961687783821325
 unverifiedrole: 000000000000000
+
+# prisonbot cog
+muterole: 000000000000000
 authorized:  # role/user id's (any combination) that can use basic bot functions like moderation features
   - 863539767600480315
 

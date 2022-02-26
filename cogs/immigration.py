@@ -9,10 +9,13 @@ class Immigration(commands.Cog):
 	def __init__(self, bot):
 		self.bot = bot
 	
+
+	
 	@commands.command(brief="Verify yourself!")
 	async def verify(self, ctx):
 		verified = ctx.guild.get_role(C["verifiedrole"])
 		rwverified = ctx.guild.get_role(C["rightwingverifiedrole"])
+		unverified = ctx.guild.get_role(C["unverifiedrole"])
 		
 		if verified in ctx.author.roles or rwverified in ctx.author.roles:
 			await ctx.message.reply("You're already verified!")
@@ -73,9 +76,15 @@ class Immigration(commands.Cog):
 			if right:			ideology = "RIGHTIST"
 
 			db.verify_user(ctx.author.id, ideology, dbqa)
+			await ctx.author.remove_roles(unverified)
+
+			if right or (left and right):
+				await ctx.author.add_roles(rightist)
+			else:
+				await ctx.author.add_roles(leftist)
 
 		else:
-			await ctx.guild.kick(ctx.author, reason="Failed verification")
+			await ctx.author.kick(reason="Failed verification")
 
 
 
