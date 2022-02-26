@@ -28,7 +28,7 @@ class Immigration(commands.Cog):
 		right = rightist in ctx.author.roles
 
 		if (not left and not right):
-			await ctx.message.reply(f"Please get roles first! Specifically one or more of the following roles:\n{leftist.mention}, {rightist.mention}", allowed_mentions = None)
+			await ctx.message.reply(f"Please get roles first! Specifically one or more of the following roles:\n{leftist.mention}, {rightist.mention}\nDo so in <#863539768071553056>", allowed_mentions = None)
 			return
 		
 		questions = ["How did you find this server?", "Why do you want to join this server?", "How would you describe yourself politically?"]  # can have up to 5
