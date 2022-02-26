@@ -36,7 +36,7 @@ class Immigration(commands.Cog):
 
 		channel = None
 		try:
-			await ctx.author.send("Starting verification... Please use a bit of detail in your responses (>15 chars).")
+			await ctx.author.send("Starting verification... Please use a bit of detail in your responses (>10 chars).")
 			channel = ctx.author
 			await ctx.message.add_reaction("📩")
 		except:  # dms turned off, don't bother telling them to turn them off, just do the process in the channel
@@ -48,7 +48,7 @@ class Immigration(commands.Cog):
 
 			def check(m):
 				if m.author == ctx.author:
-					if len(m.clean_content) < 15:
+					if len(m.clean_content) < 10:
 						return False
 					if channel == ctx.author:
 						return isinstance(m.channel, discord.channel.DMChannel)
