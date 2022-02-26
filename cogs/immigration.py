@@ -38,6 +38,7 @@ class Immigration(commands.Cog):
 		try:
 			await ctx.author.send("Starting verification... Please use a bit of detail in your responses (>15 chars).")
 			channel = ctx.author
+			await ctx.message.add_reaction("📩")
 		except:  # dms turned off, don't bother telling them to turn them off, just do the process in the channel
 			channel = ctx.channel
 
