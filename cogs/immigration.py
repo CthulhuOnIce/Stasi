@@ -75,7 +75,7 @@ class Immigration(commands.Cog):
 		msg = await self.bot.wait_for("message", check=check)
 		r = msg.clean_content.upper().replace("!", "").replace(".", "").replace("?", "")  # ignore capitalization and punctuation
 
-		if r in ["YEAH", "YES", "YESSIR", "YUP", "YEA", "YE", "Y"]:  # it specifically asks "yes" or "no" but some people are stupid
+		if r in ["YEAH", "YES", "YESSIR", "YUP", "YEA", "YE", "Y", "SURE"]:  # it specifically asks "yes" or "no" but some people are stupid
 			await channel.send("You have passed verification, please wait...")
 			dbqa = [(None, None), (None, None), (None, None), (None, None), (None, None)]
 			i = 0
@@ -128,8 +128,35 @@ class Immigration(commands.Cog):
 			await ctx.author.send(embed=embed)
 		except:
 			await ctx.send(embed=embed)
+	
+	@commands.command(brief="[Admins Only] Reassign someones verification ideology")
+	async def reassign(self, ctx, user:discord.Member, ideology:str):
+		if not s.authorize(ctx.author, C):
+			await ctx.message.reply("You are not authorized to use this command!")
+			return
+		
+		results = db.fetch_verification(user.id)
+		if not results:
+			await ctx.message.reply("No verification record found for this user!")
+			return
 
+		ideology = ideology.upper()
+		verified = ctx.guild.get_role(C["verifiedrole"])
+		rwverified = ctx.guild.get_role(C["rightwingverifiedrole"])
 
+		if ideology.startswith("R") or ideology.startswith("C"):  # right winger / centrist
+			await user.remove_roles(verified)
+			await user.add_roles(rwverified)
+			if ideology.startswith("R"):
+				db.reassign_user(user.id, "RIGHTIST")
+			else:
+				db.reassign_user(user.id, "CENTRIST")
+		elif ideology.startswith("L"):  # left winger
+			await user.add_roles(verified)
+			await user.remove_roles(rwverified)
+			db.reassign_user(user.id, "LEFTIST")
+		
+		await ctx.message.reply("✅ ideology reassigned!")
 
 def setup(bot, config):
 	global C

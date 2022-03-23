@@ -78,6 +78,14 @@ def fetch_verification(userid):
 	else:
 		return res[0]
 
+def reassign_user(userid, ideology):
+	if ideology not in ["LEFTIST", "RIGHTIST", "CENTRIST"]:
+		return
+	CON = sqlite3.connect(dbname)
+	cur = CON.cursor()
+	ret = cur.execute("UPDATE `verification` SET ideology = ? WHERE userid = ?", (ideology, userid))
+	CON.commit()
+
 def create_warn(userid, adminid, reason):
 	CON = sqlite3.connect(dbname)
 	cur = CON.cursor()
