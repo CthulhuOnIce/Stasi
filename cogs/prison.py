@@ -4,7 +4,7 @@ from discord.ext import commands
 import discord
 import re
 import asyncio
-from disputils import BotEmbedPaginator, BotConfirmation, BotMultipleChoice
+from dispinternal import BotEmbedPaginator, BotConfirmation, BotMultipleChoice
 import time
 import kevdb as db
 import simplejson as json

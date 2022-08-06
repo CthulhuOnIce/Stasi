@@ -10,6 +10,7 @@ import subprocess
 
 # add cogs
 sys.path.insert(1, "cogs")
+sys.path.insert(1, "libs")
 
 # cogs
 import prison
@@ -21,8 +22,9 @@ import immigration
 
 # import modules
 import kevdb
+import dispinternal
 
-# from disputils import BotEmbedPaginator, BotConfirmation, BotMultipleChoice
+# from dispinternal import BotEmbedPaginator, BotConfirmation, BotMultipleChoice
 
 try:
 	with open("config.yml", "r") as r:

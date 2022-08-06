@@ -2,7 +2,7 @@ from discord.ext import commands
 import kevdb as db
 import discord
 import simplejson as json
-from disputils import BotEmbedPaginator
+from dispinternal import BotEmbedPaginator
 from cyberkevsecurity import authorize, authorize_sudoer
 from tqdm import tqdm
 
