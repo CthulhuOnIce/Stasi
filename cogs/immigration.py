@@ -137,7 +137,7 @@ class Immigration(commands.Cog):
 				if results[i]:
 					embed.add_field(name=results[i], value=results[i+1], inline=False)
 
-			self.logchannel().send(embed=embed)
+			await self.logchannel().send(embed=embed)
 			
 			await ctx.message.reply(f"Verified as {ideology.lower()}.")
 
