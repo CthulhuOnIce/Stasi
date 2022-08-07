@@ -47,7 +47,7 @@ class Immigration(commands.Cog):
 		
 		self.currently_verifying.append(ctx.author.id)
 		
-		questions = ["How did you find this server?", "Why do you want to join this server?", "How would you describe yourself politically?"]  # can have up to 5
+		questions = ["How did you find this server?", "Why do you want to join this server?", "How would you describe yourself politically?", "What's your stance on LGBT rights?"]  # can have up to 5 questions
 		qa = {}  # dictionary with questions mapped to answers
 
 		channel = None
