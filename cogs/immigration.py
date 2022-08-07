@@ -129,7 +129,7 @@ class Immigration(commands.Cog):
 			results = db.fetch_verification(ctx.author.id)
 			
 			color = 0xef2929 if results[2] == "LEFTIST" else 0x729fcf
-			embed=discord.Embed(title="New Verified User!", description=f"Verification Record for {user.mention} ({user.id})", color=color)
+			embed=discord.Embed(title="New Verified User!", description=f"Verification Record for {ctx.author.mention} ({ctx.author.id})", color=color)
 			embed.add_field(name="Timestamp", value=str(results[1]), inline=False)
 			embed.add_field(name="Ideology", value=results[2], inline=False)
 			scan = [3, 5, 7, 9, 11]
