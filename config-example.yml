@@ -1,25 +1,12 @@
-prefix: "?"
-token: "TOKEN HERE"
-
-# backend cog
-repourl: https://github.com/cthulhuonice/stasi # the url to the git repo, current dir must be a git repo
-
-# sentinel cog
-logchannel: 000000000000000
-
-# immigration cog
-verifiedrole: 000000000000000
-rightwingverifiedrole: 946961687783821325
-unverifiedrole: 000000000000000
-
-# prisonbot cog
-muterole: 000000000000000
-authorized:  # role/user id's (any combination) that can use basic bot functions like moderation features
-  - 863539767600480315
-
-sudoers:  # role/user id's (any combination) that can use advanced bot functions like sql, anyone here is also authorized
+token: token
+guild_id: 1028176829502193726
+prison_role: 1028176829502193726
+verified_role: 1028176829502193726
+log_channel: 1028176829502193726
+mongodb:
+  url: 'mongodburl'
+  username: mongouser
+  password: mongopass
+  name: Stasi
+sudoers:
   - 291321148715696138
-
-ideology: 
-  rightist: 863539767396139056
-  leftist: 863539767396139057
