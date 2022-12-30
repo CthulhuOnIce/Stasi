@@ -18,18 +18,18 @@ class Social(commands.Cog):
         embed = discord.Embed(title="User Info", description=f"Info about {user.display_name}", color=0x00ff00)
         embed.set_author(name=str(user), icon_url=user.avatar.url)
         embed.set_thumbnail(url=user.avatar.url)
-        embed.add_field(name="Joined Discord", value=user.created_at.strftime("%d/%m/%Y %H:%M:%S"))
+        embed.add_field(name="Joined Discord", value=user.created_at.strftime("%m/%d/%Y %H:%M:%S"), inline=False)
 
         if user in ctx.guild.members:
             member = ctx.guild.get_member(user.id)
-            embed.add_field(name="Joined Server", value=member.joined_at.strftime("%d/%m/%Y %H:%M:%S"))
+            embed.add_field(name="Joined Server", value=member.joined_at.strftime("%m/%d/%Y %H:%M:%S"), inline=False)
         
         db_user = await db.get_user(user.id)
         if db_user:
             if "messages" in db_user:
-                embed.add_field(name="Total Messages", value=db_user["messages"])
+                embed.add_field(name="Total Messages", value=db_user["messages"], inline=False)
             if "reactions" in db_user:
-                embed.add_field(name="Total Reactions", value="\n".join([f"{reaction}: {db_user['reactions'][reaction]}" for reaction in db_user["reactions"]]))
+                embed.add_field(name="Total Reactions", value="\n".join([f"{reaction}: {db_user['reactions'][reaction]}" for reaction in db_user["reactions"]]), inline=False)
         
         await ctx.respond(embed=embed, ephemeral=ephemeral)
 
