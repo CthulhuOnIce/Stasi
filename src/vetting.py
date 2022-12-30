@@ -84,6 +84,7 @@ class Verification(commands.Cog):
                 return await ctx.respond("You have already been verified, your role has been automatically re-added.", ephemeral=True)
 
         if not questions:  # skip
+            await ctx.author.remove_roles(unverified_role)
             await ctx.author.add_roles(verified_role)
             await ctx.respond("You have been verified.")
             await db.add_verification(ctx.author.id, [])
