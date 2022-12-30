@@ -62,20 +62,26 @@ class Verification(commands.Cog):
     async def verify(self, ctx):
         questions = await db.get_verification_questions()
         verified_role = ctx.guild.get_role(config.C["verified_role"])
+        unverified_role = ctx.guild.get_role(config.C["unverified_role"])
+
+        if not verified_role or not unverified_role:
+            return await ctx.respond("Verification role not found.", ephemeral=True)  # if this happens there's a problem with the configs
 
         if verified_role in ctx.author.roles:
-            return await ctx.respond("You are already verified.", ephemeral=True)
+            if unverified_role in ctx.author.roles:
+                await ctx.author.remove_roles(unverified_role)
+                return await ctx.respond("You are already verified, but you also had the unverified role. I have removed it for you.", ephemeral=True)
+            else:
+                return await ctx.respond("You are already verified.", ephemeral=True)
         else:
             if await db.get_prisoner(ctx.author.id):
                 return await ctx.respond("You are in prison.", ephemeral=True)
 
             elif "verification" in await db.get_user(ctx.author.id):
                 await ctx.author.add_roles(verified_role)
+                if unverified_role in ctx.author.roles:
+                    await ctx.author.remove_roles(unverified_role)
                 return await ctx.respond("You have already been verified, your role has been automatically re-added.", ephemeral=True)
-
-
-        if not verified_role:
-            return await ctx.respond("Verification role not found.", ephemeral=True)  # if this happens there's a problem with the config
 
         if not questions:  # skip
             await ctx.author.add_roles(verified_role)
@@ -117,6 +123,7 @@ class Verification(commands.Cog):
                 return
             qna.append((question, answer.clean_content))
         
+        await ctx.author.remove_roles(unverified_role)
         await ctx.author.add_roles(verified_role)
         await db.add_verification(ctx.author.id, qna)
         await channel.send("Thank you for answering the questions. You have been verified.")
@@ -128,6 +135,7 @@ class Verification(commands.Cog):
         if not ctx.author.guild_permissions.manage_roles:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         await db.add_verification(user.id, ["BYPASSED", f"{ctx.author} ({ctx.author.id}) Bypassed verification"])
+        await user.remove_roles(ctx.guild.get_role(config.C["unverified_role"]))
         await user.add_roles(ctx.guild.get_role(config.C["verified_role"]))
         await ctx.respond("User bypassed verification.", ephemeral=True)
     
@@ -138,6 +146,7 @@ class Verification(commands.Cog):
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         await db.del_verification(user.id)
         await user.remove_roles(ctx.guild.get_role(config.C["verified_role"]))
+        await user.add_roles(ctx.guild.get_role(config.C["unverified_role"]))
         await ctx.respond("User unverified.", ephemeral=True)
 
 def setup(bot):
