@@ -146,8 +146,8 @@ class Prison(commands.Cog):
     async def on_reaction_add(self, reaction, user):
         if user.bot or reaction.message.author.bot:
             return
-        #if user == reaction.message.author:
-        #    return
+        if user == reaction.message.author:
+            return
 
         # if guild emoji and not in guild
         if not isinstance(reaction.emoji, str):
