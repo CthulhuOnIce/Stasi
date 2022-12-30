@@ -9,11 +9,15 @@ from . import database as db
 from . import config
 
 class Verification(commands.Cog):
+
+    verification_editing = discord.SlashCommandGroup("ver", "Edit the verification process")
+
     def __init__(self, bot):
         self.bot = bot
 
-    @slash_command(name='verquestions', description='View the verification questions and their IDs.')
-    @option('ephemeral', bool, description='Whether to send the questions as an ephemeral message or not.', default=True)
+
+    @verification_editing.command(name='questions', description='View the verification questions and their IDs.')
+    @option('ephemeral', bool, description='Whether to send the questions as an ephemeral message or not.')
     async def verquestions(self, ctx, ephemeral: bool = True):
         questions = await db.get_verification_questions()
         if not questions:
@@ -21,7 +25,7 @@ class Verification(commands.Cog):
         embed = discord.Embed(title="Verification Questions", description="\n\n".join(f"`{i}`. {question}" for i, question in enumerate(questions)))
         await ctx.respond(embed=embed, ephemeral=ephemeral)
 
-    @slash_command(name='veradd', description='Add a verification question.')
+    @verification_editing.command(name='add', description='Add a verification question.')
     @option('question', str, description='The question to add.')
     async def veradd(self, ctx, question: str):
         if not ctx.author.guild_permissions.manage_guild:
@@ -29,7 +33,7 @@ class Verification(commands.Cog):
         await db.add_verification_question(question)
         await ctx.respond("Question added.", ephemeral=True)
     
-    @slash_command(name='verdel', description='Delete a verification question.')
+    @verification_editing.command(name='del', description='Delete a verification question.')
     @option('index', int, description='The index of the question to delete.')
     async def verdel(self, ctx, index: int):
         if not ctx.author.guild_permissions.manage_guild:
@@ -37,7 +41,7 @@ class Verification(commands.Cog):
         await db.del_verification_question(index)
         await ctx.respond("Question deleted.", ephemeral=True)
     
-    @slash_command(name='verswap', description='Swap two verification questions.')
+    @verification_editing.command(name='swap', description='Swap two verification questions.')
     @option('index1', int, description='The index of the first question.')
     @option('index2', int, description='The index of the second question.')
     async def verswap(self, ctx, index1: int, index2: int):
@@ -46,7 +50,7 @@ class Verification(commands.Cog):
         await db.swap_verification_questions(index1, index2)
         await ctx.respond("Questions swapped.", ephemeral=True)
     
-    @slash_command(name='veredit', description='Clear all verification questions.')
+    @verification_editing.command(name='edit', description='Clear all verification questions.')
     @option('index', int, description='The index of the question to edit.')
     @option('question', str, description='The new question.')
     async def veredit(self, ctx, index: int, question: str):
@@ -88,6 +92,7 @@ class Verification(commands.Cog):
             await ctx.author.add_roles(verified_role)
             await ctx.respond("You have been verified.")
             await db.add_verification(ctx.author.id, [])
+            self.currently_verifying.remove(ctx.author.id)
             return
 
         if ctx.author.id in self.currently_verifying:
