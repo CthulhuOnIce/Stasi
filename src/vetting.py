@@ -101,10 +101,10 @@ class Verification(commands.Cog):
         try:
             msg = await channel.send(embed=intro_embed)
             channel = msg.channel    # this is a hack to get the channel, because at this point `channel == ctx.author` is false and we need it to be true
-            await ctx.respond("Check your DMs.", ephemeral=True)
+            await ctx.respond("Check your DMs.")
         except discord.Forbidden:
             channel = ctx.channel
-            await ctx.respond("Your DMs are disabled; I will ask you the verification questions in this channel.", ephemeral=True)
+            await ctx.respond("Your DMs are disabled; I will ask you the verification questions in this channel.")
             await channel.send(embed=intro_embed)
 
         def check(m):
