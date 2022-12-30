@@ -13,10 +13,11 @@ class Social(commands.Cog):
 
     @slash_command(name='userinfo', description='Get info about a user.')
     @option('user', discord.User, description='The user to get info about')
-    async def userinfo(self, ctx, user:discord.User):
+    @option('ephemeral', bool, description='Whether to send the message as an ephemeral message')
+    async def userinfo(self, ctx, user:discord.User, ephemeral:bool=False):
         embed = discord.Embed(title="User Info", description=f"Info about {user.display_name}", color=0x00ff00)
-        embed.set_author(name=str(user), icon_url=user.avatar_url)
-        embed.set_image(url=user.avatar_url)
+        embed.set_author(name=str(user), icon_url=user.avatar.url)
+        embed.set_thumbnail(url=user.avatar.url)
         embed.add_field(name="Joined Discord", value=user.created_at.strftime("%d/%m/%Y %H:%M:%S"))
 
         if user in ctx.guild.members:
@@ -26,11 +27,11 @@ class Social(commands.Cog):
         db_user = await db.get_user(user.id)
         if db_user:
             if "messages" in db_user:
-                embed.add_field(name="Total Messages", value=db_user.messages)
+                embed.add_field(name="Total Messages", value=db_user["messages"])
             if "reactions" in db_user:
-                embed.add
-            
-            embed.add_field(name="Total Messages", value=db_user.total_messages)
+                embed.add_field(name="Total Reactions", value="\n".join([f"{reaction}: {db_user['reactions'][reaction]}" for reaction in db_user["reactions"]]))
+        
+        await ctx.respond(embed=embed, ephemeral=ephemeral)
 
 def setup(bot):
     bot.add_cog(Social(bot))

@@ -69,20 +69,9 @@ class Prison(commands.Cog):
         if not prisoner:
             return await ctx.respond("That user is not in prison.", ephemeral=True)
 
-        prison_role = ctx.guild.get_role(config.C["prison_role"])
-
-        await member.remove_roles(prison_role)
-
-        roles = []
-        for role_id in prisoner["roles"]:
-            role = ctx.guild.get_role(role_id)
-            if role and role < ctx.guild.me.top_role:
-                roles.append(role)
-        await member.add_roles(*roles)
+        await self.free_prisoner(prisoner)
 
         await db.add_note(member.id, ctx.author.id, f"Released from prison early for '{reason}'")
-        await db.remove_prisoner(member.id)
-
         await ctx.respond(f"{member.mention} has been released from prison for `{reason}`.")
 
     @slash_command(name='adjustsentence', description='Adjust the sentence of a user.')
@@ -155,18 +144,15 @@ class Prison(commands.Cog):
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
-        if user.bot:
+        if user.bot or reaction.message.author.bot:
             return
-        if user == reaction.message.author:
-            return
-
-        # if default emoji
-        if isinstance(reaction.emoji, str):
-            return await db.add_reaction(reaction.emoji, reaction.message.author.id)
+        #if user == reaction.message.author:
+        #    return
 
         # if guild emoji and not in guild
-        if isinstance(reaction.emoji, discord.PartialEmoji) or not reaction.emoji.available:
-            return
+        if not isinstance(reaction.emoji, str):
+            if isinstance(reaction.emoji, discord.PartialEmoji) or not reaction.emoji.available:
+                return
         
         await db.add_reaction(reaction.emoji, reaction.message.author.id)
                 
