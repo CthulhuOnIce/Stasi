@@ -130,6 +130,15 @@ class Verification(commands.Cog):
         await db.add_verification(user.id, ["BYPASSED", f"{ctx.author} ({ctx.author.id}) Bypassed verification"])
         await user.add_roles(ctx.guild.get_role(config.C["verified_role"]))
         await ctx.respond("User bypassed verification.", ephemeral=True)
+    
+    @slash_command(name='unverify', description='Remove a user\'s verification record and make them do it again.')
+    @option('user', discord.Member, description='The user to unverify.')
+    async def unverify(self, ctx, user: discord.Member):
+        if not ctx.author.guild_permissions.manage_roles:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        await db.del_verification(user.id)
+        await user.remove_roles(ctx.guild.get_role(config.C["verified_role"]))
+        await ctx.respond("User unverified.", ephemeral=True)
 
 def setup(bot):
     bot.add_cog(Verification(bot))

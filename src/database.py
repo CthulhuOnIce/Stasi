@@ -112,6 +112,10 @@ async def add_verification(member_id, verification):
     db = await create_connection("users")
     return await db.update_one({"_id": member_id}, {"$set": {"verification": verification}}, upsert=True)
 
+async def del_verification(member_id):
+    db = await create_connection("users")
+    return await db.update_one({"_id": member_id}, {"$set": {"verification": []}}, upsert=True)
+
 
 # notes
 
