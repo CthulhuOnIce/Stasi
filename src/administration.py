@@ -48,7 +48,7 @@ class Administration(commands.Cog):
         if repo.is_dirty() and not force:  # if there are uncommitted changes, don't update
             await ctx.respond("Did not update, repo is dirty.", ephemeral=True)
             return
-        if repo.head.object.hexsha == repo.remotes.origin.refs.main.commit.hexsha:
+        if repo.head.object.hexsha == repo.remotes.origin.refs.master.commit.hexsha:
             await ctx.respond("No change in commit hash, not updating.", ephemeral=True)
             return
         # pull changes
