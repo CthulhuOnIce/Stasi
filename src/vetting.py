@@ -121,6 +121,15 @@ class Verification(commands.Cog):
         await db.add_verification(ctx.author.id, qna)
         await channel.send("Thank you for answering the questions. You have been verified.")
         self.currently_verifying.remove(ctx.author.id)
+    
+    @slash_command(name='bypassverify', description='Allow a user to bypass verification')
+    @option('user', discord.Member, description='The user to bypass verification for.')
+    async def bypassverify(self, ctx, user: discord.Member):
+        if not ctx.author.guild_permissions.manage_roles:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        await db.add_verification(user.id, ["BYPASSED", f"{ctx.author} ({ctx.author.id}) Bypassed verification"])
+        await user.add_roles(ctx.guild.get_role(config.C["verified_role"]))
+        await ctx.respond("User bypassed verification.", ephemeral=True)
 
 def setup(bot):
     bot.add_cog(Verification(bot))

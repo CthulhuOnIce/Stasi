@@ -8,7 +8,7 @@ import discord
 import yaml
 from discord.ext import commands
 
-from src import config, prison, vetting, administration
+from src import config, prison, vetting, administration, social
 
 # from disputils import BotEmbedPaginator, BotConfirmation, BotMultipleChoice
 
@@ -22,6 +22,7 @@ bot = commands.Bot(intents=intents, owner_id=config.C["sudoers"][0])
 prison.setup(bot)
 vetting.setup(bot)
 administration.setup(bot)
+social.setup(bot)
 # debug.setup(bot, C)
 # electionmanager.setup(bot, C)
 # legislation.setup(bot, C)

@@ -168,7 +168,7 @@ class Prison(commands.Cog):
         if isinstance(reaction.emoji, discord.PartialEmoji) or not reaction.emoji.available:
             return
         
-        await db.add_reaction(reaction.emoji.id, reaction.message.author.id)
+        await db.add_reaction(reaction.emoji, reaction.message.author.id)
                 
 
     @tasks.loop(minutes=1)
