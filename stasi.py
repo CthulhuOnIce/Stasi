@@ -8,7 +8,7 @@ import discord
 import yaml
 from discord.ext import commands
 
-from src import config, prison, vetting, administration, social
+from src import config, prison, vetting, administration, social, errortracking
 
 # from disputils import BotEmbedPaginator, BotConfirmation, BotMultipleChoice
 
@@ -23,6 +23,7 @@ prison.setup(bot)
 vetting.setup(bot)
 administration.setup(bot)
 social.setup(bot)
+errortracking.setup(bot)
 # debug.setup(bot, C)
 # electionmanager.setup(bot, C)
 # legislation.setup(bot, C)
@@ -60,5 +61,13 @@ async def on_command_error(ctx, error):  # share certain errors with the user
     if ctx:
         print(f"Author: {ctx.author}")
         print(f"Command: {ctx.message.clean_content}")
+    error_raw = ''.join(traceback.format_stack())
+    errortracking.report_error(error_raw)
+
+
+@bot.event
+async def on_error(event):
+    error_raw = ''.join(traceback.format_stack())
+    errortracking.report_error(error_raw)
 
 bot.run(config.C["token"])
