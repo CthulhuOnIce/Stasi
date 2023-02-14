@@ -13,7 +13,7 @@ class Verification(commands.Cog):
     verification_editing = discord.SlashCommandGroup("veredit", "Edit the verification process")
 
     @verification_editing.command(name='questions', description='View the verification questions and their IDs.')
-    async def verquestions(self, ctx, ephemeral: bool = True):
+    async def verquestions(self, ctx, ephemeral):
 
         questions = await db.get_verification_questions()
         if not questions:
@@ -147,7 +147,6 @@ class Verification(commands.Cog):
 
 
     def __init__(self, bot):
-        bot.add_application_command(self.verification_editing)
         self.bot = bot
 
 

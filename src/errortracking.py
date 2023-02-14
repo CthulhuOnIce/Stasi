@@ -2,7 +2,8 @@ from typing import Optional
 
 import discord
 from discord import option, slash_command
-from discord.ext import commands, tasks
+from discord.ext import commands, tasks, pages
+import datetime
 
 from . import database as db
 from . import config
@@ -10,14 +11,13 @@ from . import config
 error_limit = 10
 error_cache = []  # the last [error_limit] errors
 
-
 class ErrorTracking(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    group = discord.SlashCommandGroup("error", "Error tracking commands")
+    runtimes = discord.SlashCommandGroup("runtimes", "Runtime error tracking commands")
 
-    @group.command(name="new", description="Debug: create a new test error")
+    @runtimes.command(name="newerror", description="Debug: create a new test error", guild_ids=[863539767231905793])
     async def new_errors(self, ctx):
         global error_cache
 
@@ -28,8 +28,10 @@ class ErrorTracking(commands.Cog):
         error_cache.append({"date": date, "traceback": f"Debug error created by {ctx.author}"})
         error_cache = error_cache[-error_limit:]
 
+        await ctx.respond("Error created.", ephemeral=True)
+
     
-    @group.command(name="list", description="List the last [error_limit] errors")
+    @runtimes.command(name="list", description="List the last [error_limit] errors", guild_ids=[863539767231905793])
     async def list_errors(self, ctx):
         if not ctx.author.guild_permissions.manage_guild:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
