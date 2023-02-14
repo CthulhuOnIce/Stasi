@@ -10,15 +10,10 @@ from . import config
 
 class Verification(commands.Cog):
 
-    verification_editing = discord.SlashCommandGroup("ver", "Edit the verification process")
-
-    def __init__(self, bot):
-        self.bot = bot
-
+    verification_editing = discord.SlashCommandGroup("veredit", "Edit the verification process")
 
     @verification_editing.command(name='questions', description='View the verification questions and their IDs.')
-    @option('ephemeral', bool, description='Whether to send the questions as an ephemeral message or not.')
-    async def verquestions(self, ctx, ephemeral: bool = True):
+    async def verquestions(self, ctx, ephemeral):
         questions = await db.get_verification_questions()
         if not questions:
             return await ctx.respond("There are no verification questions.", ephemeral=True)
@@ -26,7 +21,6 @@ class Verification(commands.Cog):
         await ctx.respond(embed=embed, ephemeral=ephemeral)
 
     @verification_editing.command(name='add', description='Add a verification question.')
-    @option('question', str, description='The question to add.')
     async def veradd(self, ctx, question: str):
         if not ctx.author.guild_permissions.manage_guild:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
@@ -34,7 +28,6 @@ class Verification(commands.Cog):
         await ctx.respond("Question added.", ephemeral=True)
     
     @verification_editing.command(name='del', description='Delete a verification question.')
-    @option('index', int, description='The index of the question to delete.')
     async def verdel(self, ctx, index: int):
         if not ctx.author.guild_permissions.manage_guild:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
@@ -42,8 +35,6 @@ class Verification(commands.Cog):
         await ctx.respond("Question deleted.", ephemeral=True)
     
     @verification_editing.command(name='swap', description='Swap two verification questions.')
-    @option('index1', int, description='The index of the first question.')
-    @option('index2', int, description='The index of the second question.')
     async def verswap(self, ctx, index1: int, index2: int):
         if not ctx.author.guild_permissions.manage_guild:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
@@ -51,8 +42,6 @@ class Verification(commands.Cog):
         await ctx.respond("Questions swapped.", ephemeral=True)
     
     @verification_editing.command(name='edit', description='Clear all verification questions.')
-    @option('index', int, description='The index of the question to edit.')
-    @option('question', str, description='The new question.')
     async def veredit(self, ctx, index: int, question: str):
         if not ctx.author.guild_permissions.manage_guild:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
@@ -154,6 +143,12 @@ class Verification(commands.Cog):
         await user.remove_roles(ctx.guild.get_role(config.C["verified_role"]))
         await user.add_roles(ctx.guild.get_role(config.C["unverified_role"]))
         await ctx.respond("User unverified.", ephemeral=True)
+
+
+    def __init__(self, bot):
+        self.bot = bot
+
+
 
 def setup(bot):
     bot.add_cog(Verification(bot))
