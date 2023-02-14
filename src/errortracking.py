@@ -16,22 +16,8 @@ class ErrorTracking(commands.Cog):
         self.bot = bot
 
     runtimes = discord.SlashCommandGroup("runtimes", "Runtime error tracking commands")
-
-    @runtimes.command(name="newerror", description="Debug: create a new test error", guild_ids=[863539767231905793])
-    async def new_errors(self, ctx):
-        global error_cache
-
-        if not ctx.author.guild_permissions.manage_guild:
-            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
     
-        date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        error_cache.append({"date": date, "traceback": f"Debug error created by {ctx.author}"})
-        error_cache = error_cache[-error_limit:]
-
-        await ctx.respond("Error created.", ephemeral=True)
-
-    
-    @runtimes.command(name="list", description="List the last [error_limit] errors", guild_ids=[863539767231905793])
+    @runtimes.command(name="list", description="List the last [error_limit] errors")
     async def list_errors(self, ctx):
         if not ctx.author.guild_permissions.manage_guild:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
@@ -41,7 +27,7 @@ class ErrorTracking(commands.Cog):
             embeds.append(discord.Embed(title=error["date"], description=error["traceback"]))
         embed = discord.Embed(title="Error List", description="\n\n".join(f"`{error['date']}`: {error['traceback']}" for error in error_cache))
         # paginate
-        paginator = pages.Paginator(pages=embeds, per_page=1)
+        paginator = pages.Paginator(pages=embeds)
         await paginator.respond(ctx.interaction, ephemeral=True)
 
     @commands.Cog.listener()
@@ -50,8 +36,8 @@ class ErrorTracking(commands.Cog):
 
 def report_error(text):
     global error_cache
-    # create a string like "2021-01-01 12:00:00"
-    date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # create a string like "January 1st, 2021 at 12:00:00 AM"
+    date = datetime.datetime.now().strftime("%B %d, %Y at %I:%M:%S %p")
     error_cache.append({"date": date, "traceback": text})
     # trim cache
     error_cache = error_cache[-error_limit:]
