@@ -14,7 +14,6 @@ class Verification(commands.Cog):
 
     @verification_editing.command(name='questions', description='View the verification questions and their IDs.')
     async def verquestions(self, ctx, ephemeral):
-
         questions = await db.get_verification_questions()
         if not questions:
             return await ctx.respond("There are no verification questions.", ephemeral=True)
