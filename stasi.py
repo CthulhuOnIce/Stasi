@@ -61,7 +61,7 @@ async def on_command_error(ctx, error):  # share certain errors with the user
     if ctx:
         print(f"Author: {ctx.author}")
         print(f"Command: {ctx.message.clean_content}")
-    error_raw = ''.join(traceback.format_stack())
+    error_raw = ''.join(traceback.format_exception(error))
     errortracking.report_error(error_raw)
 
 @bot.event
@@ -79,13 +79,13 @@ async def on_application_command_error(ctx, error):  # share certain errors with
         if isinstance(original, IndexError):
             await ctx.send(f"IndexError: {original}\n[This might mean your search found no results]")
             return
-    await ctx.send("That command caused an error. This has been reported to the developer.")
+    await ctx.respond("That command caused an error. This has been reported to the developer.", ephemeral = True)
     print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
     if ctx:
         print(f"Author: {ctx.author}")
         print(f"Command: {ctx.message.clean_content}")
-    error_raw = ''.join(traceback.format_stack())
+    error_raw = ''.join(traceback.format_exception(error))
     errortracking.report_error(error_raw)
 
 
