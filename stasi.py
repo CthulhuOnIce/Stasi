@@ -91,7 +91,7 @@ async def on_application_command_error(ctx, error):  # share certain errors with
 
 @bot.event
 async def on_error(event, one, two):
-    error_raw = ''.join(traceback.format_stack())
+    error_raw = ''.join(traceback.format_exception(error))
     errortracking.report_error(error_raw)
 
 bot.run(config.C["token"])
