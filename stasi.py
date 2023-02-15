@@ -66,7 +66,7 @@ async def on_command_error(ctx, error):  # share certain errors with the user
 
 
 @bot.event
-async def on_error(event):
+async def on_error(event, one, two):
     error_raw = ''.join(traceback.format_stack())
     errortracking.report_error(error_raw)
 
