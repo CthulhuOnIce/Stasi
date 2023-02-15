@@ -64,6 +64,30 @@ async def on_command_error(ctx, error):  # share certain errors with the user
     error_raw = ''.join(traceback.format_stack())
     errortracking.report_error(error_raw)
 
+@bot.event
+async def on_application_command_error(ctx, error):  # share certain errors with the user
+    if isinstance(error, commands.CommandNotFound):
+        return
+    if isinstance(error, commands.BadArgument):
+        await ctx.send(f"Bad Argument: {error}")
+        return
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send(f"Missing Argument: {error}")
+        return
+    if isinstance(error, commands.CommandInvokeError):
+        original = error.original
+        if isinstance(original, IndexError):
+            await ctx.send(f"IndexError: {original}\n[This might mean your search found no results]")
+            return
+    await ctx.send("That command caused an error. This has been reported to the developer.")
+    print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
+    traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
+    if ctx:
+        print(f"Author: {ctx.author}")
+        print(f"Command: {ctx.message.clean_content}")
+    error_raw = ''.join(traceback.format_stack())
+    errortracking.report_error(error_raw)
+
 
 @bot.event
 async def on_error(event, one, two):
