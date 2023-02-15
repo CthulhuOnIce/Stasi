@@ -86,6 +86,7 @@ async def on_application_command_error(ctx, error):  # share certain errors with
         print(f"Author: {ctx.author}")
     error_raw = ''.join(traceback.format_exception(error))
     errortracking.report_error(error_raw)
+    print(f"reporting : {error_raw}")
 
 
 @bot.event
