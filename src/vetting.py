@@ -107,6 +107,8 @@ class Verification(commands.Cog):
         
         len_questions = len(questions)
 
+        await asyncio.sleep(1)
+
         for i, question in enumerate(questions):
             embed = discord.Embed(title=f"Verification Question #{i+1}/{len_questions}", description=question)
             await channel.send(embed=embed)
