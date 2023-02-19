@@ -61,7 +61,7 @@ async def on_command_error(ctx, error):  # share certain errors with the user
     if ctx:
         print(f"Author: {ctx.author}")
         print(f"Command: {ctx.message.clean_content}")
-    error_raw = ''.join(traceback.format_exception(error))
+    error_raw = ''.join(traceback.format_exception(type(error), error, error.__traceback__)
     errortracking.report_error(error_raw)
 
 @bot.event
@@ -84,7 +84,7 @@ async def on_application_command_error(ctx, error):  # share certain errors with
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
     if ctx:
         print(f"Author: {ctx.author}")
-    error_raw = ''.join(traceback.format_exception(error))
+    error_raw = ''.join(traceback.format_exception(type(error), error, error.__traceback__)
     errortracking.report_error(error_raw)
     print(f"reporting : {error_raw}")
 
