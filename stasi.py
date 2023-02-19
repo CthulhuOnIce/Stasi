@@ -88,9 +88,4 @@ async def on_application_command_error(ctx, error):  # share certain errors with
     errortracking.report_error(error_raw)
     print(f"reporting : {error_raw}")
 
-
-@bot.event
-async def on_error(event, one, two):
-    return
-
 bot.run(config.C["token"])
