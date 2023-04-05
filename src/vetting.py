@@ -8,6 +8,7 @@ import asyncio
 from . import database as db
 from . import config
 from . import artificalint as ai
+from . import security
 
 class Verification(commands.Cog):
 
@@ -45,6 +46,16 @@ class Verification(commands.Cog):
         await ctx.respond(embed=embed, ephemeral=False)
 
         self.currently_beta_verifying.remove(ctx.author.id)
+    
+    @slash_command(name='migratedb', description='Migrate the database to the new format.')
+    async def migratedb(self, ctx):
+        if not security.is_sudoer(ctx.author):
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        await ctx.interaction.response.defer()
+        await ctx.respond("Migrating database, check log for errors...", ephemeral=False)
+        await self.migratedb()
+        await ctx.respond("Database migrated.", ephemeral=False)
+
 
     @slash_command(name='asktutor', description='Ask Marxist AI tutor a question. [Answers may be wrong, this is for fun.]')  # TODO: move this where it actually belongs
     async def asktutor(self, ctx, question: str):
