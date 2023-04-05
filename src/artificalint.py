@@ -12,6 +12,17 @@ def make_chatgpt_request(messages: List[dict]):
   messages=messages
 )["choices"][0]
 
+def build_verification_embed(user, messages, verdict):
+    embed = discord.Embed(title=f"Verdict: {verdict}", description="Vetting completed.")
+    if user:
+        embed.set_author(name=user, icon_url=user.avatar.url)
+    if verdict == "bgtprb":
+        embed.set_footer("User is being overtly offensive, exercise caution.")
+    # fill out embed
+    for message in messages:
+        embed.add_field(name=message["role"], value=message["content"], inline=False)
+    return embed
+
 class VettingModerator:
 
     def generate_response(self):
@@ -20,8 +31,6 @@ class VettingModerator:
         return response["message"]["content"]
 
     async def vet_user(self, ctx, user):
-
-        await ctx.interaction.response.defer()
 
         def verdict_check(message):
             message = message.upper()
@@ -32,7 +41,7 @@ class VettingModerator:
             elif "[AREJECT]" in message:
                 return "areject"
             elif "[BGTPRB]" in message:
-                return "bgtp"
+                return "bgtprb"
             else:
                 return False
             

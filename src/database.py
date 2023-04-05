@@ -10,6 +10,7 @@ import pymongo
 import yaml
 
 from . import utils
+from typing import List
 
 try:
     with open("config.yml", "r") as r:
@@ -80,42 +81,20 @@ async def add_reaction(reaction, member_id):
 
 # verification
 
-async def set_verification_questions(questions):
-    return await set_global("verification_questions", questions)
+async def add_verification(member_id, verification: List[dict], verdict: str):
+    """Add the user verification to the verification database.
 
-async def add_verification_question(question):
-    db = await create_connection("globals")
-    return await db.update_one({"_id": "verification_questions"}, {"$push": {"value": question}}, upsert=True)
-
-async def del_verification_question(index):
-    db = await create_connection("globals")
-    return await db.update_one({"_id": "verification_questions"}, {"$pull": {"value": {"$index": index}}}, upsert=True)
-
-async def swap_verification_questions(index1, index2):
-    questions = await get_verification_questions()
-    if index1 >= len(questions) or index2 >= len(questions):
-        return
-    questions[index1], questions[index2] = questions[index2], questions[index1]
-    await set_verification_questions(questions)
-
-async def edit_verification_question(index, question):
-    db = await create_connection("globals")
-    return await db.update_one({"_id": "verification_questions"}, {"$set": {"value.$[index]": question}}, upsert=True, array_filters=[{"index": index}])
-
-async def get_verification_questions():
-    questions = await get_global("verification_questions")
-    if questions is None:
-        return []
-    return questions
-
-async def add_verification(member_id, verification):
+    Args:
+        member_id (int): This is the user id of the member being verified
+        verification (List[dict]): [{"role": "role", "content": "message"}] same style as openai api
+        verdict (str): left, right, bgtprb
+    """
     db = await create_connection("users")
-    return await db.update_one({"_id": member_id}, {"$set": {"verification": verification}}, upsert=True)
+    return await db.update_one({"_id": member_id}, {"$set": {"verification": verification, "verification_verdict": verdict}}, upsert=True)
 
 async def del_verification(member_id):
     db = await create_connection("users")
-    return await db.update_one({"_id": member_id}, {"$set": {"verification": []}}, upsert=True)
-
+    return await db.update_one({"_id": member_id}, {"$unset": {"verification": True, "verification_verdict": True}}, upsert=True)
 
 # notes
 
