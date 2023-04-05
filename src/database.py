@@ -96,6 +96,17 @@ async def del_verification(member_id):
     db = await create_connection("users")
     return await db.update_one({"_id": member_id}, {"$unset": {"verification": True, "verification_verdict": True}}, upsert=True)
 
+async def migrate_verification():
+    db = await create_connection("users")
+    users = await db.find({"verificiation": {"$ne": []}}).to_list(None)
+    for user in users:
+        messages = []
+        for qna in user["verification"]:
+            messages.append({"role": "assistant", "content": qna[0]})
+            messages.append({"role": "user", "content": qna[1]})
+        messages.append({"role": "system", "content": "Migrated from old verification. [LEFT]"})
+        await db.update_one({"_id": user["_id"]}, {"$set": {"verification": messages, "verification_verdict": "left"}}, upsert=True)
+
 # notes
 
 async def add_note(member_id, author_id, note):
