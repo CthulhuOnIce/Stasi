@@ -100,13 +100,15 @@ async def migrate_verification():
     db = await create_connection("users")
     users = await db.find({"verificiation": {"$ne": []}}).to_list(None)
     for user in users:
+        print(user["_id"])
         messages = []
         for qna in user["verification"]:
+            print(f"Q: {qna[0]}\nA: {qna[1]}")
             messages.append({"role": "assistant", "content": qna[0]})
             messages.append({"role": "user", "content": qna[1]})
         messages.append({"role": "system", "content": "Migrated from old verification. [LEFT]"})
         await db.update_one({"_id": user["_id"]}, {"$set": {"verification": messages, "verification_verdict": "left"}}, upsert=True)
-
+        print(f"Updated {user['_id']}.")
 # notes
 
 async def add_note(member_id, author_id, note):
