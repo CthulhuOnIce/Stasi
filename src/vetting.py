@@ -47,22 +47,22 @@ class Verification(commands.Cog):
 
         self.currently_beta_verifying.remove(ctx.author.id)
     
-    @slash_command(name='migratedb', description='Migrate the database to the new format.')
-    async def migratedb(self, ctx):
-        if not security.is_sudoer(ctx.author):
-            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
-        await ctx.interaction.response.defer()
-        await ctx.respond("Migrating database, check log for errors...", ephemeral=False)
-        await self.db.migrate_verification()
-        await ctx.respond("Database migrated.", ephemeral=False)
-
 
     @slash_command(name='asktutor', description='Ask Marxist AI tutor a question. [Answers may be wrong, this is for fun.]')  # TODO: move this where it actually belongs
     async def asktutor(self, ctx, question: str):
         await ctx.interaction.response.defer()
         embed = discord.Embed(title="Question", description=question)
         embed.set_author(name=ctx.author, icon_url=ctx.author.avatar.url)
-        embed.add_field(name="Answer", value=ai.tutor_question(question))
+        answer = ai.tutor_question(question)
+        if len(answer) <= 1024:
+            embed.add_field(name="Answer", value=answer, inline=False)
+        elif len(answer) <= 2048:  # TODO: this can be done more efficiently
+            embed.add_field(name="Answer", value=answer[:1024], inline=False)
+            embed.add_field(name="Answer (cont.)", value=answer[1024:], inline=False)
+        else:
+            embed.add_field(name="Answer", value=answer[:1024], inline=False)
+            embed.add_field(name="Answer (cont.)", value=answer[1024:2048], inline=False)
+            embed.add_field(name="Answer (cont. cont.)", value=answer[2048:], inline=False)
         await ctx.respond(embed=embed, ephemeral=False)
 
     currently_ai_verifying = []
@@ -75,7 +75,7 @@ class Verification(commands.Cog):
             return await ctx.respond("You are already being verified.", ephemeral=True)
 
         # reject if the channel isnt a dm
-        if ctx.channel.is_dm_channel:
+        if not ctx.guild:
             return await ctx.respond("Please don't run this command in your DMs.", ephemeral=True)
 
         await ctx.interaction.response.defer()  # running this here because we have to run some stuff before creating mod
@@ -95,6 +95,9 @@ class Verification(commands.Cog):
         moderator = ai.VettingModerator()
         verdict = await moderator.vet_user(ctx, ctx.author)
 
+        # sanitize log to not include system messages
+        moderator.messages = [message for message in moderator.messages if message["role"] != "system"]
+
         # log to channel
         log_channel = None
         if "log_channel" in config.C and config.C["log_channel"]:
@@ -113,6 +116,9 @@ class Verification(commands.Cog):
             verification_role = ctx.guild.get_role(config.C["rightwing_role"])
         elif verdict == "areject" or verdict == "error" or verdict == False:
             return self.currently_ai_verifying.remove(ctx.author.id)
+        
+        # dm user informing them of their verdict
+        await ctx.author.send(embed=discord.Embed(title="Verification Complete", description="Welcome to the server!", color=discord.Color.green()))
 
         # update roles
         if verification_role:

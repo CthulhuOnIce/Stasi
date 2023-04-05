@@ -45,11 +45,11 @@ class Social(commands.Cog):
         if not db_user:
             await ctx.respond("User not found.", ephemeral=True)
             return
-        if "verdict" not in db_user:
+        if "verification_verdict" not in db_user:
             await ctx.respond("User has not been vetted.", ephemeral=True)
             return
-        if "vetting_answers" not in db_user:
-            await ctx.respond("User has no vetting answers.", ephemeral=True)
+        if "verification_interview" not in db_user:
+            await ctx.respond(f"User has no vetting answers. Verdict is lsited as {db_user['verification_verdict']}", ephemeral=True)
             return
         embed = ai.build_verification_embed(user, db_user["verification_interview"], db_user["verification_verdict"])
         await ctx.respond(embed=embed, ephemeral=ephemeral)
