@@ -53,7 +53,7 @@ class Verification(commands.Cog):
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         await ctx.interaction.response.defer()
         await ctx.respond("Migrating database, check log for errors...", ephemeral=False)
-        await self.migratedb()
+        await self.db.migrate_verification()
         await ctx.respond("Database migrated.", ephemeral=False)
 
 
