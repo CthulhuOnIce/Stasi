@@ -6,6 +6,7 @@ from discord.ext import commands, tasks
 
 from . import database as db
 from . import config
+from . import artificalint as ai
 
 class Social(commands.Cog):
     def __init__(self, bot):
@@ -44,14 +45,13 @@ class Social(commands.Cog):
         if not db_user:
             await ctx.respond("User not found.", ephemeral=True)
             return
-        if "verification" not in db_user:
+        if "verification_verdict" not in db_user:
             await ctx.respond("User has not been vetted.", ephemeral=True)
             return
-        embed = discord.Embed(title="Vetting Answers", description=f"Answers for {user}", color=0x00ff00)
-        for _ in db_user["verification"]:
-            question = _[0]
-            answer = _[1]
-            embed.add_field(name=question, value=answer, inline=False)
+        if "verification_interview" not in db_user:
+            await ctx.respond(f"User has no vetting answers. Verdict is lsited as {db_user['verification_verdict']}", ephemeral=True)
+            return
+        embed = ai.build_verification_embed(user, db_user["verification_interview"], db_user["verification_verdict"])
         await ctx.respond(embed=embed, ephemeral=ephemeral)
 
     @slash_command(name='notes', description='Get a user\'s admin notes.')
