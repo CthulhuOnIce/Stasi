@@ -100,7 +100,7 @@ class Verification(commands.Cog):
             verification_role = ctx.guild.get_role(config.C["leftwing_role"])
         elif verdict == "right" or verdict == "bgtprb":
             verification_role = ctx.guild.get_role(config.C["rightwing_role"])
-        elif verdict == "areject" or verdict == "error":
+        elif verdict == "areject" or verdict == "error" or verdict == False:
             return self.currently_ai_verifying.remove(ctx.author.id)
 
         # update roles
