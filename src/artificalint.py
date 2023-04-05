@@ -54,7 +54,7 @@ class VettingModerator:
     
         await ctx.respond("Check your DMs", ephemeral=True)
         
-        while not verdict_check(self.messages[-1]["content"]) and len(self.messages) < 20:
+        while not verdict_check(self.messages[-1]["content"]) and len(self.messages) < 26:
             try:
                 message = await ctx.bot.wait_for("message", check=lambda m: m.author == user, timeout=60*20)  # 20 minutes to answer
                 dm_channel = message.channel
