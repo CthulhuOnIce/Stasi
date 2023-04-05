@@ -56,8 +56,8 @@ class Verification(commands.Cog):
         if ctx.author.id in self.currently_beta_verifying:
             return await ctx.respond("You are already being verified.", ephemeral=True)
         # reject if the channel isnt a dm
-        if ctx.channel != ctx.author.dm_channel:
-            return await ctx.respond("Please run this command in your DMs.", ephemeral=True)
+        if ctx.channel == ctx.author.dm_channel:
+            return await ctx.respond("Please don't run this command in your DMs.", ephemeral=True)
         
 
         self.currently_beta_verifying.append(ctx.author.id)
