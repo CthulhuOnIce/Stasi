@@ -7,6 +7,7 @@ import asyncio
 
 from . import database as db
 from . import config
+from . import artificalint as ai
 
 class Verification(commands.Cog):
 
@@ -48,6 +49,48 @@ class Verification(commands.Cog):
         await db.edit_verification_question(index, question)
         await ctx.respond("Question edited.", ephemeral=True)
 
+    currently_beta_verifying = []
+
+    @slash_command(name='betaverify', description='Test the new AI-based vetting system.')
+    async def betaverify(self, ctx):
+        if ctx.author.id in self.currently_beta_verifying:
+            return await ctx.respond("You are already being verified.", ephemeral=True)
+        # reject if the channel isnt a dm
+        if ctx.channel != ctx.author.dm_channel:
+            return await ctx.respond("Please run this command in your DMs.", ephemeral=True)
+        
+
+        self.currently_beta_verifying.append(ctx.author.id)
+        
+        moderator = ai.VettingModerator()
+        verdict = await moderator.vet_user(ctx, ctx.author)
+
+        def explain_verdict(verdict):
+            if verdict == "left":
+                return "SYSTEM: Verdict is LEFT. You are a left-winger."
+            elif verdict == "right":
+                return "SYSTEM: Verdict is RIGHT. You are a right-winger or your leanings or ambiguous."
+            elif verdict == "areject":
+                return "SYSTEM: Verdict is AREJECT. You are intentionally frustrating the vetting process."
+            elif verdict == "bgtp":
+                return "SYSTEM: Verdict is BGTP. You are being overtly offensive."
+            else:
+                return "SYSTEM: The AI never made a resolution code. Report this to the developers."
+            
+        embed = discord.Embed(title=f"Verdict: {verdict}", description=explain_verdict(verdict))
+        for message in moderator.messages:
+            embed.add_field(name=message["role"] if message["role"] != "user" else ctx.author, value=message["content"], inline=False)
+        await ctx.respond(embed=embed, ephemeral=False)
+
+        self.currently_beta_verifying.remove(ctx.author.id)
+
+    @slash_command(name='asktutor', description='Ask Marxist AI tutor a question. [Answers may be wrong, this is for fun.]')  # TODO: move this where it actually belongs
+    async def asktutor(self, ctx, question: str):
+        await ctx.interaction.response.defer()
+        embed = discord.Embed(title="Question", description=question)
+        embed.set_author(name=ctx.author, icon_url=ctx.author.avatar.url)
+        embed.add_field(name="Answer", value=ai.tutor_question(question))
+        await ctx.respond(embed=embed, ephemeral=False)
 
     currently_verifying = []
 
