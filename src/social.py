@@ -51,7 +51,7 @@ class Social(commands.Cog):
         if "vetting_answers" not in db_user:
             await ctx.respond("User has no vetting answers.", ephemeral=True)
             return
-        embed = ai.build_verification_embed(user, db_user["verdict"], db_user["vetting_answers"])
+        embed = ai.build_verification_embed(user, db_user["verification_interview"], db_user["verification_verdict"])
         await ctx.respond(embed=embed, ephemeral=ephemeral)
 
     @slash_command(name='notes', description='Get a user\'s admin notes.')
