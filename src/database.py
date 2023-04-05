@@ -90,11 +90,11 @@ async def add_verification(member_id, verification: List[dict], verdict: str):
         verdict (str): left, right, bgtprb
     """
     db = await create_connection("users")
-    return await db.update_one({"_id": member_id}, {"$set": {"verification": verification, "verification_verdict": verdict}}, upsert=True)
+    return await db.update_one({"_id": member_id}, {"$set": {"verification_interview": verification, "verification_verdict": verdict}}, upsert=True)
 
 async def del_verification(member_id):
     db = await create_connection("users")
-    return await db.update_one({"_id": member_id}, {"$unset": {"verification": True, "verification_verdict": True}}, upsert=True)
+    return await db.update_one({"_id": member_id}, {"$unset": {"verification_interview": True, "verification_verdict": True}}, upsert=True)
 
 async def migrate_verification():
     db = await create_connection("users")
@@ -107,7 +107,9 @@ async def migrate_verification():
             messages.append({"role": "assistant", "content": qna[0]})
             messages.append({"role": "user", "content": qna[1]})
         messages.append({"role": "system", "content": "Migrated from old verification. [LEFT]"})
-        await db.update_one({"_id": user["_id"]}, {"$set": {"verification": messages, "verification_verdict": "left"}}, upsert=True)
+        await db.update_one({"_id": user["_id"]}, {
+            "$set": {"verification_interview": messages, "verification_verdict": "left"},
+            "$unset": {"verification": True}}, upsert=True)
         print(f"Updated {user['_id']}.")
 # notes
 
