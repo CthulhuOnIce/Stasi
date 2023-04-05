@@ -13,8 +13,6 @@ def make_chatgpt_request(messages: List[dict]):
 )["choices"][0]
 
 class VettingModerator:
-    messages = [{"role": "system", "content": config.C["openai"]["vetting_prompt"]},
-                {"role": "user", "content": "[START VETTING]"}]
 
     def generate_response(self):
         response = make_chatgpt_request(self.messages)
@@ -61,35 +59,11 @@ class VettingModerator:
         verdict = verdict_check(self.messages[-1]["content"])
 
         return verdict 
-    
 
-
-
-        """
-        latest_message = None  # we can grab it now but its gonna get reassigned anyway
-        while not verdict_check(latest_message) and len(self.messages) < 20:
-            latest_message = self.messages[-1]["content"]
-
-            try:
-                message = await user.send(latest_message)
-                dm_channel = message.channel 
-
-                try :
-                    message = await self.bot.wait_for("message", check=lambda m: m.author == user and m.channel == dm_channel, timeout=300)  # 5 minutes to answer
-                except asyncio.TimeoutError:
-                    await user.send("SYSTEM: You have timed out. Please try again later.")
-                    return "areject"
-
-            except discord.Forbidden:
-                await ctx.respond("I cannot send messages to you. Please enable DMs from server members and try again.", ephemeral=True)
-                return
-
-            await ctx.respond(self.generate_response())
-        
-        verdict = verdict_check(latest_message)
-        if not verdict:
-            return "error"
-        """
+    def __init__(self):
+        self.messages = [{"role": "system", "content": config.C["openai"]["vetting_prompt"]},
+            {"role": "user", "content": "[START VETTING]"}].copy()
+        self.vetting = True
         
 
 def tutor_question(question):
