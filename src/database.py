@@ -59,8 +59,7 @@ user_template = {
     "_id": int,
     "last_seen": datetime.datetime.utcnow(),
     "last_name": str, 
-    "messages": int,
-    "verification": []
+    "messages": int
 }
 
 async def get_user(member_id):
