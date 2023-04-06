@@ -13,6 +13,7 @@ def make_chatgpt_request(messages: List[dict]):
 )["choices"][0]
 
 def build_verification_embed(user, messages, verdict):
+    messages = messages.copy()
     embed = discord.Embed(title=f"Verdict: {verdict}", description="Vetting completed.")
     if user:
         embed.set_author(name=user, icon_url=user.avatar.url)
