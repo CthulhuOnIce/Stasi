@@ -17,7 +17,7 @@ def build_verification_embed(user, messages, verdict):
     if user:
         embed.set_author(name=user, icon_url=user.avatar.url)
     if verdict == "bgtprb":
-        embed.set_footer("User is being overtly offensive, exercise caution.")
+        embed.set_footer(text="User is being overtly offensive, exercise caution.")
     # fill out embed
     for message in messages:
         embed.add_field(name=message["role"], value=message["content"], inline=False)
