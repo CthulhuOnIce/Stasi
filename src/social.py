@@ -77,7 +77,20 @@ class Social(commands.Cog):
                 author = "Unknown"
             embed.add_field(name=f'From {author} on {note["timestamp"]}', value=note["note"], inline=False)
         await ctx.respond(embed=embed, ephemeral=ephemeral)
+        
+    @commands.Cog.listener()
+    async def on_reaction_add(self, reaction, user):
+        if user.bot or reaction.message.author.bot:
+            return
+        if user == reaction.message.author:
+            return
 
+        # if guild emoji and not in guild
+        if not isinstance(reaction.emoji, str):
+            if isinstance(reaction.emoji, discord.PartialEmoji) or not reaction.emoji.available:
+                return
+        
+        await db.add_reaction(reaction.emoji, reaction.message.author.id)
 
 def setup(bot):
     bot.add_cog(Social(bot))
