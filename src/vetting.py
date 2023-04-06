@@ -142,7 +142,7 @@ class Verification(commands.Cog):
     async def verifyyank(self, ctx, user: discord.Member, ephemeral=True):
         if not ctx.author.guild_permissions.manage_roles:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
-        if user.id in self.currently_ai_verifying:
+        if str(user.id) in self.currently_ai_verifying:
             moderator = self.currently_ai_verifying[f"{user.id}"]
             embed = ai.build_verification_embed(user, moderator.messages, "yanked")
             await ctx.respond(embed=embed, ephemeral=True)
