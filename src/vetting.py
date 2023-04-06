@@ -42,6 +42,7 @@ class Verification(commands.Cog):
             
         embed = discord.Embed(title=f"Verdict: {verdict}", description=explain_verdict(verdict))
         for message in moderator.messages:
+            if message["role"] == "system": continue
             embed.add_field(name=message["role"] if message["role"] != "user" else ctx.author, value=message["content"], inline=False)
         await ctx.respond(embed=embed, ephemeral=False)
 
