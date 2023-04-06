@@ -14,14 +14,14 @@ def make_chatgpt_request(messages: List[dict]):
 
 def build_verification_embed(user, messages, verdict):
     messages = messages.copy()
-    embed = discord.Embed(title=f"Verdict: {verdict}", description="Vetting completed.")
+    embed = discord.Embed(title=f"Verdict: {verdict}", description="Vetting completed." if verdict is not "yanked" else "Vetting in progress.")
     if user:
         embed.set_author(name=user, icon_url=user.avatar.url)
     if verdict == "bgtprb":
         embed.set_footer(text="User is being overtly offensive, exercise caution.")
     elif verdict == "yanked":
         embed.set_footer(text="Interview still in progres.")
-    # fill out embed
+    # fill out embed, i
     for message in messages:
         if len(message["content"]) > 1024:
             message["content"] = message["content"][:1021] + "..."
