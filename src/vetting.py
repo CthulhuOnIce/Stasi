@@ -75,7 +75,7 @@ class Verification(commands.Cog):
     async def verify(self, ctx):
 
         # cant have several lines of questioning at once
-        if ctx.author.id in self.currently_beta_verifying:
+        if str(ctx.author.id) in self.currently_beta_verifying:
             return await ctx.respond("You are already being verified.", ephemeral=True)
 
         # reject if the channel isnt a dm
