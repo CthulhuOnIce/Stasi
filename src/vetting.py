@@ -42,8 +42,10 @@ class Verification(commands.Cog):
                 return "SYSTEM: The AI never made a resolution code. Report this to the developers."
             
         embed = discord.Embed(title=f"Verdict: {verdict}", description=explain_verdict(verdict))
-        for message in moderator.messages:
+        for message in moderator.messages.copy():
             if message["role"] == "system": continue
+            if len(message["content"]) > 1024:
+                message["content"] = message["content"][:1021] + "..."
             embed.add_field(name=message["role"] if message["role"] != "user" else ctx.author, value=message["content"], inline=False)
         await ctx.respond(embed=embed, ephemeral=False)
 
