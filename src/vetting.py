@@ -67,7 +67,7 @@ class Verification(commands.Cog):
             embed.add_field(name="Answer (cont. cont.)", value=answer[2048:], inline=False)
         await ctx.respond(embed=embed, ephemeral=False)
 
-    currently_ai_verifying = []
+    currently_ai_verifying = {}
 
     @slash_command(name='verify', description='Verify yourself!')
     async def verify(self, ctx):
@@ -90,11 +90,12 @@ class Verification(commands.Cog):
             if unverified_role in ctx.author.roles:
                 await ctx.author.remove_roles(unverified_role)
             return await ctx.respond("You are already verified.", ephemeral=True)
-        
-        # officially start verifying
-        self.currently_ai_verifying.append(ctx.author.id)
-        
+
+        # officially start verifying        
         moderator = ai.VettingModerator()
+
+        self.currently_ai_verifying[f"{ctx.author.id}"] = moderator
+
         verdict = await moderator.vet_user(ctx, ctx.author)
 
         # sanitize log to not include system messages
@@ -117,7 +118,7 @@ class Verification(commands.Cog):
         elif verdict == "right" or verdict == "bgtprb":
             verification_role = ctx.guild.get_role(config.C["rightwing_role"])
         elif verdict == "areject" or verdict == "error" or verdict == False:
-            return self.currently_ai_verifying.remove(ctx.author.id)
+            return self.currently_ai_verifying.pop(f"{ctx.author.id}")
         
         # dm user informing them of their verdict
         embed = discord.Embed(title="✅ Verification Approved", description="Welcome to the server!", color=discord.Color.green())
@@ -131,7 +132,49 @@ class Verification(commands.Cog):
                 await ctx.author.remove_roles(unverified_role) # only log the verif in the db if they passed somehow
             await db.add_verification(ctx.author.id, moderator.messages, verdict)  # internal db
 
-        self.currently_ai_verifying.remove(ctx.author.id)
+        self.currently_ai_verifying.pop(f"{ctx.author.id}")
+    
+    @slash_command(name='verifyyank', description='Yank a currently verifying users\' progress.')
+    @option('user', discord.Member, description='The user to yank progress for.')
+    @option('ephemeral', bool, description='Whether to send the message as an ephemeral message or not.', default=True)
+    async def verifyyank(self, ctx, user: discord.Member, ephemeral=True):
+        if not ctx.author.guild_permissions.manage_roles:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        if user.id in self.currently_ai_verifying:
+            moderator = self.currently_ai_verifying[f"{user.id}"]
+            embed = ai.build_verification_embed(user, moderator.messages, "yanked")
+            await ctx.respond(embed=embed, ephemeral=True)
+        else:
+            await ctx.respond("User is not being verified.", ephemeral=True)
+
+    @slash_command(name='verfifying', description='See who is verifying currently.')
+    async def verifying(self, ctx):
+        if not ctx.author.guild_permissions.manage_roles:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        if len(self.currently_ai_verifying) == 0:
+            return await ctx.respond("No one is currently being verified.", ephemeral=True)
+        
+        # start building embed
+        embed = discord.Embed(title="Currently Verifying", description="These users are currently being verified.")
+        
+        remove = []  # garbage collector for dangling moderator objects w/o a user to interview anymore
+
+        # sort
+        for user_id in self.currently_ai_verifying:
+            moderator = self.currently_ai_verifying[user_id]
+            if not moderator.user or moderator.user not in ctx.guild.members:
+                remove.append(user_id)
+                continue
+            embed.add_field(name=moderator.user.name, value=f"Messages: {len(moderator.messages)}", inline=False)
+        
+        # remove dangling moderators, garbage collector should take care of the rest
+        for user_id in remove:
+            self.currently_ai_verifying.pop(user_id)
+        
+        if len(remove):
+            embed.set_footer(text=f"{len(remove)} users were removed from the list because they left the server, or otherwise have dangling verification")
+
+        await ctx.respond(embed=embed, ephemeral=True)
 
     @slash_command(name='bypassverify', description='Allow a user to bypass verification')
     @option('user', discord.Member, description='The user to bypass verification for.')

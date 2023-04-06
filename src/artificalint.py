@@ -18,12 +18,18 @@ def build_verification_embed(user, messages, verdict):
         embed.set_author(name=user, icon_url=user.avatar.url)
     if verdict == "bgtprb":
         embed.set_footer(text="User is being overtly offensive, exercise caution.")
+    elif verdict == "yanked":
+        embed.set_footer(text="Interview still in progres.")
     # fill out embed
     for message in messages:
+        if len(message["content"]) > 1024:
+            message["content"] = message["content"][:1021] + "..."
         embed.add_field(name=message["role"], value=message["content"], inline=False)
     return embed
 
 class VettingModerator:
+
+    user: None
 
     def generate_response(self):
         response = make_chatgpt_request(self.messages)
@@ -31,6 +37,8 @@ class VettingModerator:
         return response["message"]["content"]
 
     async def vet_user(self, ctx, user):
+
+        self.user = user
 
         def verdict_check(message):
             message = message.upper()
