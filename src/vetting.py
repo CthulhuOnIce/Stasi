@@ -118,7 +118,9 @@ class Verification(commands.Cog):
             return self.currently_ai_verifying.remove(ctx.author.id)
         
         # dm user informing them of their verdict
-        await ctx.author.send(embed=discord.Embed(title="Verification Complete", description="Welcome to the server!", color=discord.Color.green()))
+        embed = discord.Embed(title="✅ Verification Approved", description="Welcome to the server!", color=discord.Color.green())
+        embed.set_author(name=ctx.author, icon_url=ctx.author.avatar.url)
+        await ctx.author.send(embed=embed)
 
         # update roles
         if verification_role:
