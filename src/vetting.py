@@ -147,7 +147,7 @@ class Verification(commands.Cog):
         else:
             await ctx.respond("User is not being verified.", ephemeral=True)
 
-    @slash_command(name='verfifying', description='See who is verifying currently.')
+    @slash_command(name='verifying', description='See who is verifying currently.')
     async def verifying(self, ctx):
         if not ctx.author.guild_permissions.manage_roles:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
