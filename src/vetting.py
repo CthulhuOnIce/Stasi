@@ -147,7 +147,7 @@ class Verification(commands.Cog):
             embed = ai.build_verification_embed(user, [message for message in moderator.messages if message["role"] != "system"], "yanked")
             await ctx.respond(embed=embed, ephemeral=True)
         else:
-            await ctx.respond("User is not being verified.", ephemeral=True)
+            await ctx.respond("User is not being verified.", ephemeral=ephemeral)
 
     @slash_command(name='verifying', description='See who is verifying currently.')
     async def verifying(self, ctx):
