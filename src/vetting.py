@@ -85,7 +85,7 @@ class Verification(commands.Cog):
 
         # if already verified, just skip
         user = await db.get_user(ctx.author.id)
-        if "verification" in user and user["verification"]:
+        if "verification" in user and user["verification_verdict"]:
             if unverified_role in ctx.author.roles:
                 await ctx.author.remove_roles(unverified_role)
             return await ctx.respond("You are already verified.", ephemeral=True)
