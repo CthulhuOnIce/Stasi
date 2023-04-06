@@ -22,6 +22,7 @@ class Verification(commands.Cog):
         if ctx.channel == ctx.author.dm_channel:
             return await ctx.respond("Please don't run this command in your DMs.", ephemeral=True)
         
+        await ctx.interaction.response.defer()
 
         self.currently_beta_verifying.append(ctx.author.id)
         
