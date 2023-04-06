@@ -57,7 +57,7 @@ class Verification(commands.Cog):
         await ctx.interaction.response.defer()
         embed = discord.Embed(title="Question", description=question)
         embed.set_author(name=ctx.author, icon_url=ctx.author.avatar.url)
-        answer = ai.tutor_question(question)
+        answer = await ai.tutor_question(question)
         if len(answer) <= 1024:
             embed.add_field(name="Answer", value=answer, inline=False)
         elif len(answer) <= 2048:  # TODO: this can be done more efficiently
@@ -197,6 +197,7 @@ class Verification(commands.Cog):
 
         left = ctx.guild.get_role(config.C["leftwing_role"])
         right = ctx.guild.get_role(config.C["rightwing_role"])
+
         if left in ctx.author.roles:
             await user.remove_roles(left)
         if right in ctx.author.roles:

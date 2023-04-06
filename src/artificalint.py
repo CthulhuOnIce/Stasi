@@ -6,21 +6,22 @@ import asyncio
 
 openai.api_key = config.C["openai"]["key"]
 
-def make_chatgpt_request(messages: List[dict]):
-    return openai.ChatCompletion.create(
+async def make_chatgpt_request(messages: List[dict]):
+    res = await openai.ChatCompletion.acreate(
   model="gpt-3.5-turbo",
   messages=messages
-)["choices"][0]
+)
+    return res["choices"][0]
 
 def build_verification_embed(user, messages, verdict):
     messages = messages.copy()
-    embed = discord.Embed(title=f"Verdict: {verdict}", description="Vetting completed." if verdict is not "yanked" else "Vetting in progress.")
+    embed = discord.Embed(title=f"Verdict: {verdict}", description="Vetting completed." if verdict != "yanked" else "Vetting in progress.")
     if user:
         embed.set_author(name=user, icon_url=user.avatar.url)
     if verdict == "bgtprb":
         embed.set_footer(text="User is being overtly offensive, exercise caution.")
     elif verdict == "yanked":
-        embed.set_footer(text="Interview still in progres.")
+        embed.set_footer(text="Interview still in progress.")
     # fill out embed, i
     for message in messages:
         if len(message["content"]) > 1024:
@@ -32,8 +33,8 @@ class VettingModerator:
 
     user: None
 
-    def generate_response(self):
-        response = make_chatgpt_request(self.messages)
+    async def generate_response(self):
+        response = await make_chatgpt_request(self.messages)
         self.messages.append({"role": "assistant", "content": response["message"]["content"]})
         return response["message"]["content"]
 
@@ -54,7 +55,7 @@ class VettingModerator:
             else:
                 return False
             
-        self.generate_response()
+        await self.generate_response()
         try:
             await user.send(self.messages[-1]["content"])
         except discord.Forbidden:
@@ -71,7 +72,8 @@ class VettingModerator:
                 await user.send("SYSTEM: You have timed out (20 minutes). Please try again later.")
                 return "areject"
         
-            await user.send(self.generate_response())
+            response = await self.generate_response()
+            await user.send(response)
         
         verdict = verdict_check(self.messages[-1]["content"])
 
@@ -83,7 +85,8 @@ class VettingModerator:
         self.vetting = True
         
 
-def tutor_question(question):
-    return make_chatgpt_request([{"role": "system", "content": config.C["openai"]["tutor_prompt"]}, {"role": "user", "content": question}])["message"]["content"]
+async def tutor_question(question):
+    res = await make_chatgpt_request([{"role": "system", "content": config.C["openai"]["tutor_prompt"]}, {"role": "user", "content": question}])
+    return res["message"]["content"]
 
             
