@@ -56,7 +56,7 @@ class VettingModerator:
         
         while not verdict_check(self.messages[-1]["content"]) and len(self.messages) < 26:
             try:
-                message = await ctx.bot.wait_for("message", check=lambda m: m.author == user and not message.guild, timeout=60*20)  # 20 minutes to answer
+                message = await ctx.bot.wait_for("message", check=lambda m: m.author == user and not m.guild, timeout=60*20)  # 20 minutes to answer
                 self.messages.append({"role": "user", "content": message.clean_content})
             except asyncio.TimeoutError:
                 await user.send("SYSTEM: You have timed out (20 minutes). Please try again later.")
