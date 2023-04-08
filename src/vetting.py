@@ -155,7 +155,7 @@ class Verification(commands.Cog):
             await ctx.respond("User is not being verified.", ephemeral=ephemeral)
 
     @verifying.command(name='list', description='See who is verifying currently.')
-    async def verifying(self, ctx):
+    async def verifyinglist(self, ctx):
         if not ctx.author.guild_permissions.manage_roles:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         if len(self.currently_ai_verifying) == 0:
