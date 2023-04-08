@@ -136,7 +136,12 @@ class Verification(commands.Cog):
 
         self.currently_ai_verifying.pop(f"{ctx.author.id}")
     
-    @slash_command(name='verifyyank', description='Yank a currently verifying users\' progress.')
+
+
+    verifying = discord.SlashCommandGroup("verifying", "Interact with users who are still being verified.")
+
+
+    @verifying.command(name='yank', description='Yank a currently verifying users\' interview progress.')
     @option('user', discord.Member, description='The user to yank progress for.')
     @option('ephemeral', bool, description='Whether to send the message as an ephemeral message or not.', default=True)
     async def verifyyank(self, ctx, user: discord.Member, ephemeral=True):
@@ -149,7 +154,7 @@ class Verification(commands.Cog):
         else:
             await ctx.respond("User is not being verified.", ephemeral=ephemeral)
 
-    @slash_command(name='verifying', description='See who is verifying currently.')
+    @verifying.command(name='list', description='See who is verifying currently.')
     async def verifying(self, ctx):
         if not ctx.author.guild_permissions.manage_roles:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
