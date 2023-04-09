@@ -44,13 +44,13 @@ class VettingModerator:
 
         def verdict_check(message):
             message = message.upper()
-            if "[LEFT]" in message:
+            if "LEFT]" in message:
                 return "left"
-            elif "[RIGHT]" in message:
+            elif "RIGHT]" in message:
                 return "right"
-            elif "[AREJECT]" in message:
+            elif "AREJECT]" in message:
                 return "areject"
-            elif "[BGTPRB]" in message:
+            elif "BGTPRB]" in message:
                 return "bgtprb"
             else:
                 return False
