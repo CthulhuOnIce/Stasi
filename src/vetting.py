@@ -9,6 +9,7 @@ from . import database as db
 from . import config
 from . import artificalint as ai
 from . import security
+from .logging import log, log_user
 
 class Verification(commands.Cog):
 
@@ -26,8 +27,9 @@ class Verification(commands.Cog):
 
         self.currently_beta_verifying.append(ctx.author.id)
         
-        moderator = ai.VettingModerator()
+        moderator = ai.BetaVettingModerator()
         verdict = await moderator.vet_user(ctx, ctx.author)
+        log("aivetting", "betaverdict", f"Verdict: {verdict} (User: {log_user(ctx.author)}")
 
         def explain_verdict(verdict):
             if verdict == "left":
@@ -50,8 +52,6 @@ class Verification(commands.Cog):
                 message["content"] = message["content"][:1021] + "..."
             embed.add_field(name=message["role"] if message["role"] != "user" else ctx.author, value=message["content"], inline=False)
         await ctx.respond(embed=embed, ephemeral=False)
-
-    
 
     @slash_command(name='asktutor', description='Ask Marxist AI tutor a question. [Answers may be wrong, this is for fun.]')  # TODO: move this where it actually belongs
     async def asktutor(self, ctx, question: str):
@@ -76,7 +76,7 @@ class Verification(commands.Cog):
     async def verify(self, ctx):
 
         # cant have several lines of questioning at once
-        if str(ctx.author.id) in self.currently_beta_verifying:
+        if str(ctx.author.id) in self.currently_ai_verifying:
             return await ctx.respond("You are already being verified.", ephemeral=True)
 
         # reject if the channel isnt a dm
@@ -95,7 +95,7 @@ class Verification(commands.Cog):
             return await ctx.respond("You are already verified.", ephemeral=True)
 
         # officially start verifying        
-        moderator = ai.VettingModerator()
+        moderator = ai.BetaVettingModerator()
 
         self.currently_ai_verifying[f"{ctx.author.id}"] = moderator
 
@@ -183,16 +183,37 @@ class Verification(commands.Cog):
             embed.set_footer(text=f"{len(remove)} users were removed from the list because they left the server, or otherwise have dangling verification")
 
         await ctx.respond(embed=embed, ephemeral=True)
-
-    @slash_command(name='bypassverify', description='Allow a user to bypass verification')
+    
+    @verifying.command(name='bypass', description='Bypass verification for a user.')
     @option('user', discord.Member, description='The user to bypass verification for.')
-    async def bypassverify(self, ctx, user: discord.Member):
+    @option('ruling', str, description='The ruling to give the user.', default="left")
+    async def verifybypass(self, ctx, user: discord.Member, ruling="left"):
+        ruling = ruling.lower()
         if not ctx.author.guild_permissions.manage_roles:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
-        await db.add_verification(user.id, [{"role": "system", "content": f"Bypassed verification by {ctx.author}"}], "left")
-        await user.remove_roles(ctx.guild.get_role(config.C["unverified_role"]))
-        await user.add_roles(ctx.guild.get_role(config.C["leftwing_role"]))
-        await ctx.respond("User bypassed verification.", ephemeral=True)
+        
+        if ruling not in ["left", "right"]:
+            return await ctx.respond("Invalid ruling.", ephemeral=True)
+        
+        if str(user.id) in self.currently_ai_verifying:  
+            moderator = self.currently_ai_verifying[f"{user.id}"]
+            collected_messages = [message for message in moderator.messages if message["role"] != "system"]
+            collected_messages.append({"role": "system", "content": f"Bypassed verification by {ctx.author}: {ruling}"})
+            log("aivetting", "midadminskip", f"{ctx.author} bypassed verification for {user} with ruling {ruling}. They were verifying and had {len(collected_messages)} messages collected.")
+            embed = ai.build_verification_embed(user, collected_messages, ruling)
+            await db.add_verification(user.id, collected_messages, ruling)
+            await user.remove_roles(ctx.guild.get_role(config.C["unverified_role"]))
+            await user.add_roles(ctx.guild.get_role(config.C[f"{ruling}wing_role"]))
+            await user.send("Your verification was manually handled by a moderator.")
+            self.currently_ai_verifying.pop(f"{user.id}")
+            await ctx.respond(f"User bypassed verification. They were already verifying and had {len(collected_messages)} messages collected.", ephemeral=True)
+            
+        else:
+            log("aivetting", "adminskip", f"{ctx.author} bypassed verification for {user} with ruling {ruling}")    
+            await db.add_verification(user.id, [{"role": "system", "content": f"Bypassed verification by {ctx.author}"}], ruling)
+            await user.remove_roles(ctx.guild.get_role(config.C["unverified_role"]))
+            await user.add_roles(ctx.guild.get_role(config.C[f"{ruling}wing_role"]))
+            await ctx.respond("User bypassed verification.", ephemeral=True)
     
     @slash_command(name='unverify', description='Remove a user\'s verification record and make them do it again.')
     @option('user', discord.Member, description='The user to unverify.')

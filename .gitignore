@@ -7,3 +7,4 @@ data/*
 cyberkevdb.db
 bin/*
 lib/*
+logs/*
