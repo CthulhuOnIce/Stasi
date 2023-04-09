@@ -80,7 +80,8 @@ class VettingModerator:
         return verdict 
 
     def __init__(self):
-        self.messages = [{"role": "system", "content": config.C["openai"]["vetting_prompt"]}].copy()
+        self.messages = [{"role": "system", "content": config.C["openai"]["vetting_prompt"]},
+            {"role": "user", "content": "[START VETTING]"}].copy()
         self.vetting = True
         
 
