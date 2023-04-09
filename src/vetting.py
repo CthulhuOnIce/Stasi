@@ -101,6 +101,8 @@ class Verification(commands.Cog):
 
         verdict = await moderator.vet_user(ctx, ctx.author)
 
+        log("aivetting", "verdict", f"AI {id(moderator)}: Verdict: {verdict} (User: {log_user(ctx.author)}")
+
         # sanitize log to not include system messages
         moderator.messages = [message for message in moderator.messages if message["role"] != "system"]
 
