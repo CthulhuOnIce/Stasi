@@ -41,6 +41,8 @@ class Verification(commands.Cog):
             else:
                 return "SYSTEM: The AI never made a resolution code. Report this to the developers."
             
+        self.currently_beta_verifying.remove(ctx.author.id)
+
         embed = discord.Embed(title=f"Verdict: {verdict}", description=explain_verdict(verdict))
         for message in moderator.messages.copy():
             if message["role"] == "system": continue
@@ -49,7 +51,6 @@ class Verification(commands.Cog):
             embed.add_field(name=message["role"] if message["role"] != "user" else ctx.author, value=message["content"], inline=False)
         await ctx.respond(embed=embed, ephemeral=False)
 
-        self.currently_beta_verifying.remove(ctx.author.id)
     
 
     @slash_command(name='asktutor', description='Ask Marxist AI tutor a question. [Answers may be wrong, this is for fun.]')  # TODO: move this where it actually belongs
