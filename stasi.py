@@ -72,14 +72,12 @@ async def on_command_error(ctx, error):  # share certain errors with the user
             await ctx.send(f"IndexError: {original}\n[This might mean your search found no results]")
             return
     await ctx.send("That command caused an error. This has been reported to the developer.")
-    print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
-    if ctx:
-        print(f"Author: {ctx.author}")
-        print(f"Command: {ctx.message.clean_content}")
+
     error_raw = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     errortracking.report_error(error_raw)
-    logging.log("runtimes", "runtime", f"Runtime {error} by {logging.log_user(ctx.author) if ctx else 'unknown'} at {id(error)}: \n```\n{error_raw}\n```")
+
+    logging.log("runtimes", "runtime", f"Runtime {error} by {logging.log_user(ctx.author) if ctx else 'unknown'} at {id(error)}: \n```\n{error_raw}\n```", False)
     logging.log("main", "runtime", f"Runtime at {id(error)}. Check runtimes.log for more info.")
 
 @bot.event
@@ -98,14 +96,12 @@ async def on_application_command_error(ctx, error):  # share certain errors with
             await ctx.send(f"IndexError: {original}\n[This might mean your search found no results]")
             return
     await ctx.respond("That command caused an error. This has been reported to the developer.", ephemeral = True)
-    print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
-    if ctx:
-        print(f"Author: {ctx.author}")
+
     error_raw = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     errortracking.report_error(error_raw)
-    print(f"reporting : {error_raw}")
-    logging.log("runtimes", "runtime", f"Runtime {error} by {logging.log_user(ctx.author) if ctx else 'unknown'} at {id(error)}: \n```\n{error_raw}\n```")
+
+    logging.log("runtimes", "runtime", f"Runtime {error} by {logging.log_user(ctx.author) if ctx else 'unknown'} at {id(error)}: \n```\n{error_raw}\n```", False)
     logging.log("main", "runtime", f"Runtime at {id(error)}. Check runtimes.log for more info.")
 
 bot.run(config.C["token"])
