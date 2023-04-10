@@ -17,8 +17,9 @@ class Social(commands.Cog):
     @option('ephemeral', bool, description='Whether to send the message as an ephemeral message')
     async def userinfo(self, ctx, user:discord.User, ephemeral:bool=False):
         embed = discord.Embed(title="User Info", description=f"Info about {user.display_name}", color=0x00ff00)
-        embed.set_author(name=str(user), icon_url=user.avatar.url)
-        embed.set_thumbnail(url=user.avatar.url)
+        embed.set_author(name=str(user), icon_url=user.avatar.url if user.avatar else None)
+        if user.avatar:
+            embed.set_thumbnail(url=user.avatar.url)
         embed.add_field(name="Joined Discord", value=user.created_at.strftime("%m/%d/%Y %H:%M:%S"), inline=False)
 
         if user in ctx.guild.members:

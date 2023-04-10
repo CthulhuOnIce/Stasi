@@ -57,7 +57,7 @@ class Verification(commands.Cog):
     async def asktutor(self, ctx, question: str):
         await ctx.interaction.response.defer()
         embed = discord.Embed(title="Question", description=question)
-        embed.set_author(name=ctx.author, icon_url=ctx.author.avatar.url)
+        embed.set_author(name=ctx.author, icon_url=ctx.author.avatar.url if ctx.author.avatar else None)
         answer = await ai.tutor_question(question)
         if len(answer) <= 1024:
             embed.add_field(name="Answer", value=answer, inline=False)
@@ -127,7 +127,7 @@ class Verification(commands.Cog):
         
         # dm user informing them of their verdict
         embed = discord.Embed(title="✅ Verification Approved", description="Welcome to the server!", color=discord.Color.green())
-        embed.set_author(name=ctx.author, icon_url=ctx.author.avatar.url)
+        embed.set_author(name=ctx.author, icon_url=ctx.author.avatar.url if ctx.author.avatar else None)
         await ctx.author.send(embed=embed)
 
         # update roles

@@ -18,7 +18,7 @@ def build_verification_embed(user, messages, verdict):
     messages = messages.copy()
     embed = discord.Embed(title=f"Verdict: {verdict}", description="Vetting completed." if verdict != "yanked" else "Vetting in progress.")
     if user:
-        embed.set_author(name=user, icon_url=user.avatar.url)
+        embed.set_author(name=user, icon_url=user.avatar.url if user.avatar else None)
     if verdict == "bgtprb":
         embed.set_footer(text="User is being overtly offensive, exercise caution.")
     elif verdict == "yanked":
