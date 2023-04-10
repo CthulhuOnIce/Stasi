@@ -79,7 +79,7 @@ async def on_command_error(ctx, error):  # share certain errors with the user
         print(f"Command: {ctx.message.clean_content}")
     error_raw = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     errortracking.report_error(error_raw)
-    logging.log("runtimes", "runtime", f"Runtime {error} by {logging.log_user(ctx.author) if ctx else 'unknown'} at {id(error)}: \n```{error_raw}```")
+    logging.log("runtimes", "runtime", f"Runtime {error} by {logging.log_user(ctx.author) if ctx else 'unknown'} at {id(error)}: \n```\n{error_raw}\n```")
     logging.log("main", "runtime", f"Runtime at {id(error)}. Check runtimes.log for more info.")
 
 @bot.event
@@ -105,7 +105,7 @@ async def on_application_command_error(ctx, error):  # share certain errors with
     error_raw = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     errortracking.report_error(error_raw)
     print(f"reporting : {error_raw}")
-    logging.log("runtimes", "runtime", f"Runtime {error} by {logging.log_user(ctx.author) if ctx else 'unknown'} at {id(error)}: \n```{error_raw}```")
+    logging.log("runtimes", "runtime", f"Runtime {error} by {logging.log_user(ctx.author) if ctx else 'unknown'} at {id(error)}: \n```\n{error_raw}\n```")
     logging.log("main", "runtime", f"Runtime at {id(error)}. Check runtimes.log for more info.")
 
 bot.run(config.C["token"])
