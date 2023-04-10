@@ -6,9 +6,10 @@ import traceback
 
 import discord
 import yaml
+import git
 from discord.ext import commands
 
-from src import config, prison, vetting, administration, social, errortracking
+from src import config, prison, vetting, administration, social, errortracking, logging
 
 # from disputils import BotEmbedPaginator, BotConfirmation, BotMultipleChoice
 
@@ -31,6 +32,10 @@ errortracking.setup(bot)
 
 
 @bot.event
+async def on_connect():
+    logging.log("main", "setup", "Bot connected to Discord.")
+
+@bot.event
 async def on_ready():  # I just like seeing basic info like this
     config.G["bot"] = bot
     config.G["guild"] = bot.get_guild(config.C["guild_id"])
@@ -39,6 +44,17 @@ async def on_ready():  # I just like seeing basic info like this
         exit()
     print("-----------------Info-----------------")
     print(f"Total Servers: {len(bot.guilds)}")
+    repo = git.Repo(search_parent_directories=True)
+    if repo:
+        print(f"Git Commit: {repo.head.object.hexsha}")
+        print(f"Git Branch: {repo.active_branch}")
+        print(f"Last Commit Date: {repo.head.object.committed_datetime}")
+        print(f"Last Commit Message: {repo.head.object.message}")
+        logging.log("main", "git", f"Git Commit: {repo.head.object.hexsha}")   
+        logging.log("main", "git", f"Git Branch: {repo.active_branch}")
+        logging.log("main", "git", f"Last Commit Date: {repo.head.object.committed_datetime}")
+        logging.log("main", "git", f"Last Commit Message: {repo.head.object.message}")
+    logging.log("main", "ready", "Bot is ready to go!")
 
 @bot.event
 async def on_command_error(ctx, error):  # share certain errors with the user
@@ -63,6 +79,8 @@ async def on_command_error(ctx, error):  # share certain errors with the user
         print(f"Command: {ctx.message.clean_content}")
     error_raw = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     errortracking.report_error(error_raw)
+    logging.log("runtimes", "runtime", f"Runtime {error} by {logging.log_user(ctx.author) if ctx else 'unknown'} at {id(error)}: \n```{error_raw}```")
+    logging.log("main", "runtime", f"Runtime at {id(error)}. Check runtimes.log for more info.")
 
 @bot.event
 async def on_application_command_error(ctx, error):  # share certain errors with the user
@@ -87,5 +105,7 @@ async def on_application_command_error(ctx, error):  # share certain errors with
     error_raw = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     errortracking.report_error(error_raw)
     print(f"reporting : {error_raw}")
+    logging.log("runtimes", "runtime", f"Runtime {error} by {logging.log_user(ctx.author) if ctx else 'unknown'} at {id(error)}: \n```{error_raw}```")
+    logging.log("main", "runtime", f"Runtime at {id(error)}. Check runtimes.log for more info.")
 
 bot.run(config.C["token"])
