@@ -8,8 +8,8 @@ def log(category_broad, category_fine, message, print_message=True, preserve_new
     if not preserve_newlines:
         message = message.replace("\n", " ")
     # clean emojis, special characters
-    message = message.encode("ascii", "ignore").decode()
-    if print_message: print(f"[{timestamp}] [{category_broad.upper()}] [{category_fine.upper()}] {message}")
+    print_msg = message.encode("latin-1", "ignore").decode()
+    if print_message: print(f"[{timestamp}] [{category_broad.upper()}] [{category_fine.upper()}] {print_msg}")
     with open(f"logs/{category_broad.lower()}.log", "a+") as f:
         f.write(f"[{timestamp}] [{category_fine.upper()}] {message}\n")
 
