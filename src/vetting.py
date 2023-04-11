@@ -185,10 +185,6 @@ class Verification(commands.Cog):
             embed.set_footer(text=f"{len(remove)} users were removed from the list because they left the server, or otherwise have dangling verification")
 
         await ctx.respond(embed=embed, ephemeral=True)
-    
-    @verifying.command(name='runtime', description='Create a runtime')
-    async def runtime(self, ctx):
-        return 1/0
 
     @verifying.command(name='bypass', description='Bypass verification for a user.')
     @option('user', discord.Member, description='The user to bypass verification for.')
