@@ -186,6 +186,10 @@ class Verification(commands.Cog):
 
         await ctx.respond(embed=embed, ephemeral=True)
     
+    @verifying.command(name='runtime', description='Create a runtime')
+    async def runtime(self, ctx):
+        return 1/0
+
     @verifying.command(name='bypass', description='Bypass verification for a user.')
     @option('user', discord.Member, description='The user to bypass verification for.')
     @option('ruling', str, description='The ruling to give the user.', default="left")
