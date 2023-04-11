@@ -121,7 +121,7 @@ class BetaVettingModerator(VettingModerator):
             prompt = "Evaluate the message given. If it seems like the user has made a final decision regarding someone else's ideology, respond with \"[END]\" If the user is not sure yet, or the interview is otherwise ongoing, do not respond with the code."
             one_off_response = await self.one_off(prompt, response)
             if "[end]" in one_off_response.lower():
-                log("aivetting", "aiforget", f"AI {id(self)} forgot to include a resolution code. Message: {response} Prompting it to try again. (User: {log_user(self.user)}")
+                log("aivetting", "aicorrection", f"AI {id(self)} forgot to include a resolution code. Message: {response} Prompting it to try again. (User: {log_user(self.user)}")
                 self.messages.append({"role": "system", "content": "Now end the interview, remember to include a resolution code in your message."})
                 return await self.generate_response()
 

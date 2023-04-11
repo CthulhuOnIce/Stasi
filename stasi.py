@@ -7,8 +7,9 @@ import traceback
 import discord
 import yaml
 from discord.ext import commands
+import git
 
-from src import config, prison, vetting, administration, social, errortracking
+from src import config, prison, vetting, administration, social, errortracking, logging
 
 # from disputils import BotEmbedPaginator, BotConfirmation, BotMultipleChoice
 
@@ -18,17 +19,22 @@ intents = discord.Intents.all()
 
 bot = commands.Bot(intents=intents, owner_id=config.C["sudoers"][0])
 
-# Setup cogs
-prison.setup(bot)
-vetting.setup(bot)
-administration.setup(bot)
-social.setup(bot)
-errortracking.setup(bot)
-# debug.setup(bot, C)
-# electionmanager.setup(bot, C)
-# legislation.setup(bot, C)
-# source.setup(bot, C)
+logging.log("main", "setup", "Setting up cogs...")
 
+# Setup cogs
+i = 0
+COGS = [prison, vetting, administration, social, errortracking]
+for cog in COGS:
+    i += 1
+    cog.setup(bot)
+    logging.log("main", "setup", f"Cog {i}/{len(COGS)} loaded")
+
+
+logging.log("main", "setup", f"Finished setting up {i} cogs")
+
+@bot.event
+async def on_connect():
+    logging.log("main", "setup", "Connected to discord")
 
 @bot.event
 async def on_ready():  # I just like seeing basic info like this
@@ -37,8 +43,20 @@ async def on_ready():  # I just like seeing basic info like this
     if not config.G["guild"]:
         print("Guild not found, please check your config.yml")
         exit()
+    logging.log("main", "setup", f"Bot finished initializing.")
     print("-----------------Info-----------------")
     print(f"Total Servers: {len(bot.guilds)}")
+    # git repo info
+    repo = git.Repo(search_parent_directories=True)
+    if repo:
+        sha = repo.head.object.hexsha
+        print(f"Git Commit: {sha}")
+        message = repo.git.log('-1', '--pretty=%B').replace('\n', '')
+        print(f"Commit Message: {message}")
+        print(f"Branch: {repo.active_branch}")
+        print(f"Last Commit Date: {repo.head.object.committed_datetime}")
+        logging.log("main", "git", f"Git Commit: {sha}\nCommit Message: {message}\nBranch: {repo.active_branch}\nLast Commit Date: {repo.head.object.committed_datetime}", False, True)
+        
 
 @bot.event
 async def on_command_error(ctx, error):  # share certain errors with the user
@@ -56,13 +74,12 @@ async def on_command_error(ctx, error):  # share certain errors with the user
             await ctx.send(f"IndexError: {original}\n[This might mean your search found no results]")
             return
     await ctx.send("That command caused an error. This has been reported to the developer.")
-    print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
-    traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
-    if ctx:
-        print(f"Author: {ctx.author}")
-        print(f"Command: {ctx.message.clean_content}")
+
     error_raw = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     errortracking.report_error(error_raw)
+
+    logging.log("main", "runtime", f"Error {id(error)} in '{ctx.command}' by '{logging.log_user(ctx.author) if ctx.author else 'unknown'}'. Check runtimes.log for more details.")
+    logging.log("runtimes", "error", f"Error {id(error)} in '{ctx.command}' by '{logging.log_user(ctx.author) if ctx.author else 'unknown'}': \n```\n{error_raw}\n```", False, True)
 
 @bot.event
 async def on_application_command_error(ctx, error):  # share certain errors with the user
@@ -80,12 +97,11 @@ async def on_application_command_error(ctx, error):  # share certain errors with
             await ctx.send(f"IndexError: {original}\n[This might mean your search found no results]")
             return
     await ctx.respond("That command caused an error. This has been reported to the developer.", ephemeral = True)
-    print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
-    traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
-    if ctx:
-        print(f"Author: {ctx.author}")
+
     error_raw = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     errortracking.report_error(error_raw)
-    print(f"reporting : {error_raw}")
+
+    logging.log("main", "runtime", f"Error {id(error)} in '{ctx.command}' by '{logging.log_user(ctx.author) if ctx.author else 'unknown'}'. Check runtimes.log for more details.")
+    logging.log("runtimes", "error", f"Error {id(error)} in '{ctx.command}' by '{logging.log_user(ctx.author) if ctx.author else 'unknown'}': \n```\n{error_raw}\n```", False, True)
 
 bot.run(config.C["token"])
