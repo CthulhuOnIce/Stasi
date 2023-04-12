@@ -18,6 +18,8 @@ async def make_chatgpt_request(messages: List[dict]):
 
 def build_verification_embed(user, messages, verdict):
     messages = messages.copy()
+    if len(messages) > 25:
+        messages = messages[:25]
     embed = discord.Embed(title=f"Verdict: {verdict}", description="Vetting completed." if verdict != "yanked" else "Vetting in progress.")
     if user:
         embed.set_author(name=user, icon_url=user.avatar.url if user.avatar else None)
@@ -31,6 +33,40 @@ def build_verification_embed(user, messages, verdict):
             message["content"] = message["content"][:1021] + "..."
         embed.add_field(name=message["role"], value=message["content"], inline=False)
     return embed
+
+def build_paginated_verification_embeds(user, messages, verdict):
+    messages = messages.copy()
+    embeds = []
+    embed = discord.Embed(title=f"Verdict: {verdict}", description="Vetting completed." if verdict != "yanked" else "Vetting in progress.")
+    if user:
+        embed.set_author(name=user, icon_url=user.avatar.url if user.avatar else None)
+    if verdict == "bgtprb":
+        embed.set_footer(text="User is being overtly offensive, exercise caution.")
+    elif verdict == "yanked":
+        embed.set_footer(text="Interview still in progress.")
+    embeds.append(embed)
+    # fill out embed, i
+    for i, message in enumerate(messages):
+        embed = discord.Embed(title=f"Message {i+1} of {len(messages)}", description="Vetting completed." if verdict != "yanked" else "Vetting in progress.")
+        if len(message["content"]) < 1024:
+            embed.add_field(name=message["role"], value=message["content"], inline=False)
+        elif len(message["content"]) < 2048:
+            embed.add_field(name=message["role"], value=message["content"][:1024], inline=False)
+            embed.add_field(name=message["role"], value=message["content"][1024:], inline=False)
+        elif len(message["content"]) < 3072:
+            embed.add_field(name=message["role"], value=message["content"][:1024], inline=False)
+            embed.add_field(name=message["role"], value=message["content"][1024:2048], inline=False)
+            embed.add_field(name=message["role"], value=message["content"][2048:], inline=False)
+        elif len(message["content"]) < 4096:  # this should be the highest under any circumstances
+            embed.add_field(name=message["role"], value=message["content"][:1024], inline=False)
+            embed.add_field(name=message["role"], value=message["content"][1024:2048], inline=False)
+            embed.add_field(name=message["role"], value=message["content"][2048:3072], inline=False)
+            embed.add_field(name=message["role"], value=message["content"][3072:], inline=False)
+
+        if user:
+            embed.set_author(name=user, icon_url=user.avatar.url if user.avatar else None)
+        embeds.append(embed)
+    return embeds
 
 class VettingModerator:
 
@@ -87,7 +123,7 @@ class VettingModerator:
     
         await ctx.respond("Check your DMs", ephemeral=True)
         
-        while not self.verdict_check(self.messages[-1]["content"]) and len(self.messages) < 26:
+        while not self.verdict_check(self.messages[-1]["content"]) and len(self.messages) < 32:
             try:
                 message = await ctx.bot.wait_for("message", check=lambda m: m.author == user and not m.guild, timeout=60*20)  # 20 minutes to answer
                 self.messages.append({"role": "user", "content": message.clean_content})

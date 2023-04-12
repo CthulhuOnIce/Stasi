@@ -15,6 +15,7 @@ from typing import List
 try:
     with open("config.yml", "r") as r:
         C = yaml.load(r.read(), Loader=yaml.FullLoader)
+        print(f"C: {C}")
 except FileNotFoundError:
     print("No config.yml, please copy and rename config-example.yml and fill in the appropriate values.")
     exit()
