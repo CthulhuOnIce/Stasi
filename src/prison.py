@@ -7,6 +7,7 @@ from discord.ext import commands, tasks
 from . import database as db
 from . import config
 from . import utils
+from .logging import log, log_user
 
 import datetime
 
@@ -106,6 +107,7 @@ class Prison(commands.Cog):
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
 
         note = await db.add_note(member.id, ctx.author.id, note)
+        log("admin", "note", f"{log_user(ctx.author)} added note to {log_user(member)} ({note['_id']}: {note['note']})")
         await ctx.respond(f"Added note to {member.mention}. ({note['_id']})", ephemeral=True)
 
     @slash_command(name='warn', description='Add a warning to a user.')
@@ -123,7 +125,9 @@ class Prison(commands.Cog):
             embed.description += "\n\n*I was unable to DM you.*"
             await ctx.channel.send(member.mention, embed=embed)
 
-        await db.add_note(member.id, ctx.author.id, f"User Warned: `{warning}`")
+    
+        note = await db.add_note(member.id, ctx.author.id, f"User Warned: `{warning}`")
+        log("admin", "warn", f"{log_user(ctx.author)} added note to {log_user(member)} ({note['_id']}: {note['note']})")
         await ctx.respond(f"User has been warned.", ephemeral=True)
 
     @commands.Cog.listener()
