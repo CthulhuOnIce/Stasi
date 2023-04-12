@@ -153,7 +153,7 @@ class Verification(commands.Cog):
         if str(user.id) in self.currently_ai_verifying:
             moderator = self.currently_ai_verifying[f"{user.id}"]
             embed = ai.build_verification_embed(user, [message for message in moderator.messages if message["role"] != "system"], "yanked")
-            await ctx.respond(embed=embed, ephemeral=True)
+            await ctx.respond(embed=embed, ephemeral=ephemeral)
         else:
             await ctx.respond("User is not being verified.", ephemeral=ephemeral)
 
@@ -185,7 +185,7 @@ class Verification(commands.Cog):
             embed.set_footer(text=f"{len(remove)} users were removed from the list because they left the server, or otherwise have dangling verification")
 
         await ctx.respond(embed=embed, ephemeral=True)
-    
+
     @verifying.command(name='bypass', description='Bypass verification for a user.')
     @option('user', discord.Member, description='The user to bypass verification for.')
     @option('ruling', str, description='The ruling to give the user.', default="left")

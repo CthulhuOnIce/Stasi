@@ -7,12 +7,14 @@ from .logging import log, log_user
 
 openai.api_key = config.C["openai"]["key"]
 
+max_errors = 6 # 1 and a half minutes
+
 async def make_chatgpt_request(messages: List[dict]):
     res = await openai.ChatCompletion.acreate(
   model="gpt-3.5-turbo",
   messages=messages
 )
-    return res["choices"][0]
+    return res["choices"][0]["message"]
 
 def build_verification_embed(user, messages, verdict):
     messages = messages.copy()
@@ -33,11 +35,28 @@ def build_verification_embed(user, messages, verdict):
 class VettingModerator:
 
     user: None
+    errors_in_a_row = 0
 
     async def generate_response(self):
-        response = await make_chatgpt_request(self.messages)
-        self.messages.append({"role": "assistant", "content": response["message"]["content"]})
-        return response["message"]["content"]
+        global errors_in_a_row
+        try:
+            response = await make_chatgpt_request(self.messages)
+            self.errors_in_a_row = 0
+            self.messages.append({"role": "assistant", "content": ["content"]})
+            return response["content"]
+        
+        except Exception as e:
+            self.errors_in_a_row += 1
+            if self.errors_in_a_row == 1:
+                await self.user.send("🚫 There has been an error. Please wait.")
+            
+            if self.errors_in_a_row > max_errors:
+                content = f"The web request has failed {max_errors} in a row. [CLOSE:LEFT]"
+                self.messages.append({"role": "assistant", "content": content})
+                return content
+            else:
+                await asyncio.sleep(15)
+                return await self.generate_response()
 
     def verdict_check(self, message):
         message = message.upper()
@@ -97,31 +116,52 @@ class VettingModerator:
 
 async def tutor_question(question):
     res = await make_chatgpt_request([{"role": "system", "content": config.C["openai"]["tutor_prompt"]}, {"role": "user", "content": question}])
-    return res["message"]["content"]
+    return res["content"]
 
 
 class BetaVettingModerator(VettingModerator):
 
+    async def openai_request(self, messages):
+        try:
+            ret = await make_chatgpt_request(messages)
+            self.errors_in_a_row = 0
+            return ret
+        
+        except Exception as e:
+            self.errors_in_a_row += 1
+            if self.errors_in_a_row == 1:
+                await self.user.send("🚫 There has been an error. Please wait.")
+
+            if self.errors_in_a_row > max_errors:
+                content = f"The web request has failed {max_errors} in a row. [CLOSE:LEFT]"
+                self.messages.append({"role": "assistant", "content": content})
+                return {"role": "assistant", "content": content}
+            else:
+                log("aivetting", "openaierror", f"Error {id(e)} {self.errors_in_a_row}/{max_errors} in OpenAI request: {e} for moderator {id(self)}. Retrying in 15 seconds.")
+                await asyncio.sleep(15)
+                log("aivetting", "openaierror", f"Error {id(e)} retrying now.")
+                return await self.openai_request(messages)
+
     async def one_off_assistant(self, system, user):
         messages = [{"role": "system", "content": system}, {"role": "assistant", "content": user}]
-        res = await make_chatgpt_request(messages)
-        return res["message"]["content"]
+        res = await self.openai_request(messages)
+        return res["content"]
 
     async def one_off(self, system, user):
         messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
-        res = await make_chatgpt_request(messages)
-        return res["message"]["content"]
+        res = await self.openai_request(messages)
+        return res["content"]
 
     async def generate_response(self):
         log("aivetting", "betaairesponse", f"Beta AI {id(self)} Generating response...")
-        response = await make_chatgpt_request(self.messages)
-        response = response["message"]["content"]
+        response = await self.openai_request(self.messages)
+        response = response["content"]
 
         if not self.verdict_check(response):  # if there is no resolution code, check if the ai just forgot to include one
             prompt = "Evaluate the message given. If it seems like the user has made a final decision regarding someone else's ideology, respond with \"[END]\" If the user is not sure yet, or the interview is otherwise ongoing, do not respond with the code."
             one_off_response = await self.one_off(prompt, response)
             if "[end]" in one_off_response.lower():
-                log("aivetting", "aiforget", f"AI {id(self)} forgot to include a resolution code. Prompting it to try again. (User: {log_user(self.user)}")
+                log("aivetting", "aicorrection", f"AI {id(self)} forgot to include a resolution code. Message: {response} Prompting it to try again. (User: {log_user(self.user)}")
                 self.messages.append({"role": "system", "content": "Now end the interview, remember to include a resolution code in your message."})
                 return await self.generate_response()
 
