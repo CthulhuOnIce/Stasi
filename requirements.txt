@@ -6,3 +6,4 @@ dill
 tqdm
 gitpython
 motor
+openai
