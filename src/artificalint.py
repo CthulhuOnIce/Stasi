@@ -17,9 +17,9 @@ async def make_chatgpt_request(messages: List[dict]):
     return res["choices"][0]["message"]
 
 def build_verification_embed(user, messages, verdict):
-    messages = messages.copy()
-    if len(messages) > 25:
-        messages = messages[:25]
+    messages_ = messages.copy()
+    if len(messages_) > 25:
+        messages_ = messages_[:25]
     embed = discord.Embed(title=f"Verdict: {verdict}", description="Vetting completed." if verdict != "yanked" else "Vetting in progress.")
     if user:
         embed.set_author(name=user, icon_url=user.avatar.url if user.avatar else None)
@@ -28,14 +28,14 @@ def build_verification_embed(user, messages, verdict):
     elif verdict == "yanked":
         embed.set_footer(text="Interview still in progress.")
     # fill out embed, i
-    for message in messages:
+    for message in messages_:
         if len(message["content"]) > 1024:
             message["content"] = message["content"][:1021] + "..."
         embed.add_field(name=message["role"], value=message["content"], inline=False)
     return embed
 
 def build_paginated_verification_embeds(user, messages, verdict):
-    messages = messages.copy()
+    messages_ = messages.copy()
     embeds = []
     embed = discord.Embed(title=f"Verdict: {verdict}", description="Vetting completed." if verdict != "yanked" else "Vetting in progress.")
     if user:
@@ -46,8 +46,8 @@ def build_paginated_verification_embeds(user, messages, verdict):
         embed.set_footer(text="Interview still in progress.")
     embeds.append(embed)
     # fill out embed, i
-    for i, message in enumerate(messages):
-        embed = discord.Embed(title=f"Message {i+1} of {len(messages)}", description="Vetting completed." if verdict != "yanked" else "Vetting in progress.")
+    for i, message in enumerate(messages_):
+        embed = discord.Embed(title=f"Message {i+1} of {len(messages_)}", description="Vetting completed." if verdict != "yanked" else "Vetting in progress.")
         if len(message["content"]) < 1024:
             embed.add_field(name=message["role"], value=message["content"], inline=False)
         elif len(message["content"]) < 2048:
