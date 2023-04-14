@@ -37,6 +37,8 @@ class Prison(commands.Cog):
             role = guild.get_role(role_id)
             if role and role < guild.me.top_role:
                 roles.append(role)
+            
+        await member.add_roles(*roles)
 
         await db.remove_prisoner(user["user_id"])
 
@@ -56,6 +58,7 @@ class Prison(commands.Cog):
         await member.add_roles(prison_role)
         roles = [role.id for role in member.roles]
         await db.add_prisoner(member.id, ctx.author.id, roles, release_date, reason)
+        await member.remove_roles(*roles)
     
         await ctx.respond(f"{member.mention} has been sent to prison for `{time}` for `{reason}`.")
     
@@ -95,7 +98,7 @@ class Prison(commands.Cog):
         if not prisoner:
             return await ctx.respond("That user is not in prison.", ephemeral=True)
         
-        release_date = datetime.datetime.fromisoformat(prisoner["release_date"]) + datetime.timedelta(seconds=time_seconds)
+        release_date = datetime.datetime.fromisoformat(prisoner["expires"]) + datetime.timedelta(seconds=time_seconds)
         await db.add_note(member.id, ctx.author.id, f"Sentence adjusted by '{time}', new release date is '{release_date}'")
         result = await db.adjust_sentence(member.id, release_date)
     
