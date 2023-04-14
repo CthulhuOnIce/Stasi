@@ -62,6 +62,20 @@ class Prison(commands.Cog):
     
         await ctx.respond(f"{member.mention} has been sent to prison for `{time}` for `{reason}`.")
     
+    @slash_command(name='sentence', description='Get the sentence of a user.')
+    @option('member', discord.Member, description='The member to get the sentence of')
+    @option('ephemeral', bool, description='Whether to send the sentence as an ephemeral message')
+    async def sentence(self, ctx, member: discord.Member = None, ephemeral: Optional[bool] = False):
+        if not member:
+            member = ctx.author
+
+        prisoner = await db.get_prisoner(member.id)
+        if not prisoner:
+            return await ctx.respond("That user is not in prison.", ephemeral=True)
+        
+        time_left = utils.seconds_to_time((prisoner["expires"] - datetime.datetime.utcnow()).total_seconds())
+        await ctx.respond(f"{member.mention} has `{time_left}` left in prison.", ephemeral=ephemeral)
+    
     @slash_command(name='release', description='Release a user from prison.')
     @option('member', discord.Member, description='The member to release')
     @option('reason', str, description='The reason for the release')
