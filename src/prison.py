@@ -101,6 +101,8 @@ class Prison(commands.Cog):
         release_date = prisoner["expires"] + datetime.timedelta(seconds=time_seconds)
         await db.add_note(member.id, ctx.author.id, f"Sentence adjusted by '{time}', new release date is '{release_date}'")
         result = await db.adjust_sentence(member.id, release_date)
+
+        await ctx.respond(f"Adjusted sentence of {member.mention} by `{time}`.")
     
     @slash_command(name='note', description='Add a note to a user.')
     @option('member', discord.Member, description='The member to add the note to')
