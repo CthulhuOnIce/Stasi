@@ -98,7 +98,7 @@ class Prison(commands.Cog):
         if not prisoner:
             return await ctx.respond("That user is not in prison.", ephemeral=True)
         
-        release_date = datetime.datetime.fromisoformat(prisoner["expires"]) + datetime.timedelta(seconds=time_seconds)
+        release_date = prisoner["expires"] + datetime.timedelta(seconds=time_seconds)
         await db.add_note(member.id, ctx.author.id, f"Sentence adjusted by '{time}', new release date is '{release_date}'")
         result = await db.adjust_sentence(member.id, release_date)
     
