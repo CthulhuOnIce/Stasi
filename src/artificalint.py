@@ -4,6 +4,7 @@ from typing import List
 import discord
 import asyncio
 from .logging import log, log_user
+from copy import deepcopy
 
 openai.api_key = config.C["openai"]["key"]
 
@@ -17,7 +18,7 @@ async def make_chatgpt_request(messages: List[dict]):
     return res["choices"][0]["message"]
 
 def build_verification_embed(user, messages, verdict):
-    messages_ = messages.copy()
+    messages_ = deepcopy(messages)
     if len(messages_) > 25:
         messages_ = messages_[:25]
     embed = discord.Embed(title=f"Verdict: {verdict}", description="Vetting completed." if verdict != "yanked" else "Vetting in progress.")
@@ -35,7 +36,7 @@ def build_verification_embed(user, messages, verdict):
     return embed
 
 def build_paginated_verification_embeds(user, messages, verdict):
-    messages_ = messages.copy()
+    messages_ = deepcopy(messages)
     embeds = []
     embed = discord.Embed(title=f"Verdict: {verdict}", description="Vetting completed." if verdict != "yanked" else "Vetting in progress.")
     if user:
