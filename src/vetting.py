@@ -27,8 +27,8 @@ class Verification(commands.Cog):
 
         self.currently_beta_verifying.append(ctx.author.id)
         
-        moderator = ai.BetaVettingModerator()
-        verdict = await moderator.vet_user(ctx, ctx.author)
+        interviewer = ai.BetaVettingInterviewer()
+        verdict = await interviewer.vet_user(ctx, ctx.author)
         log("aivetting", "betaverdict", f"Verdict: {verdict} (User: {log_user(ctx.author)}")
 
         def explain_verdict(verdict):
@@ -46,7 +46,7 @@ class Verification(commands.Cog):
         self.currently_beta_verifying.remove(ctx.author.id)
 
         embed = discord.Embed(title=f"Verdict: {verdict}", description=explain_verdict(verdict))
-        for message in moderator.messages.copy():
+        for message in interviewer.messages.copy():
             if message["role"] == "system": continue
             if len(message["content"]) > 1024:
                 message["content"] = message["content"][:1021] + "..."
@@ -95,16 +95,16 @@ class Verification(commands.Cog):
             return await ctx.respond("You are already verified.", ephemeral=True)
 
         # officially start verifying        
-        moderator = ai.BetaVettingModerator()
+        interviewer = ai.BetaVettingInterviewer()
 
-        self.currently_ai_verifying[f"{ctx.author.id}"] = moderator
+        self.currently_ai_verifying[f"{ctx.author.id}"] = interviewer
 
-        verdict = await moderator.vet_user(ctx, ctx.author)
+        verdict = await interviewer.vet_user(ctx, ctx.author)
 
-        log("aivetting", "verdict", f"AI {id(moderator)}: Verdict: {verdict} (User: {log_user(ctx.author)}")
+        log("aivetting", "verdict", f"AI {id(interviewer)}: Verdict: {verdict} (User: {log_user(ctx.author)}")
 
         # sanitize log to not include system messages
-        moderator.messages = [message for message in moderator.messages if message["role"] != "system"]
+        interviewer.messages = [message for message in interviewer.messages if message["role"] != "system"]
 
         # log to channel
         log_channel = None
@@ -113,7 +113,7 @@ class Verification(commands.Cog):
             if not log_channel:
                 log_channel = ctx.channel
             if log_channel:
-                embed = ai.build_verification_embed(ctx.author, moderator.messages, verdict)
+                embed = ai.build_verification_embed(ctx.author, interviewer.messages, verdict)
                 await log_channel.send(embed=embed)
 
         # decide which role to use for verification
@@ -135,7 +135,7 @@ class Verification(commands.Cog):
             await ctx.author.add_roles(verification_role)
             if unverified_role in ctx.author.roles:
                 await ctx.author.remove_roles(unverified_role) # only log the verif in the db if they passed somehow
-            await db.add_verification(ctx.author.id, moderator.messages, verdict)  # internal db
+            await db.add_verification(ctx.author.id, interviewer.messages, verdict)  # internal db
 
         self.currently_ai_verifying.pop(f"{ctx.author.id}")
     
@@ -151,8 +151,8 @@ class Verification(commands.Cog):
         if not ctx.author.guild_permissions.manage_roles:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         if str(user.id) in self.currently_ai_verifying:
-            moderator = self.currently_ai_verifying[f"{user.id}"]
-            embed = ai.build_verification_embed(user, [message for message in moderator.messages if message["role"] != "system"], "yanked")
+            interviewer = self.currently_ai_verifying[f"{user.id}"]
+            embed = ai.build_verification_embed(user, [message for message in interviewer.messages if message["role"] != "system"], "yanked")
             await ctx.respond(embed=embed, ephemeral=ephemeral)
         else:
             await ctx.respond("User is not being verified.", ephemeral=ephemeral)
@@ -167,17 +167,17 @@ class Verification(commands.Cog):
         # start building embed
         embed = discord.Embed(title="Currently Verifying", description="These users are currently being verified.")
         
-        remove = []  # garbage collector for dangling moderator objects w/o a user to interview anymore
+        remove = []  # garbage collector for dangling interviewer objects w/o a user to interview anymore
 
         # sort
         for user_id in self.currently_ai_verifying:
-            moderator = self.currently_ai_verifying[user_id]
-            if not moderator.user or moderator.user not in ctx.guild.members:
+            interviewer = self.currently_ai_verifying[user_id]
+            if not interviewer.user or interviewer.user not in ctx.guild.members:
                 remove.append(user_id)
                 continue
-            embed.add_field(name=moderator.user.name, value=f"Messages: {len(moderator.messages)}", inline=False)
+            embed.add_field(name=interviewer.user.name, value=f"Messages: {len(interviewer.messages)}", inline=False)
         
-        # remove dangling moderators, garbage collector should take care of the rest
+        # remove dangling interviewers, garbage collector should take care of the rest
         for user_id in remove:
             self.currently_ai_verifying.pop(user_id)
         
@@ -198,8 +198,8 @@ class Verification(commands.Cog):
             return await ctx.respond("Invalid ruling.", ephemeral=True)
         
         if str(user.id) in self.currently_ai_verifying:  
-            moderator = self.currently_ai_verifying[f"{user.id}"]
-            collected_messages = [message for message in moderator.messages if message["role"] != "system"]
+            interviewer = self.currently_ai_verifying[f"{user.id}"]
+            collected_messages = [message for message in interviewer.messages if message["role"] != "system"]
             collected_messages.append({"role": "system", "content": f"Bypassed verification by {ctx.author}: {ruling}"})
             log("aivetting", "midadminskip", f"{ctx.author} bypassed verification for {user} with ruling {ruling}. They were verifying and had {len(collected_messages)} messages collected.")
             embed = ai.build_verification_embed(user, collected_messages, ruling)

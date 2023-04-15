@@ -68,7 +68,7 @@ def build_paginated_verification_embeds(user, messages, verdict):
         embeds.append(embed)
     return embeds
 
-class VettingModerator:
+class VettingInterviewer:
 
     user: None
     errors_in_a_row = 0
@@ -141,13 +141,13 @@ class VettingModerator:
         return verdict 
 
     def __init__(self):
-        log("aivetting", "newmod", f"New moderator {id(self)} created.")
+        log("aivetting", "newmod", f"New interviewer {id(self)} created.")
         self.messages = [{"role": "system", "content": config.C["openai"]["vetting_prompt"]},
             {"role": "user", "content": "[START VETTING]"}].copy()
         self.vetting = True
 
     def __del__(self):
-        log("aivetting", "delmod", f"Moderator {id(self)} deleted.")
+        log("aivetting", "delmod", f"Interviewer {id(self)} deleted.")
         
 
 async def tutor_question(question):
@@ -155,7 +155,7 @@ async def tutor_question(question):
     return res["content"]
 
 
-class BetaVettingModerator(VettingModerator):
+class BetaVettingInterviewer(VettingInterviewer):
 
     async def openai_request(self, messages):
         try:
@@ -173,7 +173,7 @@ class BetaVettingModerator(VettingModerator):
                 self.messages.append({"role": "assistant", "content": content})
                 return {"role": "assistant", "content": content}
             else:
-                log("aivetting", "openaierror", f"Error {id(e)} {self.errors_in_a_row}/{max_errors} in OpenAI request: {e} for moderator {id(self)}. Retrying in 15 seconds.")
+                log("aivetting", "openaierror", f"Error {id(e)} {self.errors_in_a_row}/{max_errors} in OpenAI request: {e} for interviewer {id(self)}. Retrying in 15 seconds.")
                 await asyncio.sleep(15)
                 log("aivetting", "openaierror", f"Error {id(e)} retrying now.")
                 return await self.openai_request(messages)
