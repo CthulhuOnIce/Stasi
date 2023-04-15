@@ -17,7 +17,7 @@ class Social(commands.Cog):
     @option('ephemeral', bool, description='Whether to send the message as an ephemeral message')
     async def userinfo(self, ctx, user:discord.User, ephemeral:bool=False):
         embed = discord.Embed(title="User Info", description=f"Info about {user.display_name}", color=0x00ff00)
-        embed.set_author(name=str(user), icon_url=user.avatar.url if user.avatar else None)
+        embed.set_author(name=str(user), icon_url=user.avatar.url if user.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
         if user.avatar:
             embed.set_thumbnail(url=user.avatar.url)
         embed.add_field(name="Joined Discord", value=user.created_at.strftime("%m/%d/%Y %H:%M:%S"), inline=False)
@@ -100,7 +100,7 @@ class Social(commands.Cog):
         embeds = []
         
         embed = discord.Embed(title="Notes", description=f"Notes for {user}", color=0x00ff00)
-        embed.set_author(name=str(user), icon_url=user.avatar.url if user.avatar else None)
+        embed.set_author(name=str(user), icon_url=user.avatar.url if user.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
         embed.add_field(name="Total Notes", value=len(notes), inline=False)
         embeds.append(embed)
 
