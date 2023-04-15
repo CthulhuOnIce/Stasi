@@ -26,6 +26,12 @@ def seconds_to_time(time: int):
     time %= 60
     seconds = time
 
+    # round all values to 3 decimal places
+    days = round(days, 3)
+    hours = round(hours, 3)
+    minutes = round(minutes, 3)
+    seconds = round(seconds, 3)
+
     if days > 0:
         return f"{days}d{hours}h{minutes}m{seconds}s"
     elif hours > 0:
@@ -34,6 +40,35 @@ def seconds_to_time(time: int):
         return f"{minutes}m{seconds}s"
     elif seconds > 0:
         return f"{seconds}s"
+    else: # 0 seconds
+        return "now"
+    
+
+def seconds_to_time_long(time: int):  # "one day, 10 hours, 10 minutes, 10 seconds"
+    
+    days = time // 86400
+    time %= 86400
+    hours = time // 3600
+    time %= 3600
+    minutes = time // 60
+    time %= 60
+    seconds = time
+
+    # round all values to 3 decimal places
+    days = round(days, 3)
+    hours = round(hours, 3)
+    minutes = round(minutes, 3)
+    seconds = round(seconds, 3)
+
+
+    if days > 0:
+        return f"{days} day{'s' if days > 1 else ''}, {hours} hour{'s' if hours > 1 else ''}, {minutes} minute{'s' if minutes > 1 else ''}, {seconds} second{'s' if seconds > 1 else ''}"
+    elif hours > 0:
+        return f"{hours} hour{'s' if hours > 1 else ''}, {minutes} minute{'s' if minutes > 1 else ''}, {seconds} second{'s' if seconds > 1 else ''}"
+    elif minutes > 0:
+        return f"{minutes} minute{'s' if minutes > 1 else ''}, {seconds} second{'s' if seconds > 1 else ''}"
+    elif seconds > 0:
+        return f"{seconds} second{'s' if seconds > 1 else ''}"
     else: # 0 seconds
         return "now"
 
