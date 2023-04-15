@@ -27,6 +27,7 @@ class Prison(commands.Cog):
             if roles:
                 await db.add_roles_stealth(user["_id"], user["roles"])  # so they get their original roles if they rejoin
             await db.remove_prisoner(user["_id"])
+            log("justice", "expired-nouser", f"Prisoner {user['_id']} expired but is no longer in the guild.")
 
         prison_role = guild.get_role(config.C["prison_role"])
 
@@ -41,6 +42,8 @@ class Prison(commands.Cog):
         await member.add_roles(*roles)
 
         await db.remove_prisoner(user["user_id"])
+
+        log("justice", "expired", f"{log_user(member)}'s sentence has expired and they have been released from prison")
 
 
     @slash_command(name='prison', description='Prison a user.')
@@ -59,13 +62,17 @@ class Prison(commands.Cog):
         roles = [role.id for role in member.roles]
         await db.add_prisoner(member.id, ctx.author.id, roles, release_date, reason)
         await member.remove_roles(*roles)
+        log("justice", "prison", f"{log_user(ctx.author)} imprisoned {log_user(member)} for {time} (reason: {reason})")
     
         await ctx.respond(f"{member.mention} has been sent to prison for `{time}` for `{reason}`.")
+
+
+    sentence = discord.SlashCommandGroup("sentence", "View or edit prisoner sentences")
     
-    @slash_command(name='sentence', description='Get the sentence of a user.')
+    @sentence.command(name='view', description='Get the sentence of a user.')
     @option('member', discord.Member, description='The member to get the sentence of')
     @option('ephemeral', bool, description='Whether to send the sentence as an ephemeral message')
-    async def sentence(self, ctx, member: discord.Member = None, ephemeral: Optional[bool] = False):
+    async def view_sentence(self, ctx, member: discord.Member = None, ephemeral: Optional[bool] = False):
         if not member:
             member = ctx.author
 
@@ -76,7 +83,7 @@ class Prison(commands.Cog):
         time_left = utils.seconds_to_time((prisoner["expires"] - datetime.datetime.utcnow()).total_seconds())
         await ctx.respond(f"{member.mention} has `{time_left}` left in prison.", ephemeral=ephemeral)
     
-    @slash_command(name='release', description='Release a user from prison.')
+    @sentence.command(name='release', description='Release a user from prison.')
     @option('member', discord.Member, description='The member to release')
     @option('reason', str, description='The reason for the release')
     async def release(self, ctx, member: discord.Member, reason: str):
@@ -88,11 +95,12 @@ class Prison(commands.Cog):
             return await ctx.respond("That user is not in prison.", ephemeral=True)
 
         await self.free_prisoner(prisoner)
+        log("justice", "release", f"{log_user(ctx.author)} released {log_user(member)} from prison (reason: {reason})")
 
         await db.add_note(member.id, ctx.author.id, f"Released from prison early for '{reason}'")
         await ctx.respond(f"{member.mention} has been released from prison for `{reason}`.")
 
-    @slash_command(name='adjustsentence', description='Adjust the sentence of a user.')
+    @sentence.command(name='adjust', description='Adjust the sentence of a user.')
     @option('member', discord.Member, description='The member to adjust the sentence of')
     @option('time', str, description='The time to adjust the sentence by')
     async def adjustsentence(self, ctx, member: discord.Member, time: str):
@@ -115,8 +123,9 @@ class Prison(commands.Cog):
         release_date = prisoner["expires"] + datetime.timedelta(seconds=time_seconds)
         await db.add_note(member.id, ctx.author.id, f"Sentence adjusted by '{time}', new release date is '{release_date}'")
         result = await db.adjust_sentence(member.id, release_date)
-
-        await ctx.respond(f"Adjusted sentence of {member.mention} by `{time}`.")
+        
+        log("justice", "adjust", f"{log_user(ctx.author)} adjusted sentence of {log_user(member)} by {time} (new release date: {release_date})")
+        await ctx.respond(f"Adjusted sentence of {member.mention} by `{time}` (New Release Date: {release_date}).")
     
     @slash_command(name='note', description='Add a note to a user.')
     @option('member', discord.Member, description='The member to add the note to')
@@ -151,13 +160,18 @@ class Prison(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
-        entry = await guild.audit_logs(limit=1, action=discord.AuditLogAction.ban).flatten()[0]
+        entry = await guild.audit_logs(limit=1, action=discord.AuditLogAction.ban)
+        entry = entry.flatten()
+        entry = entry[0]
         await db.add_note(user.id, entry.user.id, f"User Banned: `{entry.reason if entry.reason else 'No reason given'}`")
+        log("admin", "ban", f"{log_user(entry.user)} banned {log_user(user)} (reason: {entry.reason if entry.reason else 'No reason given'})")
 
     @commands.Cog.listener()
     async def on_member_kick(self, guild, user):
         entry = await guild.audit_logs(limit=1, action=discord.AuditLogAction.kick).flatten()[0]
         await db.add_note(user.id, entry.user.id, f"User Kicked: `{entry.reason if entry.reason else 'No reason given'}`")
+        log("admin", "kick", f"{log_user(entry.user)} kicked {log_user(user)} (reason: {entry.reason if entry.reason else 'No reason given'})")
+
 
     @commands.Cog.listener()
     async def on_message(self, message):
