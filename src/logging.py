@@ -1,7 +1,5 @@
 import os
 import datetime
-import pytz
-from dateutil import tz
 
 def discord_dynamic_timestamp(timestamp: datetime.datetime, format_style: str = 'f') -> str:
     """
