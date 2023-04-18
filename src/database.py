@@ -120,6 +120,9 @@ async def remove_note(note_id):
     db = await create_connection("notes")
     return await db.delete_one({"_id": note_id})
 
+async def clear_notes(user_id):
+    db = await create_connection("notes")
+    return await db.delete_many({"user": user_id})
 
 # role memory
 

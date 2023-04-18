@@ -7,7 +7,7 @@ from discord.ext import commands, tasks, pages
 from . import database as db
 from . import config
 from . import artificalint as ai
-from .logging import discord_dynamic_timestamp
+from .logging import discord_dynamic_timestamp, log, log_user
 
 class Social(commands.Cog):
     def __init__(self, bot):
@@ -84,10 +84,12 @@ class Social(commands.Cog):
         paginator = pages.Paginator(pages=embeds)
         await paginator.respond(ctx.interaction, ephemeral=True)
 
-    @slash_command(name='notes', description='Get a user\'s admin notes.')
+    notes = discord.SlashCommandGroup("notes", "Admin note commands")
+
+    @notes.command(name='view', description='Get a user\'s admin notes.')
     @option('user', discord.User, description='The user to get notes for')
     @option('ephemeral', bool, description='Whether to send the message as an ephemeral message')
-    async def notes(self, ctx, user:discord.User, ephemeral:bool=True):
+    async def viewnotes(self, ctx, user:discord.User, ephemeral:bool=True):
         if not ctx.author.guild_permissions.manage_roles:
             await ctx.respond("You do not have permission to use this command.", ephemeral=True)
             return
@@ -134,6 +136,115 @@ class Social(commands.Cog):
         paginator = pages.Paginator(pages=embeds)
         await paginator.respond(ctx.interaction, ephemeral=ephemeral)
         
+    @notes.command(name='add', description='Add a note to a user.')
+    @option('member', discord.Member, description='The member to add the note to')
+    @option('note', str, description='The note to add')
+    async def addnote(self, ctx, member: discord.Member, note: str):
+        if not ctx.author.guild_permissions.moderate_members:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+
+        note = await db.add_note(member.id, ctx.author.id, note)
+        log("admin", "note", f"{log_user(ctx.author)} added note to {log_user(member)} ({note['_id']}: {note['note']})")
+
+        embed = discord.Embed(title="Note", description=f"Note added to {member.mention} by {ctx.author.mention}", color=0x00ff6e)
+        embed.add_field(name="Note", value=note["note"], inline=False)
+        embed.set_footer(text=f"Note ID: `{note['_id']}`")
+
+        try:
+            log_channel = self.bot.get_channel(config.C["log_channel"])
+            await log_channel.send(embed=embed)
+        except discord.Forbidden:
+            pass
+
+
+        await ctx.respond(embed=embed, ephemeral=True)
+
+    @notes.command(name='warn', description='Add a warning to a user. (like a note but sends a dm)')
+    @option('member', discord.Member, description='The member to add the warning to')
+    @option('reason', str, description='The reason for the warning')
+    async def warn(self, ctx, member: discord.Member, warning: str):
+        if not ctx.author.guild_permissions.moderate_members:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+
+        note = await db.add_note(member.id, ctx.author.id, f"User Warned: `{warning}`")
+
+        embed = discord.Embed(title="Warning", description=f"{member.mention} has been warned in {ctx.guild.name}, by `{ctx.author}` for\n`{warning}`", color=0xeb6a29)
+
+        embed.set_footer(text=f"Note ID: `{note['_id']}`")
+
+        try:
+            await member.send(embed=embed)
+        except discord.Forbidden:
+            embed.description += "\n\n*I was unable to DM the user.*"
+            await ctx.channel.send(member.mention, embed=embed)
+        
+        try:
+            log_channel = self.bot.get_channel(config.C["log_channel"])
+            await log_channel.send(embed=embed)
+        except discord.Forbidden:
+            pass
+
+        log("admin", "warn", f"{log_user(ctx.author)} warned {log_user(member)} ({note['_id']}: {note['note']})")
+        await ctx.respond(embed=embed, ephemeral=True)
+
+    @notes.command(name='remove', description='Remove a note from a user.')
+    @option('note_id', str, description='The id of the note to remove')
+    async def removenote(self, ctx, note_id: str):
+        if not ctx.author.guild_permissions.moderate_members:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        note = await db.get_note(note_id.lower())
+        if not note:
+            return await ctx.respond("Note not found.", ephemeral=True)
+        await db.remove_note(note_id.lower())
+        log("admin", "delnote", f"{log_user(ctx.author)} removed note from {note['user']} ({note_id}: {note['note']})")
+
+        embed = discord.Embed(title="Note Removed", description=f"Note removed from <@{note['user']}> by {ctx.author.mention}", color=0x34eb98)
+        author = None
+
+        author = self.bot.get_user(note["author"])
+
+        if not author:
+            try:
+                author = await self.bot.fetch_user(note["author"])
+            except discord.NotFound:
+                author = None
+        
+        if not author:
+            author = note["author"]
+
+        embed.add_field(name="Original Author", value=author if isinstance(author, int) else author.mention, inline=False)
+        embed.add_field(name="Note", value=note["note"], inline=False)
+        embed.set_footer(text=f"Note ID: `{note['_id']}`")
+
+        try:
+            log_channel = self.bot.get_channel(config.C["log_channel"])
+            await log_channel.send(embed=embed)
+        except discord.Forbidden:
+            pass
+
+        await ctx.respond(embed=embed, ephemeral=True)
+
+    @notes.command(name='clear', description='Clear all notes for a user.')
+    @option('member', discord.Member, description='The member to clear notes for')
+    async def clearnotes(self, ctx, member):
+        if not ctx.author.guild_permissions.moderate_members:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        
+        ret = await db.clear_notes(member.id)
+        log("admin", "clearnotes", f"{log_user(ctx.author)} cleared {ret.deleted_count} notes for {log_user(member)}")
+
+        embed = discord.Embed(title="Notes Cleared", description=f"Notes cleared for {member.mention} by {ctx.author.mention}", color=0x34eb98)
+        embed.add_field(name="Note Count", value=ret.deleted_count, inline=False)
+
+        try:
+            log_channel = self.bot.get_channel(config.C["log_channel"])
+            await log_channel.send(embed=embed)
+        except discord.Forbidden:
+            pass
+
+        await ctx.respond(embed=embed, ephemeral=True)
+
+    
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
         if user.bot or reaction.message.author.bot:

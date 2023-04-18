@@ -222,37 +222,6 @@ class Prison(commands.Cog):
             pass
         
         await ctx.respond(embed=embed, ephemeral=ephemeral)
-    
-    @slash_command(name='note', description='Add a note to a user.')
-    @option('member', discord.Member, description='The member to add the note to')
-    @option('note', str, description='The note to add')
-    async def note(self, ctx, member: discord.Member, note: str):
-        if not ctx.author.guild_permissions.moderate_members:
-            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
-
-        note = await db.add_note(member.id, ctx.author.id, note)
-        log("admin", "note", f"{log_user(ctx.author)} added note to {log_user(member)} ({note['_id']}: {note['note']})")
-        await ctx.respond(f"Added note to {member.mention}: {note['note']}. ({note['_id']})", ephemeral=True)
-
-    @slash_command(name='warn', description='Add a warning to a user.')
-    @option('member', discord.Member, description='The member to add the warning to')
-    @option('reason', str, description='The reason for the warning')
-    async def warn(self, ctx, member: discord.Member, warning: str):
-        if not ctx.author.guild_permissions.moderate_members:
-            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
-        
-        embed = discord.Embed(title="Warning", description=f"You have been warned in {ctx.guild.name}, by `{ctx.author}` for\n`{warning}`", color=discord.Color.red())
-
-        try:
-            await member.send(embed=embed)
-        except discord.Forbidden:
-            embed.description += "\n\n*I was unable to DM you.*"
-            await ctx.channel.send(member.mention, embed=embed)
-
-    
-        note = await db.add_note(member.id, ctx.author.id, f"User Warned: `{warning}`")
-        log("admin", "warn", f"{log_user(ctx.author)} warned {log_user(member)} ({note['_id']}: {note['note']})")
-        await ctx.respond(f"User has been warned.", embed=embed, ephemeral=True)
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):

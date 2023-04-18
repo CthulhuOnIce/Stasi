@@ -34,7 +34,8 @@ logging.log("main", "setup", f"Finished setting up {i} cogs")
 
 @bot.event
 async def on_connect():
-    logging.log("main", "setup", "Connected to discord")
+    await bot.sync_commands()
+    logging.log("main", "setup", "Connected to discord, synced commands")
 
 @bot.event
 async def on_ready():  # I just like seeing basic info like this
