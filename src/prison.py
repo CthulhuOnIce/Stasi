@@ -7,18 +7,21 @@ from discord.ext import commands, tasks
 from . import database as db
 from . import config
 from . import utils
-from .logging import log, log_user
+from .logging import log, log_user, discord_dynamic_timestamp
 
 import datetime
+import pytz
 
 class Prison(commands.Cog):
     bot: commands.Bot
 
     def __init__(self, bot):
         self.bot = bot
+        self.prisoner_loop.start()
 
-    async def free_prisoner(self, user: dict):
-        guild = self.bot.get_guild(config.C["guild"])
+    async def free_prisoner(self, user: dict, admin = None, reason = "Sentence expired."):
+        guild = self.bot.get_guild(config.C["guild_id"])
+        if not guild:   return
         member = guild.get_member(user["_id"])
 
         if not member:  # the user left the server, remove them from database only
@@ -40,25 +43,45 @@ class Prison(commands.Cog):
             if role and role < guild.me.top_role:
                 roles.append(role)
             
-        await member.add_roles(*roles)
-        embed = embed=discord.Embed(title="Released", description="You have been released from prison and can now access channels normally.", color=0x8ff0a4)
+        await member.edit(roles=roles)
+        
+        embed = discord.Embed(title="Released", description=f"{member.mention} has been successfully released from prison and can now access channels normally.", color=0x8ff0a4)
+        if admin:
+            embed = discord.Embed(title="Released Early", description=f"{member.mention} has been released from prison early by {admin.mention}.", color=0x8ff0a4)
+        if "sentenced" in user:
+            embed.add_field(name="Sentenced", value=discord_dynamic_timestamp(user["sentenced"], "F"), inline=False)
+            embed.add_field(name="Time Served", value=utils.seconds_to_time_long((datetime.datetime.utcnow() - user["sentenced"]).total_seconds()), inline=False)
+        if admin:
+            embed.add_field(name="Original Release Date", value=discord_dynamic_timestamp(user["expires"], "F"), inline=False)
+            embed.add_field(name="Time Left", value=utils.seconds_to_time_long((user["expires"] - datetime.datetime.utcnow()).total_seconds()), inline=False)
+        embed.add_field(name="Reason", value=reason, inline=False)
+
         try:
             await member.send(embed=embed)
         except discord.Forbidden:
             pass
 
+        try:
+            log_channel = guild.get_channel(config.C["log_channel"])
+            await log_channel.send(embed=embed)
+        except discord.Forbidden:
+            pass
+
         await db.remove_prisoner(user["_id"])
 
-        log("justice", "expired", f"{log_user(member)}'s sentence has expired and they have been released from prison")
+        log("justice", "release", f"{log_user(member)} has been successfully released from prison")
 
 
     @slash_command(name='prison', description='Prison a user.')
     @option('member', discord.Member, description='The member to prison')
     @option('time', str, description='The time to prison the member for')
     @option('reason', str, description='The reason for the prison')
-    async def prison(self, ctx, member: discord.Member, time: str, reason: str):
+    @option('ephemeral', bool, description='Whether to send the sentence as an ephemeral message')
+    async def prison(self, ctx, member: discord.Member, time: str, reason: str, ephemeral: Optional[bool] = False):
         if not ctx.author.guild_permissions.manage_roles:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        
+        await ctx.interaction.response.defer(ephemeral=ephemeral)
 
         prison_role = ctx.guild.get_role(config.C["prison_role"])
         time_seconds = utils.time_to_seconds(time)
@@ -71,13 +94,13 @@ class Prison(commands.Cog):
 
         await db.add_prisoner(member.id, ctx.author.id, roles, release_date, reason)
 
-        await member.edit(roles=[])
+        await member.edit(roles=[prison_role])
 
         log("justice", "prison", f"{log_user(ctx.author)} imprisoned {log_user(member)} for {time} (reason: {reason})")
 
         embed=discord.Embed(title="Prisoned!", description=f"{member} has been prisoned!", color=0xf66151)
         embed.set_author(name=str(member), icon_url=member.avatar.url if member.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
-        embed.add_field(name="Expires", value=release_date.strftime("%m/%d/%Y %H:%M:%S"), inline=False)
+        embed.add_field(name="Expires", value=discord_dynamic_timestamp(release_date, 'F'), inline=False)
         embed.add_field(name="Time Left", value=utils.seconds_to_time_long(time_seconds), inline=False)
         embed.add_field(name="Reason", value=reason, inline=False)
 
@@ -86,9 +109,13 @@ class Prison(commands.Cog):
         except discord.Forbidden:
             pass
 
-        await ctx.respond(embed=embed)
+        try:
+            log_channel = ctx.guild.get_channel(config.C["log_channel"])
+            await log_channel.send(embed=embed)
+        except discord.Forbidden:
+            pass
 
-
+        await ctx.respond(embed=embed, ephemeral=ephemeral)
 
     sentence = discord.SlashCommandGroup("sentence", "View or edit prisoner sentences")
     
@@ -103,11 +130,19 @@ class Prison(commands.Cog):
         if not prisoner:
             return await ctx.respond("That user is not in prison.", ephemeral=True)
         
-        time_left = utils.seconds_to_time_long((prisoner["expires"] - datetime.datetime.utcnow()).total_seconds())
+        if prisoner["expires"] > datetime.datetime.utcnow():
+            time_left = utils.seconds_to_time_long((prisoner["expires"] - datetime.datetime.utcnow()).total_seconds())
+        else:
+            time_left = "Expired: Will be released next prison cycle"
 
         embed=discord.Embed(title="Prisoner Info", description=f"Info For Prisoner #{member.id}", color=0xf66151)
         embed.set_author(name=str(member), icon_url=member.avatar.url if member.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
-        embed.add_field(name="Expires", value=prisoner["expires"].strftime("%m/%d/%Y %H:%M:%S"), inline=False)
+        embed.add_field(name="Current Datetime", value=discord_dynamic_timestamp(datetime.datetime.utcnow(), 'F'))
+        if "sentenced" in prisoner:
+            embed.add_field(name="Sentenced", value=discord_dynamic_timestamp(prisoner["sentenced"], "F"), inline=False)
+            embed.add_field(name='Time Served', value=utils.seconds_to_time_long((datetime.datetime.utcnow() - prisoner["sentenced"]).total_seconds()), inline=False)
+        embed.add_field(name="Expires", value=discord_dynamic_timestamp(prisoner["expires"], "F"), inline=False)
+        embed.add_field(name="Expires (Relative)", value=discord_dynamic_timestamp(prisoner["expires"], "R"), inline=False)
         embed.add_field(name="Time Left", value=time_left, inline=False)
         embed.add_field(name="Reason", value=prisoner["reason"], inline=False)
         await ctx.respond(embed=embed, ephemeral=ephemeral)
@@ -115,25 +150,23 @@ class Prison(commands.Cog):
     @sentence.command(name='release', description='Release a user from prison.')
     @option('member', discord.Member, description='The member to release')
     @option('reason', str, description='The reason for the release')
-    async def release(self, ctx, member: discord.Member, reason: str):
+    @option('ephemeral', bool, description='Whether to send the sentence as an ephemeral message')
+    async def release(self, ctx, member: discord.Member, reason: str, ephemeral: Optional[bool] = False):
         if not ctx.author.guild_permissions.manage_roles:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
 
         prisoner = await db.get_prisoner(member.id)
         if not prisoner:
             return await ctx.respond("That user is not in prison.", ephemeral=True)
+        
+        await ctx.interaction.response.defer(ephemeral=ephemeral)
 
-        await self.free_prisoner(prisoner)
+        await self.free_prisoner(prisoner, ctx.author, reason)
         log("justice", "release", f"{log_user(ctx.author)} released {log_user(member)} from prison (reason: {reason})")
 
         await db.add_note(member.id, ctx.author.id, f"Released from prison early for '{reason}'")
 
-        try:
-            await member.send(f"You have been released from prison early for `{reason}`.")
-        except discord.Forbidden:
-            pass
-
-        await ctx.respond(f"{member.mention} has been released from prison for `{reason}`.")
+        await ctx.respond(f"{member.mention} has been released from prison for `{reason}`.", ephemeral=ephemeral)
 
     @sentence.command(name='adjust', description='Adjust the sentence of a user.')
     @option('member', discord.Member, description='The member to adjust the sentence of')
@@ -162,11 +195,14 @@ class Prison(commands.Cog):
 
         time_left_in_new_sentence = (release_date - datetime.datetime.utcnow()).total_seconds()
 
-        embed=discord.Embed(title="Sentence Adjusted", description=f"{member} has had their sentence adjusted.", color=0x8ff0a4 if time[0] == "-" else 0xf66151)
-        embed.add_field(name="Old Expiration Date", value=prisoner["expires"].strftime("%m/%d/%Y %H:%M:%S"), inline=False)
-        embed.add_field(name="New Expiration Date", value=release_date.strftime("%m/%d/%Y %H:%M:%S"), inline=False)
-        embed.add_field(name="Difference", value=f"{time[0]} {utils.seconds_to_time_long(time_seconds_absolute_value)}", inline=False)
-        embed.add_field(name="Time to Release", value=utils.seconds_to_time_long(time_left_in_new_sentence), inline=False)
+        embed=discord.Embed(title="Sentence Adjusted", description=f"{member.mention} has had their sentence adjusted by {ctx.author.mention}.", color=0x8ff0a4 if time[0] == "-" else 0xf66151)
+        embed.add_field(name="Old Expiration Date", value=discord_dynamic_timestamp(prisoner["expires"], "F"), inline=False)
+        embed.add_field(name="New Expiration Date", value=discord_dynamic_timestamp(release_date, "F"), inline=False)
+        embed.add_field(name="Difference", value=f"<{time[0]}> {utils.seconds_to_time_long(time_seconds_absolute_value)}", inline=False)
+        if time_left_in_new_sentence < 0:
+            embed.add_field(name="Time Left", value="Expired: Will be released next prison cycle", inline=False)
+        else:
+            embed.add_field(name="Time to Release", value=utils.seconds_to_time_long(time_left_in_new_sentence), inline=False)
         embed.set_author(name=str(member), icon_url=member.avatar.url if member.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
 
         await db.add_note(member.id, ctx.author.id, f"Sentence adjusted by '{time}', new release date is '{release_date}'")
@@ -176,6 +212,12 @@ class Prison(commands.Cog):
         
         try:
             await member.send(embed=embed)
+        except discord.Forbidden:
+            pass
+
+        try:
+            log_channel = ctx.guild.get_channel(config.C["log_channel"])
+            await log_channel.send(embed=embed)
         except discord.Forbidden:
             pass
         
@@ -236,9 +278,11 @@ class Prison(commands.Cog):
 
     @tasks.loop(minutes=1)
     async def prisoner_loop(self):
+        print("Running prisoner loop")
         log("justice", "loop", "Running prisoner loop", False)
         for user in await db.get_expired_prisoners():
             await self.free_prisoner(user)
 
 def setup(bot):
     bot.add_cog(Prison(bot))
+

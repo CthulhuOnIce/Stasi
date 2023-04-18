@@ -154,8 +154,8 @@ async def add_prisoner(member_id, admin_id, roles, release_date, reason):
     db = await create_connection("prison")
     difference_in_seconds = (release_date - datetime.datetime.utcnow()).total_seconds()
     ts = utils.seconds_to_time(difference_in_seconds)
-    await add_note(member_id, admin_id, f"Prisoned for '{reason}' until {release_date} ({ts}).")
-    await db.insert_one({"_id": member_id, "expires": release_date, "reason": reason, "roles": roles})
+    note = await add_note(member_id, admin_id, f"Prisoned for '{reason}' until {release_date} ({ts}).")
+    await db.insert_one({"_id": member_id, "expires": release_date, "reason": reason, "roles": roles, "sentenced": datetime.datetime.utcnow(), "admin": admin_id, "note": note["_id"]})
 
 async def get_prisoner(member_id):
     db = await create_connection("prison")
