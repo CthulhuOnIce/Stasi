@@ -65,14 +65,11 @@ class Prison(commands.Cog):
         release_date = datetime.datetime.utcnow() + datetime.timedelta(seconds=time_seconds)
 
         await member.add_roles(prison_role)
-        roles = [role.id for role in member.roles]
+        member_roles = [role for role in member.roles if str(role) != "@everyone"]
+        roles = [role.id for role in member_roles]
         await db.add_prisoner(member.id, ctx.author.id, roles, release_date, reason)
 
-        for role in member.roles:
-            try:
-                await member.remove_roles(role)
-            except Exception as e:
-                log("debug", "roleissue", f"Role {role} on user {log_user(member)}: {e}")
+        await member.remove_roles(*member_roles)
 
         log("justice", "prison", f"{log_user(ctx.author)} imprisoned {log_user(member)} for {time} (reason: {reason})")
 
