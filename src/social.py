@@ -7,6 +7,7 @@ from discord.ext import commands, tasks, pages
 from . import database as db
 from . import config
 from . import artificalint as ai
+from .logging import discord_dynamic_timestamp
 
 class Social(commands.Cog):
     def __init__(self, bot):
@@ -104,16 +105,29 @@ class Social(commands.Cog):
         embed.add_field(name="Total Notes", value=len(notes), inline=False)
         embeds.append(embed)
 
+        author_cache = {}
+
         for i, note in enumerate(notes):
-            author = self.bot.get_user(note["author"])
+            author = None
+            if note["author"] in author_cache:
+                author = author_cache[note["author"]]
+            else:
+                author = self.bot.get_user(note["author"])
+
+                if not author:
+                    try:
+                        author = await self.bot.fetch_user(note["author"])
+                    except discord.NotFound:
+                        author = None
             
-            if not author:
-                author = await self.bot.fetch_user(note["author"])
             if not author:
                 author = note["author"]
+            else:
+                author_cache[note["author"]] = author
             
-            embed = discord.Embed(title=f"Note {i+1}/{len(notes)}", description=f'From {author} on {note["timestamp"]}', color=0x00ff00)
+            embed = discord.Embed(title=f"Note {i+1}/{len(notes)}", description=f'From {author} on {discord_dynamic_timestamp(note["timestamp"], "F")}', color=0x00ff00)
             embed.add_field(name="Note", value=note["note"], inline=False)
+            embed.set_footer(text=f"Note ID: `{note['_id']}`")
 
             embeds.append(embed)
 
