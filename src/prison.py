@@ -278,7 +278,6 @@ class Prison(commands.Cog):
 
     @tasks.loop(minutes=1)
     async def prisoner_loop(self):
-        print("Running prisoner loop")
         log("justice", "loop", "Running prisoner loop", False)
         for user in await db.get_expired_prisoners():
             await self.free_prisoner(user)
