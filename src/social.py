@@ -168,14 +168,15 @@ class Social(commands.Cog):
 
         note = await db.add_note(member.id, ctx.author.id, f"User Warned: `{warning}`")
 
-        embed = discord.Embed(title="Warning", description=f"{member.mention} has been warned in {ctx.guild.name}, by `{ctx.author}` for\n`{warning}`", color=0xeb6a29)
+        embed = discord.Embed(title="Warning", description=f"{member.mention} has been warned in {ctx.guild.name}, by {ctx.author.mention} ") #for\n`{warning}`", color=0xeb6a29)
+        embed.add_field(name="Warn Text", value=warning, inline=False)
 
         embed.set_footer(text=f"Note ID: `{note['_id']}`")
 
         try:
             await member.send(embed=embed)
         except discord.Forbidden:
-            embed.description += "\n\n*I was unable to DM the user.*"
+            embed.add_field(name="DM", value="*Could Not DM User*", inline=False)
             await ctx.channel.send(member.mention, embed=embed)
         
         try:
