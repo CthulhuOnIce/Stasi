@@ -72,7 +72,7 @@ class Prison(commands.Cog):
             try:
                 await member.remove_roles(role)
             except Exception as e:
-                log("debug", "roleissue", "Role {role} on user {log_user(member)}: {e}")
+                log("debug", "roleissue", f"Role {role} on user {log_user(member)}: {e}")
 
         log("justice", "prison", f"{log_user(ctx.author)} imprisoned {log_user(member)} for {time} (reason: {reason})")
 
