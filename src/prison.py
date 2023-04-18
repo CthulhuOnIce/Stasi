@@ -66,9 +66,13 @@ class Prison(commands.Cog):
 
         await member.add_roles(prison_role)
         roles = [role.id for role in member.roles]
-        roles_raw = [role for role in member.roles if role.id]
         await db.add_prisoner(member.id, ctx.author.id, roles, release_date, reason)
-        await member.remove_roles(*roles_raw)
+
+        for role in member.roles:
+            try:
+                await member.remove_roles(role)
+            except Exception as e:
+                log("debug", "roleissue", "Role {role} on user {log_user(member)}: {e}")
 
         log("justice", "prison", f"{log_user(ctx.author)} imprisoned {log_user(member)} for {time} (reason: {reason})")
 
