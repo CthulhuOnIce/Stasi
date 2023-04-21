@@ -98,7 +98,7 @@ class Prison(commands.Cog):
 
         log("justice", "prison", f"{log_user(ctx.author)} imprisoned {log_user(member)} for {time} (reason: {reason})")
 
-        embed=discord.Embed(title="Prisoned!", description=f"{member} has been prisoned!", color=0xf66151)
+        embed=discord.Embed(title="Prisoned!", description=f"{member.mention} has been prisoned by {ctx.author.mention}!", color=0xf66151)
         embed.set_author(name=str(member), icon_url=member.avatar.url if member.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
         embed.add_field(name="Expires", value=discord_dynamic_timestamp(release_date, 'F'), inline=False)
         embed.add_field(name="Time Left", value=utils.seconds_to_time_long(time_seconds), inline=False)
