@@ -17,6 +17,13 @@ async def make_chatgpt_request(messages: List[dict]):
 )
     return res["choices"][0]["message"]
 
+async def make_chatgpt4_request(messages: List[dict]):
+    res = await openai.ChatCompletion.acreate(
+  model="gpt4",
+  messages=messages
+)
+    return res["choices"][0]["message"]
+
 def build_verification_embed(user, messages, verdict):
     messages_ = deepcopy(messages)
     if len(messages_) > 25:
@@ -152,7 +159,7 @@ class VettingInterviewer:
         
 
 async def tutor_question(question):
-    res = await make_chatgpt_request([{"role": "system", "content": config.C["openai"]["tutor_prompt"]}, {"role": "user", "content": question}])
+    res = await make_chatgpt4_request([{"role": "system", "content": config.C["openai"]["tutor_prompt"]}, {"role": "user", "content": question}])
     return res["content"]
 
 
