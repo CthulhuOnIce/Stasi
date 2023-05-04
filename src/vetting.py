@@ -54,7 +54,9 @@ class Verification(commands.Cog):
         await ctx.respond(embed=embed, ephemeral=False)
 
     @slash_command(name='asktutor', description='Ask Marxist AI tutor a question. [Answers may be wrong, this is for fun.]')  # TODO: move this where it actually belongs
-    async def asktutor(self, ctx, question: str):
+    @option(name='question', description='The question to ask.', required=True)
+    @option(name='ephemeral', description='Whether to make the response ephemeral.', required=False)
+    async def asktutor(self, ctx, question: str, ephemeral: Optional[bool] = True):
         await ctx.interaction.response.defer()
         embed = discord.Embed(title="Question", description=question)
         embed.set_author(name=ctx.author, icon_url=ctx.author.avatar.url if ctx.author.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
@@ -68,7 +70,7 @@ class Verification(commands.Cog):
             embed.add_field(name="Answer", value=answer[:1024], inline=False)
             embed.add_field(name="Answer (cont.)", value=answer[1024:2048], inline=False)
             embed.add_field(name="Answer (cont. cont.)", value=answer[2048:], inline=False)
-        await ctx.respond(embed=embed, ephemeral=False)
+        await ctx.respond(embed=embed, ephemeral=ephemeral)
 
     currently_ai_verifying = {}
 
