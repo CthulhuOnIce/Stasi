@@ -3,7 +3,7 @@ from . import config
 from typing import List
 import discord
 import asyncio
-from .logging import log, log_user
+from .logging import log, log_user, lid
 from copy import deepcopy
 
 openai.api_key = config.C["openai"]["key"]
@@ -117,7 +117,7 @@ class VettingInterviewer:
 
     async def vet_user(self, ctx, user):
 
-        log("aivetting", "startvetting", f"{id(self)} starting vetting for {log_user(user)}")
+        log("aivetting", "startvetting", f"{lid(self)} starting vetting for {log_user(user)}")
 
         self.user = user
             
@@ -135,7 +135,7 @@ class VettingInterviewer:
             try:
                 message = await ctx.bot.wait_for("message", check=lambda m: m.author == user and not m.guild, timeout=60*20)  # 20 minutes to answer
                 self.messages.append({"role": "user", "content": message.clean_content})
-                log("aivetting", "readmessage", f"{id(self)} Read message from {log_user(user)}: {message.clean_content}")
+                log("aivetting", "readmessage", f"{lid(self)} Read message from {log_user(user)}: {message.clean_content}")
             except asyncio.TimeoutError:
                 log("aivetting", "timeout", f"User {log_user(user)} timed out.")
                 await user.send("SYSTEM: You have timed out (20 minutes). Please try again later.")
@@ -149,13 +149,13 @@ class VettingInterviewer:
         return verdict 
 
     def __init__(self):
-        log("aivetting", "newmod", f"New interviewer {id(self)} created.")
+        log("aivetting", "newmod", f"New interviewer {lid(self)} created.")
         self.messages = [{"role": "system", "content": config.C["openai"]["vetting_prompt"]},
             {"role": "user", "content": "[START VETTING]"}].copy()
         self.vetting = True
 
     def __del__(self):
-        log("aivetting", "delmod", f"Interviewer {id(self)} deleted.")
+        log("aivetting", "delmod", f"Interviewer {lid(self)} deleted.")
         
 
 async def tutor_question(question):
@@ -181,9 +181,9 @@ class BetaVettingInterviewer(VettingInterviewer):
                 self.messages.append({"role": "assistant", "content": content})
                 return {"role": "assistant", "content": content}
             else:
-                log("aivetting", "openaierror", f"Error {id(e)} {self.errors_in_a_row}/{max_errors} in OpenAI request: {e} for interviewer {id(self)}. Retrying in 15 seconds.")
+                log("aivetting", "openaierror", f"Error {lid(e)} {self.errors_in_a_row}/{max_errors} in OpenAI request: {e} for interviewer {id(self)}. Retrying in 15 seconds.")
                 await asyncio.sleep(15)
-                log("aivetting", "openaierror", f"Error {id(e)} retrying now.")
+                log("aivetting", "openaierror", f"Error {lid(e)} retrying now.")
                 return await self.openai_request(messages)
 
     async def one_off_assistant(self, system, user):
@@ -197,7 +197,7 @@ class BetaVettingInterviewer(VettingInterviewer):
         return res["content"]
 
     async def generate_response(self):
-        log("aivetting", "betaairesponse", f"Beta AI {id(self)} Generating response...")
+        log("aivetting", "betaairesponse", f"Beta AI {lid(self)} Generating response...")
         response = await self.openai_request(self.messages)
         response = response["content"]
 
@@ -205,10 +205,10 @@ class BetaVettingInterviewer(VettingInterviewer):
             prompt = "Evaluate the message given. If it seems like the user has made a final decision regarding someone else's ideology, respond with \"[END]\" If the user is not sure yet, or the interview is otherwise ongoing, do not respond with the code."
             one_off_response = await self.one_off(prompt, response)
             if "[end]" in one_off_response.lower():
-                log("aivetting", "aicorrection", f"AI {id(self)} forgot to include a resolution code. Message: {response} Prompting it to try again. (User: {log_user(self.user)}")
+                log("aivetting", "aicorrection", f"AI {lid(self)} forgot to include a resolution code. Message: {response} Prompting it to try again. (User: {log_user(self.user)}")
                 self.messages.append({"role": "system", "content": "Now end the interview, remember to include a resolution code in your message."})
                 return await self.generate_response()
 
         self.messages.append({"role": "assistant", "content": response})
-        log("aivetting", "betaairesponse", f"Beta AI {id(self)} Generated response: {response}")
+        log("aivetting", "betaairesponse", f"Beta AI {lid(self)} Generated response: {response}")
         return response

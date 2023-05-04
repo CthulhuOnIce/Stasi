@@ -9,7 +9,7 @@ from . import database as db
 from . import config
 from . import artificalint as ai
 from . import security
-from .logging import log, log_user
+from .logging import log, log_user, lid
 
 class Verification(commands.Cog):
 
@@ -60,7 +60,13 @@ class Verification(commands.Cog):
         await ctx.interaction.response.defer(ephemeral=ephemeral)
         embed = discord.Embed(title="Question", description=question)
         embed.set_author(name=ctx.author, icon_url=ctx.author.avatar.url if ctx.author.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
+
+        log("aivetting", "asktutor", f"Question: {question} (User: {log_user(ctx.author)} | CTX: {lid(ctx)})")
+
         answer = await ai.tutor_question(question)
+
+        log("aivetting", "asktutor", f"Answer: {answer} (User: {log_user(ctx.author)} | CTX: {lid(ctx)})")
+        
         if len(answer) <= 1024:
             embed.add_field(name="Answer", value=answer, inline=False)
         elif len(answer) <= 2048:  # TODO: this can be done more efficiently
@@ -103,7 +109,7 @@ class Verification(commands.Cog):
 
         verdict = await interviewer.vet_user(ctx, ctx.author)
 
-        log("aivetting", "verdict", f"AI {id(interviewer)}: Verdict: {verdict} (User: {log_user(ctx.author)}")
+        log("aivetting", "verdict", f"AI {lid(interviewer)}: Verdict: {verdict} (User: {log_user(ctx.author)}")
 
         # sanitize log to not include system messages
         interviewer.messages = [message for message in interviewer.messages if message["role"] != "system"]

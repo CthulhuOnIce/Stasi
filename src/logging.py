@@ -1,5 +1,6 @@
 import os
 import datetime
+import base64
 
 def discord_dynamic_timestamp(timestamp: datetime.datetime, format_style: str = 'f') -> str:
     """
@@ -48,3 +49,5 @@ def log(category_broad, category_fine, message, print_message=True, preserve_new
 def log_user(user):
     return f"{user} ({user.id})"
 
+def lid(object):  # convert the id(object) to base64
+    return base64.b64encode(str(id(object)).encode("utf-8")).decode("utf-8")

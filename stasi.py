@@ -79,8 +79,8 @@ async def on_command_error(ctx, error):  # share certain errors with the user
     error_raw = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     errortracking.report_error(error_raw)
 
-    logging.log("main", "runtime", f"Error {id(error)} in '{ctx.command}' by '{logging.log_user(ctx.author) if ctx.author else 'unknown'}'. Check runtimes.log for more details.")
-    logging.log("runtimes", "error", f"Error {id(error)} in '{ctx.command}' by '{logging.log_user(ctx.author) if ctx.author else 'unknown'}': \n```\n{error_raw}\n```", False, True)
+    logging.log("main", "runtime", f"Error {logging.lid(error)} in '{ctx.command}' by '{logging.log_user(ctx.author) if ctx.author else 'unknown'}'. Check runtimes.log for more details.")
+    logging.log("runtimes", "error", f"Error {logging.lid(error)} in '{ctx.command}' by '{logging.log_user(ctx.author) if ctx.author else 'unknown'}': \n```\n{error_raw}\n```", False, True)
 
 @bot.event
 async def on_application_command_error(ctx, error):  # share certain errors with the user
@@ -102,7 +102,7 @@ async def on_application_command_error(ctx, error):  # share certain errors with
     error_raw = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     errortracking.report_error(error_raw)
 
-    logging.log("main", "runtime", f"Error {id(error)} in '{ctx.command}' by '{logging.log_user(ctx.author) if ctx.author else 'unknown'}'. Check runtimes.log for more details.")
-    logging.log("runtimes", "error", f"Error {id(error)} in '{ctx.command}' by '{logging.log_user(ctx.author) if ctx.author else 'unknown'}': \n```\n{error_raw}\n```", False, True)
+    logging.log("main", "runtime", f"Error {logging.lid(error)} in '{ctx.command}' by '{logging.log_user(ctx.author) if ctx.author else 'unknown'}'. Check runtimes.log for more details.")
+    logging.log("runtimes", "error", f"Error {logging.lid(error)} in '{ctx.command}' by '{logging.log_user(ctx.author) if ctx.author else 'unknown'}': \n```\n{error_raw}\n```", False, True)
 
 bot.run(config.C["token"])
