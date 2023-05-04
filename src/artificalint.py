@@ -19,7 +19,7 @@ async def make_chatgpt_request(messages: List[dict]):
 
 async def make_chatgpt4_request(messages: List[dict]):
     res = await openai.ChatCompletion.acreate(
-  model="gpt4",
+  model="gpt-4",
   messages=messages
 )
     return res["choices"][0]["message"]
