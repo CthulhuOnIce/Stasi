@@ -56,7 +56,7 @@ class Verification(commands.Cog):
     @slash_command(name='asktutor', description='Ask Marxist AI tutor a question. [Answers may be wrong, this is for fun.]')  # TODO: move this where it actually belongs
     @option(name='question', description='The question to ask.', required=True)
     @option(name='ephemeral', description='Whether to make the response ephemeral.', required=False)
-    async def asktutor(self, ctx, question: str, ephemeral: Optional[bool] = True):
+    async def asktutor(self, ctx, question: str, ephemeral: bool = True):
         await ctx.interaction.response.defer()
         embed = discord.Embed(title="Question", description=question)
         embed.set_author(name=ctx.author, icon_url=ctx.author.avatar.url if ctx.author.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
