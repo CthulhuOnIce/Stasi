@@ -30,7 +30,7 @@ def build_verification_embed(user, messages, verdict):
         messages_ = messages_[:25]
     embed = discord.Embed(title=f"Verdict: {verdict}", description="Vetting completed." if verdict != "yanked" else "Vetting in progress.")
     if user:
-        embed.set_author(name=user, icon_url=user.avatar.url if user.avatar else None)
+        embed.set_author(name=user, icon_url=user.avatar.url if user.avatar else "https://cdn.discordapp.com/embed/avatars/4.png")
     if verdict == "bgtprb":
         embed.set_footer(text="User is being overtly offensive, exercise caution.")
     elif verdict == "yanked":
@@ -47,7 +47,7 @@ def build_paginated_verification_embeds(user, messages, verdict):
     embeds = []
     embed = discord.Embed(title=f"Verdict: {verdict}", description="Vetting completed." if verdict != "yanked" else "Vetting in progress.")
     if user:
-        embed.set_author(name=user, icon_url=user.avatar.url if user.avatar else None)
+        embed.set_author(name=user, icon_url=user.avatar.url if user.avatar else "https://cdn.discordapp.com/embed/avatars/4.png")
     if verdict == "bgtprb":
         embed.set_footer(text="User is being overtly offensive, exercise caution.")
     elif verdict == "yanked":

@@ -72,7 +72,7 @@ class Verification(commands.Cog):
         elif len(answer) <= 2048:  # TODO: this can be done more efficiently
             embed.add_field(name="Answer", value=answer[:1024], inline=False)
             embed.add_field(name="Answer (cont.)", value=answer[1024:], inline=False)
-        else:
+        elif len(answer) <= 3072:
             embed.add_field(name="Answer", value=answer[:1024], inline=False)
             embed.add_field(name="Answer (cont.)", value=answer[1024:2048], inline=False)
             embed.add_field(name="Answer (cont. cont.)", value=answer[2048:], inline=False)
