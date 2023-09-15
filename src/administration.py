@@ -70,6 +70,7 @@ class Administration(commands.Cog):
         members_str = json.dumps(members)
         with open("logs/dump.json", "w+") as w:
             w.write(members_str)
+        await ctx.respond("Done!")
 
     @slash_command(name='simonsays', description='Repeat what Simon says.')
     @option('text', str, description='The text to repeat')
