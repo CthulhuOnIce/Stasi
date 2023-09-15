@@ -102,7 +102,7 @@ async def dump_verification(trim=True):
     if not trim:
         return answer
     # anonymize and return
-    return [{"verification_verdict": person["verification_verdict"], "verification_answer": person["verification_answer"]} for person in answer]
+    return [{"verification_verdict": person["verification_verdict"], "verification_interview": person["verification_interview"]} for person in answer]
 
 
 
