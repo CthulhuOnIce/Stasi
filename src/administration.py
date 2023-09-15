@@ -60,18 +60,6 @@ class Administration(commands.Cog):
             print(e)
             return
 
-    @slash_command(name='interviewdump', description='Dump interview data.')
-    @option('trim', bool, description="Whether or not to anonymize the data.")
-    async def interviewdump(self, ctx, trim:bool=True):
-        await ctx.interaction.response.defer(ephemeral=True)
-        if not security.is_sudoer(ctx.author):
-            await ctx.respond("You do not have access to this command.")
-        members = await db.dump_verification(trim=trim)
-        members_str = json.dumps(members)
-        with open("logs/dump.json", "w+") as w:
-            w.write(members_str)
-        await ctx.respond("Done!")
-
     @slash_command(name='simonsays', description='Repeat what Simon says.')
     @option('text', str, description='The text to repeat')
     async def player_info(self, ctx, text:str):

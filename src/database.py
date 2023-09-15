@@ -95,17 +95,6 @@ async def del_verification(member_id):
     db = await create_connection("users")
     return await db.update_one({"_id": member_id}, {"$unset": {"verification_interview": True, "verification_verdict": True}}, upsert=True)
 
-async def dump_verification(trim=True):
-    db = await create_connection("users")
-    answer = db.find({"verification_interview": {"$exists": True}})
-    answer = await answer.to_list(10000)
-    if not trim:
-        return answer
-    # anonymize and return
-    return [{"verification_verdict": person["verification_verdict"], "verification_interview": person["verification_interview"]} for person in answer]
-
-
-
 async def add_note(member_id, author_id, note):
     note = {
         "_id": utils.generate_random_id(),
