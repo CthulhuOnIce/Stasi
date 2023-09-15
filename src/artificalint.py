@@ -120,10 +120,11 @@ class VettingInterviewer:
         log("aivetting", "startvetting", f"{lid(self)} starting vetting for {log_user(user)}")
 
         self.user = user
-            
-        await self.generate_response()
         try:
-            await user.send(self.messages[-1]["content"])
+            dm_channel = await ctx.author.create_dm()
+            with dm_channel.typing(): 
+                await self.generate_response()
+                await dm_channel.send(self.messages[-1]["content"])
         except discord.Forbidden:
             log("aivetting", "dmfail", f"Failed to send DM to {log_user(user)}")
             await ctx.respond("I cannot send messages to you. Please enable DMs from server members and try again.", ephemeral=True)
@@ -141,8 +142,9 @@ class VettingInterviewer:
                 await user.send("SYSTEM: You have timed out (20 minutes). Please try again later.")
                 return "areject"
         
-            response = await self.generate_response()
-            await user.send(response)
+            with dm_channel.typing():
+                response = await self.generate_response()
+                await dm_channel.send(response)
         
         verdict = self.verdict_check(self.messages[-1]["content"])
 
