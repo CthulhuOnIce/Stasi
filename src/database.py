@@ -97,7 +97,7 @@ async def del_verification(member_id):
 
 async def dump_verification(trim=True):
     db = await create_connection("users")
-    answer = db.find("$exists": {"verification_interview": True})
+    answer = db.find({"$exists": {"verification_interview": True}})
     answer = await answer.to_list()
     if not trim:
         return answer
