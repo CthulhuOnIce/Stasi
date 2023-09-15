@@ -87,8 +87,6 @@ class Prison(commands.Cog):
         time_seconds = utils.time_to_seconds(time)
         release_date = datetime.datetime.utcnow() + datetime.timedelta(seconds=time_seconds)
 
-        await member.add_roles(prison_role)
-
         member_roles = [role for role in member.roles if str(role) != "@everyone"]
         roles = [role.id for role in member_roles]
 
