@@ -67,6 +67,7 @@ class Administration(commands.Cog):
         if not security.is_sudoer(ctx.author):
             await ctx.respond("You do not have access to this command.")
         members = await db.dump_verification(trim=trim)
+        print(members)
         members_str = json.dumps(members)
         # create file-like object
         fo = io.StringIO()
