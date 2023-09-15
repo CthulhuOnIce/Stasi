@@ -3,6 +3,7 @@ from typing import Optional
 import discord
 from discord import option, slash_command
 from discord.ext import commands, tasks
+import simplejson as json
 
 from . import database as db
 from . import config
@@ -10,6 +11,7 @@ from . import security
 import git
 import os
 import sys
+import io
 
 class Administration(commands.Cog):
     def __init__(self, bot):
@@ -57,6 +59,19 @@ class Administration(commands.Cog):
         except Exception as e:  # TODO: make this more specific
             print(e)
             return
+
+    @slash_command(name='interviewdump', description='Dump interview data.')
+    @option('trim', bool, description="Whether or not to anonymize the data.")
+    async def interviewdump(self, ctx, trim:bool=True):
+        await ctx.interaction.response.defer(ephemeral=True)
+        if not security.is_sudoer(ctx.author):
+            await ctx.respond("You do not have access to this command.")
+        members = await db.dump_verification(trim=trim)
+        members_str = json.dumps(members)
+        # create file-like object
+        fo = io.StringIO()
+        fo.write(members_str)
+        await ctx.respond(file=discord.File(fo, 'datadump.json'))
 
     @slash_command(name='simonsays', description='Repeat what Simon says.')
     @option('text', str, description='The text to repeat')
