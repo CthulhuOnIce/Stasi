@@ -67,12 +67,9 @@ class Administration(commands.Cog):
         if not security.is_sudoer(ctx.author):
             await ctx.respond("You do not have access to this command.")
         members = await db.dump_verification(trim=trim)
-        print(members)
         members_str = json.dumps(members)
-        # create file-like object
-        fo = io.StringIO()
-        fo.write(members_str)
-        await ctx.respond(file=discord.File(fo, 'datadump.json'))
+        with open("logs/dump.json", "w+") as w:
+            w.write(members_str)
 
     @slash_command(name='simonsays', description='Repeat what Simon says.')
     @option('text', str, description='The text to repeat')
