@@ -19,7 +19,7 @@ async def make_chatgpt_request(messages: List[dict]):
 
 async def make_vetting_chatgpt_request(messages: List[dict]):
     res = await openai.ChatCompletion.acreate(
-  model=config.C["openai"]["model"],
+  model=config.C["openai"]["vettingmodel"],
   messages=messages
 )
     return res["choices"][0]["message"]
