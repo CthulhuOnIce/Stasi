@@ -17,6 +17,13 @@ async def make_chatgpt_request(messages: List[dict]):
 )
     return res["choices"][0]["message"]
 
+async def make_vetting_chatgpt_request(messages: List[dict]):
+    res = await openai.ChatCompletion.acreate(
+  model=config.C["openai"]["model"],
+  messages=messages
+)
+    return res["choices"][0]["message"]
+
 async def make_chatgpt4_request(messages: List[dict]):
     res = await openai.ChatCompletion.acreate(
   model="gpt-4",
@@ -84,7 +91,7 @@ class VettingInterviewer:
     async def generate_response(self):
         global errors_in_a_row
         try:
-            response = await make_chatgpt_request(self.messages)
+            response = await make_vetting_chatgpt_request(self.messages)
             self.errors_in_a_row = 0
             self.messages.append({"role": "assistant", "content": ["content"]})
             return response["content"]
@@ -169,7 +176,7 @@ class BetaVettingInterviewer(VettingInterviewer):
 
     async def openai_request(self, messages):
         try:
-            ret = await make_chatgpt_request(messages)
+            ret = await make_vetting_chatgpt_request(messages)
             self.errors_in_a_row = 0
             return ret
         

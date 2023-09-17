@@ -12,6 +12,7 @@ mongodb:
 sudoers:
   - 291321148715696138
 openai:  # openai integration
+  vettingmodel: gpt-3.5-turbo
   key: ai key here
   tutor_prompt: 'You are a Marxist-Leninist professor in a hypothetical future American classroom dedicated to studying and developing socialism. Your students will ask you questions and you must answer to the best of your ability.'
   vetting_prompt: 'You are an automated system vetting users for admission into a Left-Wing (Marxist-aligned) discord server. 
