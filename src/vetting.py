@@ -36,8 +36,8 @@ class Verification(commands.Cog):
                 return "SYSTEM: Verdict is LEFT. You are a left-winger."
             elif verdict == "right":
                 return "SYSTEM: Verdict is RIGHT. You are a right-winger or your leanings or ambiguous."
-            elif verdict == "areject":
-                return "SYSTEM: Verdict is AREJECT. You are intentionally frustrating the vetting process."
+            elif verdict == "redo":
+                return "SYSTEM: Verdict is REDO. Your interview must be redone, usually if you're being uncooperative."
             elif verdict == "bgtprb":
                 return "SYSTEM: Verdict is BGTPRB. You are being overtly offensive."
             else:
@@ -130,7 +130,7 @@ class Verification(commands.Cog):
             verification_role = ctx.guild.get_role(config.C["leftwing_role"])
         elif verdict == "right" or verdict == "bgtprb":
             verification_role = ctx.guild.get_role(config.C["rightwing_role"])
-        elif verdict == "areject" or verdict == "error" or verdict == False:
+        elif verdict == "redo" or verdict == "error" or verdict == False:
             return self.currently_ai_verifying.pop(f"{ctx.author.id}")
         
         # dm user informing them of their verdict

@@ -115,8 +115,8 @@ class VettingInterviewer:
             return "left"
         elif "RIGHT]" in message:
             return "right"
-        elif "AREJECT]" in message:
-            return "areject"
+        elif "REDO]" in message:
+            return "redo"
         elif "BGTPRB]" in message:
             return "bgtprb"
         else:
@@ -135,7 +135,7 @@ class VettingInterviewer:
         except discord.Forbidden:
             log("aivetting", "dmfail", f"Failed to send DM to {log_user(user)}")
             await ctx.respond("I cannot send messages to you. Please enable DMs from server members and try again.", ephemeral=True)
-            return "areject"
+            return "redo"
     
         await ctx.respond("Check your DMs", ephemeral=True)
         
@@ -147,7 +147,7 @@ class VettingInterviewer:
             except asyncio.TimeoutError:
                 log("aivetting", "timeout", f"User {log_user(user)} timed out.")
                 await user.send("SYSTEM: You have timed out (20 minutes). Please try again later.")
-                return "areject"
+                return "redo"
         
             with dm_channel.typing():
                 response = await self.generate_response()
