@@ -1,5 +1,8 @@
 import random
 
+nouns = open("wordlists/nouns.txt", "r").read().splitlines()
+adjectives = open("wordlists/adjectives.txt", "r").read().splitlines()
+
 # Function to receive time in the form of "100d10h10m10s" and return the time in seconds
 def time_to_seconds(time: str):
     seconds = 0
@@ -73,6 +76,4 @@ def seconds_to_time_long(time: int):  # "one day, 10 hours, 10 minutes, 10 secon
         return "now"
 
 def generate_random_id(): 
-    nouns = open("wordlists/nouns.txt", "r").read().splitlines()
-    adjectives = open("wordlists/adjectives.txt", "r").read().splitlines()
     return f"{random.choice(adjectives)}-{random.choice(adjectives)}-{random.choice(nouns)}"

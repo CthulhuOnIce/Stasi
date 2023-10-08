@@ -1,0 +1,31 @@
+diamond
+ruby
+sapphire
+emerald
+amethyst
+topaz
+opal
+turquoise
+aquamarine
+garnet
+peridot
+pearl
+citrine
+jade
+lapis lazuli
+moonstone
+tanzanite
+quartz
+onyx
+amber
+rose quartz
+tourmaline
+agate
+malachite
+alexandrite
+carnelian
+iolite
+spinel
+zircon
+labradorite
+rhodolite

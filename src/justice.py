@@ -52,6 +52,9 @@ case = {
 client = db.client
 create_connection = db.create_connection
 
+tree_types = open("wordlists/trees.txt", "r").read().splitlines()
+gem_types = open("wordlists/gems.txt", "r").read().splitlines()
+
 async def get_case(case_id: str):
     db = await create_connection("cases")
     case = await db.find_one({"case_id": case_id})
@@ -124,6 +127,9 @@ async def add_case(case_id: str, title:str, description: str, plaintiff_id: int,
     await db.insert_one(case)
     return case
 
+def create_jurist_pseudonym(member: discord.Member):
+    
+
 class NewCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -180,8 +186,9 @@ class NewCog(commands.Cog):
             return await ctx.respond("Case either doesn't exist or isn't asking for jurists.", ephemeral=True)
         if ctx.author.id not in self.jury_invites[case_id]:
             return await ctx.respond("You have not been invited to this case.", ephemeral=True)
-        
-        
+        if not await self.is_potential_juror(ctx.author):  # this should never happen, as a check is done before the invite is sent
+            return await ctx.respond("You are not eligible to be a juror.", ephemeral=True)
+        await add_jurist_to_case(case_id, ctx.author.id, ctx.author.display_name if anonymize else ctx.author.name)
 
     @slash_command(name='simonsays', description='Repeat what Simon says.')
     @option('text', str, description='The text to repeat')
