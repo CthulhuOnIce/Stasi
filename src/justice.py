@@ -57,6 +57,11 @@ async def get_case(case_id: str):
     case = await db.find_one({"case_id": case_id})
     return case
 
+async def get_case_lite(case_id: str):
+    db = await create_connection("cases")
+    case = await db.find_one({"case_id": case_id}, {"event_log": False, "juror_chat_log": False})
+    return case
+
 async def list_cases():  
     db = await create_connection("cases")
     cases = await db.find().to_list(None)
@@ -79,6 +84,22 @@ async def list_active_cases_lite():
     db = await create_connection("cases")
     cases = await db.find({"judgement_day": {"$ne": None}}, {"event_log": False, "juror_chat_log": False}).to_list(None)
     return cases
+
+async def add_jurist_to_case(case_id: str, jurist_id: int, jurist_name: str):
+    # set jury_pool[juri_id] = jurist_name
+    db = await create_connection("cases")
+    await db.update_one({"case_id": case_id}, {"$set": {f"jury_pool.{jurist_id}": jurist_name}}, upsert=True)
+
+async def resolve_jurist_name(case_id: str, jurist_id: int):
+    case_ = await get_case_lite(case_id)
+    if case_ is None:
+        return None
+    if "jury_pool" not in case_:
+        return None
+    if jurist_id not in case_["jury_pool"]:
+        return None
+    return case_["jury_pool"][str(jurist_id)]
+
 
 
 async def add_case(case_id: str, title:str, description: str, plaintiff_id: int, plaintiff_is_prosecutor: bool, defense_ids: list[int], penalty: dict, jury_pool: dict):
@@ -147,9 +168,20 @@ class NewCog(commands.Cog):
 
         return eligible
 
+    jury_group = discord.SlashCommandGroup("jury", "Commands related to the jury system.")
 
+    jury_invites = {}
 
-    @slash_command(name='')
+    @jury_group.command(name="join", description="Accept an invite to join a jury.")
+    @option("case_id", str, "The case id to join.")
+    @option("anonymize", bool, "Whether to anonymize your name in the jury pool.", default=False, required=False)
+    async def jury_join(self, ctx, case_id: str, anonymize: bool = False):
+        if case_id not in self.jury_invites:
+            return await ctx.respond("Case either doesn't exist or isn't asking for jurists.", ephemeral=True)
+        if ctx.author.id not in self.jury_invites[case_id]:
+            return await ctx.respond("You have not been invited to this case.", ephemeral=True)
+        
+        
 
     @slash_command(name='simonsays', description='Repeat what Simon says.')
     @option('text', str, description='The text to repeat')
