@@ -52,28 +52,55 @@ case = {
 client = db.client
 create_connection = db.create_connection
 
-class Case:
-    
-    def json(self):
-          return {
-            "case_id": self.case_id,
-            "plaintiff_id": self.plaintiff_id,
-            "plaintiff_is_prosecutor": self.plaintiff_is_prosecutor,
-            "defense_ids": self.defense
-          }
+async def get_case(case_id: str):
+    db = await create_connection("cases")
+    case = await db.find_one({"case_id": case_id})
+    return case
 
-    async def select_jurors(self):
-        return
-    
-    async def build_new_case(self, plaintiff, defense_ids, penalty, jury_size=7):
-        return
-    
-    async def save(self):
-        db = await create_connection("cases")
-        await db.insert_one(self.json(), upsert=True)
+async def list_cases():  
+    db = await create_connection("cases")
+    cases = await db.find().to_list(None)
+    return cases
 
-    def __init__():
-        return
+# list_cases but doesn't return the event log or juror chat log, for efficiency
+async def list_cases_lite():
+    db = await create_connection("cases")
+    cases = await db.find({}, {"event_log": False, "juror_chat_log": False}).to_list(None)
+    return cases
+
+
+# only returns cases that have judgement day set
+async def list_active_cases():
+    db = await create_connection("cases")
+    cases = await db.find({"judgement_day": {"$ne": None}}).to_list(None)
+    return cases
+
+async def list_active_cases_lite():
+    db = await create_connection("cases")
+    cases = await db.find({"judgement_day": {"$ne": None}}, {"event_log": False, "juror_chat_log": False}).to_list(None)
+    return cases
+
+async def add_case(case_id: str, title:str, description: str, plaintiff_id: int, plaintiff_is_prosecutor: bool, defense_ids: list[int], penalty: dict, jury_pool: dict):
+    db = await create_connection("cases")
+    case = {
+        "case_id": case_id,
+        "title": title,
+        "description": description,
+        "plaintiff_id": plaintiff_id,
+        "plaintiff_is_prosecutor": plaintiff_is_prosecutor,
+        "defense_ids": defense_ids,
+        "penalty": penalty,
+        "guilty": None,
+        "filed_date": datetime.datetime.utcnow(),
+        "filed_date_utc": datetime.datetime.utcnow().timestamp(),
+        "jury_pool": jury_pool,
+        "judgement_day": None,
+        "votes": {},
+        "event_log": [],
+        "juror_chat_log": []
+    }
+    await db.insert_one(case)
+    return case
 
 class NewCog(commands.Cog):
     def __init__(self, bot):
