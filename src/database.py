@@ -71,7 +71,7 @@ async def get_user(member_id):
 
 async def add_message(member_id):  # also used to register users
     db = await create_connection("users")
-    return await db.update_one({"_id": member_id}, {"$inc": {"messages": 1}}, upsert=True)
+    return await db.update_one({"_id": member_id}, {"$inc": {"messages": 1}, "$set": {"last_seen": datetime.datetime.utcnow()}}, upsert=True)
 
 async def add_reaction(reaction, member_id):
     db = await create_connection("users")

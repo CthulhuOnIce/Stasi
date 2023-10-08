@@ -13,10 +13,10 @@ class Social(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @slash_command(name='userinfo', description='Get info about a user.')
+    @slash_command(name='profile', description='Get info about a user.')
     @option('user', discord.User, description='The user to get info about')
     @option('ephemeral', bool, description='Whether to send the message as an ephemeral message')
-    async def userinfo(self, ctx, user:discord.User, ephemeral:bool=False):
+    async def profile(self, ctx, user:discord.User, ephemeral:bool=False):
         embed = discord.Embed(title="User Info", description=f"Info about {user.display_name}", color=0x00ff00)
         embed.set_author(name=str(user), icon_url=user.avatar.url if user.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
         if user.avatar:
@@ -31,6 +31,8 @@ class Social(commands.Cog):
         if db_user:
             if "messages" in db_user:
                 embed.add_field(name="Total Messages", value=db_user["messages"], inline=False)
+            if "last_seen" in db_user:
+                embed.add_field(name="Last Seen", value=discord_dynamic_timestamp(db_user["last_seen"]), inline=False)
             if "reactions" in db_user:
                 react_list = [{"reaction": reaction, "count": db_user["reactions"][reaction]} for reaction in db_user["reactions"]]
 
@@ -43,6 +45,12 @@ class Social(commands.Cog):
                 embed.add_field(name="Top 10 Reactions", value="\n".join([f"{i['reaction']}: {i['count']}" for i in react_list]), inline=False)
         
         await ctx.respond(embed=embed, ephemeral=ephemeral)
+
+    # option to right click a user to get their info
+    @commands.user_command(name="View Profile")  # create a user command for the supplied guilds
+    async def player_information_click(self, ctx, member: discord.Member):  # user commands return the member
+        await self.profile(ctx, member, ephemeral=True)  # respond with the member's display name
+
     
     @slash_command(name='interview', description='Get a user\'s vetting answers.')
     @option('user', discord.User, description='The user to get answers for')

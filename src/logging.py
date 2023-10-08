@@ -29,10 +29,8 @@ def discord_dynamic_timestamp(timestamp: datetime.datetime, format_style: str = 
 
     # Convert the timezone aware datetime object to Unix timestamp (epoch time)
     epoch = int(timestamp.timestamp())
-
-    unix_timestamp = int(epoch)
     
-    return f'<t:{unix_timestamp}:{format_style}>'
+    return f'<t:{epoch}:{format_style}>'
 
 def log(category_broad, category_fine, message, print_message=True, preserve_newlines=False):
     # create timestamp like JAN 6 2021 12:00:00
