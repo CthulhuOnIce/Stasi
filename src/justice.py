@@ -25,7 +25,7 @@ case = {
     "filed_date": datetime,
     "filed_date_utc": utc_int,
     "jury_pool": [int, int, int],
-    "jury_pool_anonymization": {
+    "anonymization": {
         user_id_int: "Nickname"
     },
     "judgement_day": None,  # or datetime
@@ -93,15 +93,20 @@ async def add_jurist_to_case(case_id: str, jurist_id: int, jurist_name: str):
     db = await create_connection("cases")
     await db.update_one({"case_id": case_id}, {"$set": {f"jury_pool.{jurist_id}": jurist_name}}, upsert=True)
 
-async def resolve_jurist_name(case_id: str, jurist_id: int):
+async def resolve_party_name(case_id: str, user_id: int):
     case_ = await get_case_lite(case_id)
     if case_ is None:
         return None
-    if "jury_pool" not in case_:
-        return None
-    if jurist_id not in case_["jury_pool"]:
-        return None
-    return case_["jury_pool"][str(jurist_id)]
+    if str(user_id) in case_["anonymization"]:
+        return case_["anonymization"][str(user_id)]
+    # TODO: guild.get user and await client.fetch_user, try to see if caching system for fetch_user can be used
+    return f"Unknown to the Case (#{user_id})"
+
+async def add_anonymous_user(case_id: str, user_id: int, user_nickname: str):
+    case_ = await get_case_lite(case_id)
+    if not case_:   return None
+    db = await create_connection("cases")
+    await db.update_one({"case_id": case_id}, {"$set", {f"anonymization.{user_id}": user_nickname}})
 
 
 
@@ -119,6 +124,7 @@ async def add_case(case_id: str, title:str, description: str, plaintiff_id: int,
         "filed_date": datetime.datetime.utcnow(),
         "filed_date_utc": datetime.datetime.utcnow().timestamp(),
         "jury_pool": jury_pool,
+        "anonymization": [],
         "judgement_day": None,
         "votes": {},
         "event_log": [],
@@ -126,8 +132,6 @@ async def add_case(case_id: str, title:str, description: str, plaintiff_id: int,
     }
     await db.insert_one(case)
     return case
-
-def create_jurist_pseudonym(member: discord.Member):
     
 
 class NewCog(commands.Cog):
