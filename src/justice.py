@@ -137,10 +137,15 @@ class NewCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def is_potential_juror(self, member):
+    async def is_potential_juror(self, member, guild=None):
+        if not guild:
+            guild = self.bot.get_guild(config.C["guild_id"])
+
         join_requried_days = 21
         message_requried_count = 100
         last_message_max_age = 7
+        right_wing_role = guild.get_role(config.C["rightwing_role"])
+
 
         if member.bot:
             return False
@@ -173,7 +178,7 @@ class NewCog(commands.Cog):
         right_wing_role = guild.get_role(config.C["rightwing_role"])
 
         for member in guild.members:
-            if await self.is_potential_juror(member):
+            if await self.is_potential_juror(member, guild):  # supply guild to save more time
                 eligible.append(member)
 
         return eligible
