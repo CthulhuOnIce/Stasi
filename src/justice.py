@@ -109,7 +109,6 @@ async def add_anonymous_user(case_id: str, user_id: int, user_nickname: str):
     await db.update_one({"case_id": case_id}, {"$set", {f"anonymization.{user_id}": user_nickname}})
 
 
-
 async def add_case(case_id: str, title:str, description: str, plaintiff_id: int, plaintiff_is_prosecutor: bool, defense_ids: list[int], penalty: dict, jury_pool: dict):
     db = await create_connection("cases")
     case = {
@@ -139,6 +138,33 @@ class NewCog(commands.Cog):
         self.bot = bot
 
     async def is_potential_juror(self, member):
+        join_requried_days = 21
+        message_requried_count = 100
+        last_message_max_age = 7
+
+        if member.bot:
+            return False
+        # disqualify if admin
+        if member.guild_permissions.ban or member.guild_permissions.kick or member.guild_permissions.manage_roles or member.guild_permissions.manage_messages or member.guild_permissions.manage_guild:
+            return False
+        # disqualify if hasn't been a member for more than x days
+        if (datetime.datetime.utcnow() - member.joined_at).days < join_requried_days:
+            return False
+        # disqualify if has right wing role
+        if right_wing_role in member.roles:
+            return False
+        profile = await db.get_user(member.id)
+        # disqualify if jury_banned
+        if "jury_banned" in profile:
+            return False
+        # disqualify if less than x messages
+        if profile["messages"] < message_requried_count:
+            return False
+        # disqualify if more than x days since last message
+        if "last_seen" not in profile:
+            return False    
+        if (datetime.datetime.utcnow() - profile["last_seen"]).days > last_message_max_age:
+            return False
         return True
 
     async def list_potential_jurors(self):
@@ -147,34 +173,8 @@ class NewCog(commands.Cog):
         right_wing_role = guild.get_role(config.C["rightwing_role"])
 
         for member in guild.members:
-            if member.bot:
-                continue
-            # disqualify if admin
-            if member.guild_permissions.ban or member.guild_permissions.kick or member.guild_permissions.manage_roles or member.guild_permissions.manage_messages or member.guild_permissions.manage_guild:
-                continue
-            # disqualify if hasn't been a member for more than x days
-            join_requried_days = 21
-            if (datetime.datetime.utcnow() - member.joined_at).days < join_requried_days:
-                continue
-            # disqualify if has right wing role
-            if right_wing_role in member.roles:
-                continue
-            profile = await db.get_user(member.id)
-            # disqualify if jury_banned
-            if "jury_banned" in profile:
-                continue
-            # disqualify if less than x messages
-            message_requried_count = 100
-            if profile["messages"] < message_requried_count:
-                continue
-            # disqualify if more than x days since last message
-            if "last_seen" not in profile:
-                continue    
-            message_requried_days = 7
-            if (datetime.datetime.utcnow() - profile["last_seen"]).days > message_requried_days:
-                continue
-        
-            eligible.append(member)
+            if await self.is_potential_juror(member):
+                eligible.append(member)
 
         return eligible
 
