@@ -10,6 +10,7 @@ from discord.ext import commands, tasks
 from . import database as db
 from . import config
 from . import utils
+from .logging import *
 
 """
 case = {
@@ -123,6 +124,7 @@ async def add_case(case_id: str, title:str, description: str, plaintiff_id: int,
         "filed_date": datetime.datetime.utcnow(),
         "filed_date_utc": datetime.datetime.utcnow().timestamp(),
         "jury_pool": jury_pool,
+        "eligible_jury": [],  # people who have been invited to the jury but are yet to accept
         "anonymization": [],
         "judgement_day": None,
         "votes": {},
@@ -133,9 +135,10 @@ async def add_case(case_id: str, title:str, description: str, plaintiff_id: int,
     return case
     
 
-class NewCog(commands.Cog):
+class Justice(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.CaseManager.start()
 
     async def is_potential_juror(self, member, guild=None):
         if not guild:
@@ -191,13 +194,17 @@ class NewCog(commands.Cog):
     @option("case_id", str, "The case id to join.")
     @option("anonymize", bool, "Whether to anonymize your name in the jury pool.", default=False, required=False)
     async def jury_join(self, ctx, case_id: str, anonymize: bool = False):
-        if case_id not in self.jury_invites:
-            return await ctx.respond("Case either doesn't exist or isn't asking for jurists.", ephemeral=True)
+        case = get_case_lite(case_id)
+        if not case:
+            return await ctx.respond("Case not found!", ephemeral=True)
         if ctx.author.id not in self.jury_invites[case_id]:
-            return await ctx.respond("You have not been invited to this case.", ephemeral=True)
+            return await ctx.respond("You have not been invited to this case or the case is not accepting new jurors.", ephemeral=True)
         if not await self.is_potential_juror(ctx.author):  # this should never happen, as a check is done before the invite is sent
-            return await ctx.respond("You are not eligible to be a juror.", ephemeral=True)
-        await add_jurist_to_case(case_id, ctx.author.id, ctx.author.display_name if anonymize else ctx.author.name)
+            return await ctx.respond("You are no longer eligible to be a juror.", ephemeral=True)
+        name = ctx.author.name
+        if anonyimize:
+            pass # TODO: have this guide the user through choosing a pseudonym
+        await add_jurist_to_case(case_id, ctx.author.id, name)
 
     @slash_command(name='simonsays', description='Repeat what Simon says.')
     @option('text', str, description='The text to repeat')
@@ -217,10 +224,16 @@ class NewCog(commands.Cog):
 
         await ctx.send(embed=embed)
 
+    @tasks.loop(minutes=15)
+    async def CaseManager(self):
+        log("Justice", "CaseManager", "Doing Periodic Case Manager Loop")
+        cases = await list_active_cases_lite()
+        for case in cases:
+            if case["jury_pool"] < 5:  # not enough jurors
+                difference = 5 - case["jury_pool"]
+                offer_number = difference * 2  # send out double the invites
 
-    @commands.Cog.listener()
-    async def on_message(self, message):
         return
 
 def setup(bot):
-    bot.add_cog(NewCog(bot))
+    bot.add_cog(Justice(bot))
