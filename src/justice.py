@@ -14,7 +14,7 @@ from .logging import *
 
 """
 case = {
-    "case_id": "Red-Rebel-98",
+    "_id": "Red-Rebel-98",
     "plaintiff_id": int,
     "plaintiff_is_prosecutor": 0,
     "defense_ids": [int, int, int],
@@ -50,6 +50,10 @@ case = {
 }
 """
 
+# motion types
+
+# stage types
+
 client = db.client
 create_connection = db.create_connection
 
@@ -58,12 +62,12 @@ gem_types = open("wordlists/gems.txt", "r").read().splitlines()
 
 async def get_case(case_id: str):
     db = await create_connection("cases")
-    case = await db.find_one({"case_id": case_id})
+    case = await db.find_one({"_id": case_id})
     return case
 
 async def get_case_lite(case_id: str):
     db = await create_connection("cases")
-    case = await db.find_one({"case_id": case_id}, {"event_log": False, "juror_chat_log": False})
+    case = await db.find_one({"_id": case_id}, {"event_log": False, "juror_chat_log": False})
     return case
 
 async def list_cases():  
@@ -81,18 +85,13 @@ async def list_cases_lite():
 # only returns cases that have judgement day set
 async def list_active_cases():
     db = await create_connection("cases")
-    cases = await db.find({"judgement_day": {"$ne": None}}).to_list(None)
+    cases = await db.find({"status": {"$gt": 0}}).to_list(None)
     return cases
 
 async def list_active_cases_lite():
     db = await create_connection("cases")
-    cases = await db.find({"judgement_day": {"$ne": None}}, {"event_log": False, "juror_chat_log": False}).to_list(None)
+    cases = await db.find({"status": {"$gt": 0}}, {"event_log": False, "juror_chat_log": False}).to_list(None)
     return cases
-
-async def add_jurist_to_case(case_id: str, jurist_id: int, jurist_name: str):
-    # set jury_pool[juri_id] = jurist_name
-    db = await create_connection("cases")
-    await db.update_one({"case_id": case_id}, {"$set": {f"jury_pool.{jurist_id}": jurist_name}}, upsert=True)
 
 async def resolve_party_name(case_id: str, user_id: int):
     case_ = await get_case_lite(case_id)
@@ -107,28 +106,44 @@ async def add_anonymous_user(case_id: str, user_id: int, user_nickname: str):
     case_ = await get_case_lite(case_id)
     if not case_:   return None
     db = await create_connection("cases")
-    await db.update_one({"case_id": case_id}, {"$set", {f"anonymization.{user_id}": user_nickname}})
+    await db.update_one({"_id": case_id}, {"$set", {f"anonymization.{user_id}": user_nickname}})
 
+async def add_jurist_to_case(case_id: str, jurist_id: int, jurist_name: str = None):
+    # set jury_pool[juri_id] = jurist_name
+    db = await create_connection("cases")
+    await db.update_one({"_id": case_id}, {"$push": {f"jury_pool": jurist_id}}, upsert=True)
+    if jurist_name:
+        await db.update_one({"_id": case_id}, {"$set": {f"anonyimization.{jurist_id}": jurist_name}})
 
 async def add_case(case_id: str, title:str, description: str, plaintiff_id: int, plaintiff_is_prosecutor: bool, defense_ids: list[int], penalty: dict, jury_pool: dict):
     db = await create_connection("cases")
     case = {
-        "case_id": case_id,
+        # metadata
+        "_id": case_id,
         "title": title,
         "description": description,
+        "filed_date": datetime.datetime.utcnow(),
+        "filed_date_utc": datetime.datetime.utcnow().timestamp(),
+
+        # plaintiff and defense
         "plaintiff_id": plaintiff_id,
         "plaintiff_is_prosecutor": plaintiff_is_prosecutor,
         "defense_ids": defense_ids,
+        
         "penalty": penalty,
+        
+        # processing stuff
+        "stage": 1,  # 0 - done (archived), 1 - jury selection, 2 - jury consideration, 3 - argumentation / body, 4 - ready to close, awaiting archive 
         "guilty": None,
-        "filed_date": datetime.datetime.utcnow(),
-        "filed_date_utc": datetime.datetime.utcnow().timestamp(),
+        "motion_queue": [],
+
+        # jury stuff
         "jury_pool": jury_pool,
         "eligible_jury": [],  # people who have been invited to the jury but are yet to accept
-        "anonymization": [],
-        "judgement_day": None,
-        "votes": {},
-        "event_log": [],
+        
+        "anonymization": {},  # id: name - anybody in this list will be anonymized and referred to by their dict value
+        "votes": {},  # guilty vs not guilty votes
+        "event_log": [],  # {"title": title, "short_desc": 280 chars or less, "long_desc": unlimited}
         "juror_chat_log": []
     }
     await db.insert_one(case)
@@ -188,16 +203,16 @@ class Justice(commands.Cog):
 
     jury_group = discord.SlashCommandGroup("jury", "Commands related to the jury system.")
 
-    jury_invites = {}
-
     @jury_group.command(name="join", description="Accept an invite to join a jury.")
-    @option("case_id", str, "The case id to join.")
+    @option("_id", str, "The case id to join.")
     @option("anonymize", bool, "Whether to anonymize your name in the jury pool.", default=False, required=False)
-    async def jury_join(self, ctx, case_id: str, anonymize: bool = False):
+    async def jury_join(self, ctx, case_id: str):
+        anonymize = False
+        # anonymize = ask_yes_or_no("Would you like to anonymize yourself? You will be referred to by randomly-generated pseudonym instead of your real username.")
         case = get_case_lite(case_id)
         if not case:
             return await ctx.respond("Case not found!", ephemeral=True)
-        if ctx.author.id not in self.jury_invites[case_id]:
+        if ctx.author.id not in case["eligible_jury"]:
             return await ctx.respond("You have not been invited to this case or the case is not accepting new jurors.", ephemeral=True)
         if not await self.is_potential_juror(ctx.author):  # this should never happen, as a check is done before the invite is sent
             return await ctx.respond("You are no longer eligible to be a juror.", ephemeral=True)
@@ -229,7 +244,7 @@ class Justice(commands.Cog):
         log("Justice", "CaseManager", "Doing Periodic Case Manager Loop")
         cases = await list_active_cases_lite()
         for case in cases:
-            if case["jury_pool"] < 5:  # not enough jurors
+            if len(case["jury_pool"]) < 5:  # not enough jurors
                 difference = 5 - case["jury_pool"]
                 offer_number = difference * 2  # send out double the invites
 
