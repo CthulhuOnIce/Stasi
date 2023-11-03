@@ -54,6 +54,9 @@ case = {
 
 # stage types
 
+# punishment codes
+# BAN, KICK, PRISON, TIMEOUT, 
+
 client = db.client
 create_connection = db.create_connection
 
@@ -143,7 +146,16 @@ async def add_case(case_id: str, title:str, description: str, plaintiff_id: int,
         
         "anonymization": {},  # id: name - anybody in this list will be anonymized and referred to by their dict value
         "votes": {},  # guilty vs not guilty votes
-        "event_log": [],  # {"title": title, "short_desc": 280 chars or less, "long_desc": unlimited}
+        "event_log": [
+            {
+                "event_id": "open_case",
+                "name": "Case Opened",
+                "author_id": 0,
+                "desc": f"A case has been opened.",
+                "timestamp": datetime.datetime.utcnow(),
+                "timestamp_utc": datetime.datetime.utcnow().timestamp(),
+            }
+        ],
         "juror_chat_log": []
     }
     await db.insert_one(case)
