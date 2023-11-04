@@ -1,4 +1,5 @@
 import random
+import base64
 
 nouns = open("wordlists/nouns.txt", "r").read().splitlines()
 adjectives = open("wordlists/adjectives.txt", "r").read().splitlines()
@@ -77,3 +78,16 @@ def seconds_to_time_long(time: int):  # "one day, 10 hours, 10 minutes, 10 secon
 
 def generate_random_id(): 
     return f"{random.choice(adjectives)}-{random.choice(adjectives)}-{random.choice(nouns)}"
+
+def int_to_base64(n: int):
+    # Convert integer to bytes
+    int_bytes = n.to_bytes((n.bit_length() + 7) // 8, 'big') or b'\0'
+    
+    # Encode bytes to base64
+    base64_bytes = base64.b64encode(int_bytes)
+    
+    # Convert bytes to string for the output
+    base64_string = base64_bytes.decode('utf-8')
+    
+    return base64_string
+
