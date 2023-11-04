@@ -141,7 +141,7 @@ async def add_case(case_id: str, title:str, description: str, plaintiff_id: int,
         "guilty": None,
         "motion_queue": [
             {
-                "name": 
+                "name": ""
             }
         ],
 
@@ -168,9 +168,100 @@ async def add_case(case_id: str, title:str, description: str, plaintiff_id: int,
 
 ACTIVECASES = []
 
+"""
+    def new_motion(self, author, motion_code, **kwargs):
+        motionid = f"{self.case_id}-{self.motion_number}"
+        self.motion_number += 1
+        motion = {
+            "motion_id": 
+            "author": author,
+            "motion_code": 
+        }
+        for kw in kwargs:
+            motion[kw] = kwargs[kw]
+        return motion 
+"""
+
+
+
+class Motion:
+
+    expiry_days = 1
+    expiry_hours = expiry_days * 24
+
+    Case: Case = None
+
+    async def StartVoting(self):
+        self.Expiry = datetime.datetime.utcnow() + datetime.timedelta(hours=self.expiry_hours)
+        self.Votes["Yes"] = []
+        self.Votes["No"] = []
+        self.Case.motion_in_consideration = self
+        self.Case.event_log.append(self.Case.new_event(
+            "motion_up",
+            f"The motion {self.MotionID} has been put up to be considered for a vote by {self.Case.NameUserByID(self.Author.id)}.",
+            "A new motion has been put on the floor for consideration by the jury.",
+            motion = self.Dict()
+        ))
+
+    async def VoteFailed(self):
+        self.Case.event_log.append(self.Case.new_event(
+            "motion_failed",
+            f"The motion {self.MotionID} has failed its vote.",
+            f"The motion {self.MotionID} has failed its jury vote. {len(self.Votes['Yes'])}/{len(self.Votes['No'])}",
+            motion = self.Dict()
+        ))
+        return
+
+    async def VotePassed(self):
+        return
+    
+    async def Execute(self):
+        return
+
+    async def Close(self, delete: bool = True):
+        if len(self.No) >= len(self.Yes):
+            await self.VoteFailed()
+        else:
+            await self.VotePassed()
+            await self.Execute()
+        if delete:
+            del(self)
+
+
+    def LoadDict(self, DBDocument: dict):
+        return self
+    
+    def New(self, author, motion_code):
+        self.Created = datetime.datetime.utcnow()
+        self.Author = author
+        self.MotionCode = motion_code
+        self.MotionID = f"{self.Case.case_id}-{self.Case.motion_number}"
+        self.Case.motion_number += 1
+        return self
+
+    def __init__(self, Case):
+        self.Case = Case
+        self.Expiry = None  # this is set by the motion manageer based on when it appears on the floors
+        self.Votes = {}
+        self.Votes["Yes"] = []
+        self.Votes["No"] = []
+        self.MotionID = "#NO-ID-ERR"
+        return 
+
+    def __del__(self):
+        self.Case.motion_queue.remove(self)
+        if self.Case.motion_in_consideration != self:
+            self.Case.motion_in_consideration = None
+    
+    def Dict():  # like Motion.Save() but doesn't save the dictionary, just returns it instead. Motions are saved when their 
+        return
+
 class Case:
 
     motion_timeout_days = 1  # how long it takes for voting to close on a motion in the absence of all parties voting
+
+    def CreateMotion(self):
+        return Motion(self).New()
 
     def new_event(self, event_id: str, name, desc, **kwargs):
         event = {
@@ -196,7 +287,7 @@ class Case:
         # news_wire = whether or not to send this announcement to the public news wire channel
         return
     
-    async def NameUserByID(self, userid: int):
+    def NameUserByID(self, userid: int):
         if userid in self.anonymization:
             return self.anonymization[userid]
         if str(userid) in self.anonymization:
@@ -226,16 +317,8 @@ class Case:
         # switching from stage 1 to 2 should be done by the function which assigns a juror to the case
         if self.stage == 2:  # work the motion queue
             
-            self.motion_in_consideration = self.motion_queue[0]  # select first motion in the queue
-            
-            if not "expiry" in self.motion_in_consideration or not self.motion_in_consideration["expiry"]:  # just popped to the front, has not been formally entered into consideration yet
-                self.motion_in_consideration["expiry"] = datetime.datetime.utcnow() + datetime.timedelta(days=self.motion_timeout_days)
-                self.event_log.append(self.new_event(
-                    "motion_up",
-                    "There is a new motion on the floor.",
-                    "A new motion has been put on the floor for consideration by the jury.",
-                    motion = self.motion_in_consideration
-                ))
+            if self.motion_in_consideration != self.motion_queue[0]:  # putting up a new motion to vote
+                motion_queue[0].StartVoting()
 
             elif len(self.motion_in_consideration["votes"]) >= len(self.jury_pool) or datetime.datetime.utcnow() < self.motion_in_consideration["expiry"]:  # everybody's voted, doesn't need to expire, or has expired
                 if len(self.motion_in_consideration["votes"]["yes"]) <= len(self.motion_in_consideration["votes"]["no"]):  # needs majority yes to pass, this triggers if yes is equal to or less than no
@@ -273,6 +356,7 @@ class Case:
         self.penalty = penalty
         self.stage = 1
         self.motion_queue = []
+        self.motion_archive = []
         self.jury_pool = []
         self.jury_invites = []
         self.anonymization = {}
@@ -280,6 +364,7 @@ class Case:
         self.event_log = []
         self.juror_chat_log = []
         self.motion_in_consideration = None
+        self.motion_number = 100  # motion IDs start as {caseid}-100, {caseid}-101, etc. 
 
         self.Save()
         ACTIVECASES.append(self)
@@ -313,7 +398,10 @@ class Case:
                 # processing stuff
                 "stage": self.stage,  # 0 - done (archived), 1 - jury selection, 2 - argumentation / body, 3 - ready to close, awaiting archive 
                 "guilty": None,
-                "motion_queue": [],
+                
+                "motion_number": self.motion_number,
+                "motion_queue": [motion.Dict() for motion in self.motions],
+                "motion_archive": self.motion_archive,
 
                 # jury stuff
                 "jury_pool": [user.id for user in self.jury_pool],
@@ -327,7 +415,7 @@ class Case:
         return
     
     def __init__(self):
-        return self
+        return
 
 class Justice(commands.Cog):
     def __init__(self, bot):
