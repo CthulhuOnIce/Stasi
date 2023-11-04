@@ -226,7 +226,7 @@ class Case:
         # switching from stage 1 to 2 should be done by the function which assigns a juror to the case
         if self.stage == 2:  # work the motion queue
             
-            self.motion_in_consideration = self.motion_queue[0]
+            self.motion_in_consideration = self.motion_queue[0]  # select first motion in the queue
             
             if not "expiry" in self.motion_in_consideration or not self.motion_in_consideration["expiry"]:  # just popped to the front, has not been formally entered into consideration yet
                 self.motion_in_consideration["expiry"] = datetime.datetime.utcnow() + datetime.timedelta(days=self.motion_timeout_days)
@@ -249,6 +249,14 @@ class Case:
                         explainer,
                         motion = self.motion_in_consideration
                     ))
+            
+            return
+
+        if self.stage == 3:  # archive self, end the case
+            # unprison prisoned users
+            return
+
+            
 
 
 
