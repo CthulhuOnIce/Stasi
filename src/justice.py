@@ -164,10 +164,10 @@ async def add_case(case_id: str, title:str, description: str, plaintiff_id: int,
 class Case:
     async def generate_new_id(self):
         return
-    
-    async def Tick(self):  # called by case manager
-        if self.jury_pool < 5:
 
+    async def Tick(self):  # called by case manager
+        if len(self.jury_pool) < 5:
+            invites_to_send = (5 - len(self.jury_pool)) * 2   # if we need 3 more jurors, the bot will send out 6 invites
 
     async def New(self, title: str, description: str, plaintiff: discord.Member, defense: discord.Member, penalty: dict):
         self.title = title
