@@ -2,6 +2,7 @@ from typing import Optional
 
 import motor  # doing this locally instead of in database.py for greater modularity
 import datetime
+import random
 
 import discord
 from discord import option, slash_command
@@ -138,7 +139,11 @@ async def add_case(case_id: str, title:str, description: str, plaintiff_id: int,
         # processing stuff
         "stage": 1,  # 0 - done (archived), 1 - jury selection, 2 - jury consideration, 3 - argumentation / body, 4 - ready to close, awaiting archive 
         "guilty": None,
-        "motion_queue": [],
+        "motion_queue": [
+            {
+                "name": 
+            }
+        ],
 
         # jury stuff
         "jury_pool": jury_pool,
@@ -161,15 +166,96 @@ async def add_case(case_id: str, title:str, description: str, plaintiff_id: int,
     await db.insert_one(case)
     return case
 
+ACTIVECASES = []
+
 class Case:
+
+    motion_timeout_days = 1  # how long it takes for voting to close on a motion in the absence of all parties voting
+
+    def new_event(self, event_id: str, name, desc, **kwargs):
+        event = {
+                    "event_id": event_id,
+                    "name": name,
+                    "desc": desc,
+                    "timestamp": datetime.datetime.utcnow(),
+                    "timestamp_utc": datetime.datetime.utcnow().timestamp(),
+                }
+        for kw in kwargs:
+            event[kw] = kwargs[kw]
+        return event
+
     async def generate_new_id(self):
         return
+    
+    async def Announce(self, content = None, embed = None, jurors: bool = True, defense: bool = True, prosecution: bool = True, news_wire: bool = True):
+        # content = plain text content
+        # embed = an embed
+        # jurors = whether or not to send this announcement to the jury
+        # defense = whether or not to send this announcement to the defense
+        # prosucution = whether or not to send this announcement to the prosecution
+        # news_wire = whether or not to send this announcement to the public news wire channel
+        return
+    
+    async def NameUserByID(self, userid: int):
+        if userid in self.anonymization:
+            return self.anonymization[userid]
+        if str(userid) in self.anonymization:
+            return self.anonymization[str(userid)]
+        if self.guild:
+            user = self.guild.get_user(userid)
+            if user:
+                return user
+        
+        return
 
-    async def Tick(self):  # called by case manager
+    async def Tick(self):  # called by case manager or when certain events happen, like a juror leaving the case
         if len(self.jury_pool) < 5:
+            if self.stage > 1:  # juror left the case
+                self.stage = 1  # back in the recruitment stage
             invites_to_send = (5 - len(self.jury_pool)) * 2   # if we need 3 more jurors, the bot will send out 6 invites
+            eligible_jurors = await self.FindEligibleJurors()
+            for i in range(invites_to_send):
+                invitee = random.choice(eligible_jurors)
+                eligible_jurors.remove(invitee)
+                try:
+                    await invitee.send(f"You have been invited to be a juror for `{self.case_id}`.\nTo accept, use `/jury join`.")
+                    self.jury_invites.append(invitee)
+                except:
+                    pass  # already removed from eligible jurors
+            return
+        # switching from stage 1 to 2 should be done by the function which assigns a juror to the case
+        if self.stage == 2:  # work the motion queue
+            
+            self.motion_in_consideration = self.motion_queue[0]
+            
+            if not "expiry" in self.motion_in_consideration or not self.motion_in_consideration["expiry"]:  # just popped to the front, has not been formally entered into consideration yet
+                self.motion_in_consideration["expiry"] = datetime.datetime.utcnow() + datetime.timedelta(days=self.motion_timeout_days)
+                self.event_log.append(self.new_event(
+                    "motion_up",
+                    "There is a new motion on the floor.",
+                    "A new motion has been put on the floor for consideration by the jury.",
+                    motion = self.motion_in_consideration
+                ))
 
-    async def New(self, title: str, description: str, plaintiff: discord.Member, defense: discord.Member, penalty: dict):
+            elif len(self.motion_in_consideration["votes"]) >= len(self.jury_pool) or datetime.datetime.utcnow() < self.motion_in_consideration["expiry"]:  # everybody's voted, doesn't need to expire, or has expired
+                if len(self.motion_in_consideration["votes"]["yes"]) <= len(self.motion_in_consideration["votes"]["no"]):  # needs majority yes to pass, this triggers if yes is equal to or less than no
+                    explainer = "The motion has failed its vote."
+                    if datetime.datetime.utcnow() < self.motion_in_consideration["expiry"]:
+                        explainer += " The motion expired before all votes were cast."
+
+                    self.event_log.append(self.new_event(
+                        "motion_fail",
+                        "This motion has failed its vote.",
+                        explainer,
+                        motion = self.motion_in_consideration
+                    ))
+
+
+
+
+    async def New(self, title: str, description: str, plaintiff: discord.Member, defense: discord.Member, penalty: dict, guild):
+        self.guild = guild
+
         self.title = title
         self.description = description
         self.case_id = await self.generate_new_id()
@@ -185,12 +271,21 @@ class Case:
         self.votes = {}
         self.event_log = []
         self.juror_chat_log = []
+        self.motion_in_consideration = None
 
         self.Save()
+        ACTIVECASES.append(self)
         return self
 
-    async def LoadFromID(self, case_id):
+    async def LoadFromID(self, case_id, guild):
+        self.guild = guild
+
+        ACTIVECASES.append(self)
+
         return
+    
+    def __del__(self):
+        ACTIVECASES.remove(self)
 
     async def Save(self):
         case_dict = {
@@ -208,7 +303,7 @@ class Case:
                 "penalty": self.penalty,
                 
                 # processing stuff
-                "stage": self.stage,  # 0 - done (archived), 1 - jury selection, 2 - jury consideration, 3 - argumentation / body, 4 - ready to close, awaiting archive 
+                "stage": self.stage,  # 0 - done (archived), 1 - jury selection, 2 - argumentation / body, 3 - ready to close, awaiting archive 
                 "guilty": None,
                 "motion_queue": [],
 
@@ -218,17 +313,8 @@ class Case:
                 
                 "anonymization": self.anonymization,  # id: name - anybody in this list will be anonymized and referred to by their dict value
                 "votes": self.votes,  # guilty vs not guilty votes
-                "event_log": [
-                    {
-                        "event_id": "open_case",
-                        "name": "Case Opened",
-                        "author_id": 0,
-                        "desc": f"A case has been opened.",
-                        "timestamp": datetime.datetime.utcnow(),
-                        "timestamp_utc": datetime.datetime.utcnow().timestamp(),
-                    }
-                ],
-                "juror_chat_log": []
+                "event_log": self.event_log,
+                "juror_chat_log": self.juror_chat_log
             }
         return
     
