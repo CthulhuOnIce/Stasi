@@ -63,80 +63,6 @@ create_connection = db.create_connection
 tree_types = open("wordlists/trees.txt", "r").read().splitlines()
 gem_types = open("wordlists/gems.txt", "r").read().splitlines()
 
-class Case:
-    async def generate_new_id(self):
-        return
-    
-    async def Tick(self):  # called by case manager
-        if self.jury_pool < 5:
-
-
-    async def New(self, title: str, description: str, plaintiff: discord.Member, defense: discord.Member, penalty: dict):
-        self.title = title
-        self.description = description
-        self.case_id = await self.generate_new_id()
-        self.created = datetime.datetime.utcnow()
-        self.plaintiff = plaintiff
-        self.defense = defense
-        self.penalty = penalty
-        self.stage = 1
-        self.motion_queue = []
-        self.jury_pool = []
-        self.jury_invites = []
-        self.anonymization = {}
-        self.votes = {}
-        self.event_log = []
-        self.juror_chat_log = []
-
-        self.Save()
-        return self
-
-    async def LoadFromID(self, case_id):
-        return
-
-    async def Save(self):
-        case_dict = {
-                # metadata
-                "_id": self.case_id,
-                "title": self.title,
-                "description": self.description,
-                "filed_date": self.created,
-                "filed_date_utc": self.created.timestamp(),
-
-                # plaintiff and defense
-                "plaintiff_id": self.plaintiff.id,
-                "defense_id": self.defense.id,
-                
-                "penalty": self.penalty,
-                
-                # processing stuff
-                "stage": self.stage,  # 0 - done (archived), 1 - jury selection, 2 - jury consideration, 3 - argumentation / body, 4 - ready to close, awaiting archive 
-                "guilty": None,
-                "motion_queue": [],
-
-                # jury stuff
-                "jury_pool": [user.id for user in self.jury_pool],
-                "jury_invites": [user.id for user in self.jury_invites],  # people who have been invited to the jury but are yet to accept
-                
-                "anonymization": self.anonymization,  # id: name - anybody in this list will be anonymized and referred to by their dict value
-                "votes": self.votes,  # guilty vs not guilty votes
-                "event_log": [
-                    {
-                        "event_id": "open_case",
-                        "name": "Case Opened",
-                        "author_id": 0,
-                        "desc": f"A case has been opened.",
-                        "timestamp": datetime.datetime.utcnow(),
-                        "timestamp_utc": datetime.datetime.utcnow().timestamp(),
-                    }
-                ],
-                "juror_chat_log": []
-            }
-        return
-    
-    def __init__(self):
-        return self
-
 async def get_case(case_id: str):
     db = await create_connection("cases")
     case = await db.find_one({"_id": case_id})
@@ -234,7 +160,80 @@ async def add_case(case_id: str, title:str, description: str, plaintiff_id: int,
     }
     await db.insert_one(case)
     return case
+
+class Case:
+    async def generate_new_id(self):
+        return
     
+    async def Tick(self):  # called by case manager
+        if self.jury_pool < 5:
+
+
+    async def New(self, title: str, description: str, plaintiff: discord.Member, defense: discord.Member, penalty: dict):
+        self.title = title
+        self.description = description
+        self.case_id = await self.generate_new_id()
+        self.created = datetime.datetime.utcnow()
+        self.plaintiff = plaintiff
+        self.defense = defense
+        self.penalty = penalty
+        self.stage = 1
+        self.motion_queue = []
+        self.jury_pool = []
+        self.jury_invites = []
+        self.anonymization = {}
+        self.votes = {}
+        self.event_log = []
+        self.juror_chat_log = []
+
+        self.Save()
+        return self
+
+    async def LoadFromID(self, case_id):
+        return
+
+    async def Save(self):
+        case_dict = {
+                # metadata
+                "_id": self.case_id,
+                "title": self.title,
+                "description": self.description,
+                "filed_date": self.created,
+                "filed_date_utc": self.created.timestamp(),
+
+                # plaintiff and defense
+                "plaintiff_id": self.plaintiff.id,
+                "defense_id": self.defense.id,
+                
+                "penalty": self.penalty,
+                
+                # processing stuff
+                "stage": self.stage,  # 0 - done (archived), 1 - jury selection, 2 - jury consideration, 3 - argumentation / body, 4 - ready to close, awaiting archive 
+                "guilty": None,
+                "motion_queue": [],
+
+                # jury stuff
+                "jury_pool": [user.id for user in self.jury_pool],
+                "jury_invites": [user.id for user in self.jury_invites],  # people who have been invited to the jury but are yet to accept
+                
+                "anonymization": self.anonymization,  # id: name - anybody in this list will be anonymized and referred to by their dict value
+                "votes": self.votes,  # guilty vs not guilty votes
+                "event_log": [
+                    {
+                        "event_id": "open_case",
+                        "name": "Case Opened",
+                        "author_id": 0,
+                        "desc": f"A case has been opened.",
+                        "timestamp": datetime.datetime.utcnow(),
+                        "timestamp_utc": datetime.datetime.utcnow().timestamp(),
+                    }
+                ],
+                "juror_chat_log": []
+            }
+        return
+    
+    def __init__(self):
+        return self
 
 class Justice(commands.Cog):
     def __init__(self, bot):
