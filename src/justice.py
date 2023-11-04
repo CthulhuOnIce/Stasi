@@ -373,7 +373,8 @@ class Motion:
         self.Case.event_log.append(self.Case.new_event(
             "motion_up",
             f"The motion {self.MotionID} has been put up to be considered for a vote by {self.Case.NameUserByID(self.Author.id)}.",
-            "A new motion has been put on the floor for consideration by the jury.",
+            f"The motion {self.MotionID} has been put up to be considered for a vote by {self.Case.NameUserByID(self.Author.id)}. \
+            Unless another vote is rushed, voting will end on <t:{self.Expiry.timestamp()}:F>.",
             motion = self.Dict()
         ))
 
@@ -387,6 +388,12 @@ class Motion:
         return
 
     async def VotePassed(self):
+        self.Case.event_log.append(self.Case.new_event(
+            "motion_failed",
+            f"The motion {self.MotionID} has passed its vote.",
+            f"The motion {self.MotionID} has passed its jury vote. {len(self.Votes['Yes'])}/{len(self.Votes['No'])}",
+            motion = self.Dict()
+        ))
         return
     
     async def Execute(self):
@@ -409,11 +416,11 @@ class Motion:
         self.Created = datetime.datetime.utcnow()
         self.Author = author
         self.MotionCode = motion_code
-        self.MotionID = f"{self.Case.case_id}-{self.Case.motion_number}"
+        self.MotionID = f"{self.Case.case_id}-M{self.Case.motion_number}"  # 11042023-M001 for example
         self.Case.motion_number += 1
         return self
 
-    def __init__(self, Case):
+    def __init__(self, Case: Case):
         self.Case = Case
         self.Expiry = None  # this is set by the motion manageer based on when it appears on the floors
         self.Votes = {}
@@ -429,6 +436,20 @@ class Motion:
     
     def Dict():  # like Motion.Save() but doesn't save the dictionary, just returns it instead. Motions are saved when their 
         return
+
+class StatementMotion(Motion):
+    async def Execute(self):
+        self.Case.event_log.append(self.Case.new_event(
+            "jury_statement",
+            f"The jury has made an official statement.",
+            f"Pursuant to motion {self.MotionID}, the Jury makes the following statement:\n{self.statement_content}",
+            motion = self.Dict()
+        ))
+
+    def LoadDict(self, DBDocument: dict):
+        super().LoadDict()
+        return
+
 
 class Justice(commands.Cog):
     def __init__(self, bot):
