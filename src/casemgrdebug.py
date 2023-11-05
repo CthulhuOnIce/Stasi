@@ -335,10 +335,9 @@ class Motion:
     def LoadDict(self, DBDocument: dict):
         return self
     
-    def New(self, author, motion_code):
+    def New(self, author):
         self.Created = datetime.datetime.now(datetime.UTC)
         self.Author = author
-        self.MotionCode = motion_code
         self.MotionID = f"{self.Case.id}-M{self.Case.motion_number}"  # 11042023-M001 for example
         self.Case.motion_number += 1
         return self
@@ -350,6 +349,7 @@ class Motion:
         self.Votes["Yes"] = []
         self.Votes["No"] = []
         self.MotionID = "#NO-ID-ERR"
+        Case.motion_queue.append(self)
         return 
 
     def __del__(self):
@@ -357,8 +357,14 @@ class Motion:
         if self.Case.motion_in_consideration != self:
             self.Case.motion_in_consideration = None
     
-    def Dict():  # like Motion.Save() but doesn't save the dictionary, just returns it instead. Motions are saved when their 
-        return
+    def __str__(self):
+        return self.MotionID
+
+    def __repr__(self):
+        return self.MotionID
+
+    def Dict(self):  # like Motion.Save() but doesn't save the dictionary, just returns it instead. Motions are saved when their 
+        return self.__dict__
 
 class StatementMotion(Motion):
     def Execute(self):
@@ -368,6 +374,11 @@ class StatementMotion(Motion):
             f"Pursuant to motion {self.MotionID}, the Jury makes the following statement:\n{self.statement_content}",
             motion = self.Dict()
         ))
+    
+    def New(self, author, statement_content: str = None):
+        super().New(author)
+        self.statement_content = statement_content
+        return self
 
     def LoadDict(self, DBDocument: dict):
         super().LoadDict()
@@ -384,6 +395,14 @@ case.New(f"{plaintiff} v. {defense}", "This is a test case.", plaintiff, defense
 
 for i in range(6):
     case.Tick()
+
+jury = case.jury_pool
+i = 0
+for juror in jury:
+    i += 1
+    motion = StatementMotion(case).New(juror, f"This is a test statement {i}")
+
+case.motion_queue[0].Execute()
 
 # by this point the case is filed and the jury is already selected
 
