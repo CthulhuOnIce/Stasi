@@ -9,6 +9,9 @@ import base64
 # DOC LINKS
 # https://docs.pycord.dev/en/stable/api/models.html
 
+# BUGS
+# - motion_in_consideration is not being set as the motion queue is worked
+
 # # UTILS
 class utils:
     def int_to_base64(self, n: int):
@@ -67,7 +70,7 @@ class Guild:
         self.members = [User() for i in range(800)]
         return
     
-    def find(self, id):
+    def get_user(self, id):
         for member in self.members:
             if member.id == id:
                 return member
@@ -164,24 +167,16 @@ class Case:
                 except:
                     pass  # already removed from eligible jurors
             return
+        elif self.stage == 1:
+            self.stage = 2
         # switching from stage 1 to 2 should be done by the function which assigns a juror to the case
-        if self.stage == 2:  # work the motion queue
+        if self.stage == 2 and len(self.motion_queue):  # work the motion queue
             
             if self.motion_in_consideration != self.motion_queue[0]:  # putting up a new motion to vote
                 self.motion_queue[0].StartVoting()
 
-            elif len(self.motion_in_consideration["votes"]) >= len(self.jury_pool) or datetime.datetime.now(datetime.UTC) < self.motion_in_consideration["expiry"]:  # everybody's voted, doesn't need to expire, or has expired
-                if len(self.motion_in_consideration["votes"]["yes"]) <= len(self.motion_in_consideration["votes"]["no"]):  # needs majority yes to pass, this triggers if yes is equal to or less than no
-                    explainer = "The motion has failed its vote."
-                    if datetime.datetime.now(datetime.UTC) < self.motion_in_consideration["expiry"]:
-                        explainer += " The motion expired before all votes were cast."
-
-                    self.event_log.append(self.new_event(
-                        "motion_fail",
-                        "This motion has failed its vote.",
-                        explainer,
-                        motion = self.motion_in_consideration
-                    ))
+            elif self.motion_in_consideration.ReadyToClose():  # everybody's voted, doesn't need to expire, or has expired
+                self.motion_in_consideration.Close()
             
             return
 
@@ -206,7 +201,6 @@ class Case:
         self.penalty = penalty
         self.stage = 1
         self.motion_queue = []
-        self.motion_archive = []
         self.jury_pool = []
         self.jury_invites = []
         self.anonymization = {}
@@ -262,7 +256,6 @@ class Case:
                 
                 "motion_number": self.motion_number,
                 "motion_queue": [motion.Dict() for motion in self.motion_queue],
-                "motion_archive": self.motion_archive,
 
                 # jury stuff
                 "jury_pool": [user.id for user in self.jury_pool],
@@ -321,15 +314,28 @@ class Motion:
     
     def Execute(self):
         return
+    
+    def ReadyToClose(self):
+        if len(self.Votes["Yes"]) + len(self.Votes["No"]) == len(self.Case.jury_pool):
+            return True
+        if datetime.datetime.now(datetime.UTC) > self.Expiry:
+            return True
+        return False
 
     def Close(self, delete: bool = True):
-        if len(self.No) >= len(self.Yes):
+        # DEBUG CODE REMOVE LATER
+
+        print(f"Closing motion {self}")
+        if len(self.Votes["No"]) >= len(self.Votes["Yes"]):
+            print("VOTE FAILED")
             self.VoteFailed()
         else:
+            print("VOTE PASSED")
             self.VotePassed()
             self.Execute()
-        if delete:
-            del(self)
+        self.Case.motion_queue.remove(self)
+        if self.Case.motion_in_consideration == self:
+            self.Case.motion_in_consideration = None
 
 
     def LoadDict(self, DBDocument: dict):
@@ -353,9 +359,10 @@ class Motion:
         return 
 
     def __del__(self):
-        self.Case.motion_queue.remove(self)
-        if self.Case.motion_in_consideration != self:
-            self.Case.motion_in_consideration = None
+        # DEBUG CODE REMOVE LATER
+
+        print(f"DEL CALLED FOR {self}")
+        return
     
     def __str__(self):
         return self.MotionID
@@ -402,8 +409,19 @@ for juror in jury:
     i += 1
     motion = StatementMotion(case).New(juror, f"This is a test statement {i}")
 
-case.motion_queue[0].Execute()
+for i in range(2):
+    case.Tick()
 
+for i in range(12):
+    case.Tick()
+    for juror in jury:
+        if not case.motion_in_consideration:
+            continue
+        if random.choice([True, False]):
+            case.motion_in_consideration.Votes["Yes"].append(juror.id)
+        else:
+            case.motion_in_consideration.Votes["No"].append(juror.id)
+    
 # by this point the case is filed and the jury is already selected
 
 def shell():
