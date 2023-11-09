@@ -5,6 +5,7 @@ import random
 
 # TESTING IMPORTS  
 import base64
+import json
 
 # DOC LINKS
 # https://docs.pycord.dev/en/stable/api/models.html
@@ -26,11 +27,26 @@ class utils:
         
         return base64_string
 
+def shell():
+    while True:
+        try:
+            user_input = input(">>> ")
+            if user_input.strip() == "":
+                continue
+            else:
+                exec(user_input)
+        except Exception as e:
+            print(f"Error: {e}")
+
 # --- START DEBUG CLASSES AND FUNCTIONS - THIS IS FOR EMULATING AND TESTING AND SHOULD NOT BE PORTED TO THE BOT ---
 
 nouns = open("../wordlists/nouns.txt", "r").read().split("\n")
 adjectives = open("../wordlists/adjectives.txt", "r").read().split("\n")
 elements = open("../wordlists/elements.txt", "r").read().split("\n")
+
+def safedump(d: dict):
+    default = lambda o: f"<<non-serializable: {type(o).__qualname__}>>"
+    return json.dumps(d, default=default, indent=2)
 
 class User:
     def __init__(self):
@@ -163,7 +179,7 @@ class Case:
                 eligible_jurors.remove(invitee)
                 try:
                     self.jury_invites.append(invitee)
-                    invitee.send(f"You have been invited to be a juror for `{self.id}`.\nTo accept, use `/jury join`.")
+                    invitee.send(f"You have been invited to be a juror for {self.title} (`{self.id}`).\nTo accept, use `/jury join`.")
                 except:
                     pass  # already removed from eligible jurors
             return
@@ -183,11 +199,15 @@ class Case:
         if self.stage == 3:  # archive self, end the case
             # unprison prisoned users
             return
-
-            
-
-
-
+        
+    def GetMotionByID(self, motionid: str):
+        for motion in self.motion_queue:
+            # TODO: remove prints later
+            print(motion.MotionID.lower(), motionid.lower())
+            if motion.MotionID.lower() == motionid.lower():
+                print("found")
+                return motion
+        return None
 
     def New(self, title: str, description: str, plaintiff: discord.Member, defense: discord.Member, penalty: dict, guild):
         self.guild = guild
@@ -293,6 +313,23 @@ class Motion:
             Unless another vote is rushed, voting will end on <t:{self.Expiry.timestamp()}:F>.",
             motion = self.Dict()
         ))
+    
+    def CancelVoting(self, reason:str = None):
+        if not self.Expiry and self.Case.motion_in_consideration != self:
+            return
+        self.Expiry = None
+        self.Case.motion_in_consideration = None
+        self.Votes["Yes"] = []
+        self.Votes["No"] = []
+        explan = f"Voting for motion {self.MotionID} has been cancelled."
+        if reason:
+            explan += f"\nReason: {reason}"
+        self.Case.event_log.append(self.Case.new_event(
+            "motion_cancel_vote",
+            f"Voting for motion {self.MotionID} has been cancelled.",
+            explan,
+            motion = self.Dict()
+        ))
 
     def VoteFailed(self):
         self.Case.event_log.append(self.Case.new_event(
@@ -305,7 +342,7 @@ class Motion:
 
     def VotePassed(self):
         self.Case.event_log.append(self.Case.new_event(
-            "motion_failed",
+            "motion_passed",
             f"The motion {self.MotionID} has passed its vote.",
             f"The motion {self.MotionID} has passed its jury vote. {len(self.Votes['Yes'])}/{len(self.Votes['No'])}",
             motion = self.Dict()
@@ -346,6 +383,7 @@ class Motion:
         self.Author = author
         self.MotionID = f"{self.Case.id}-M{self.Case.motion_number}"  # 11042023-M001 for example
         self.Case.motion_number += 1
+        self.Case.motion_queue.append(self)
         return self
 
     def __init__(self, Case: Case):
@@ -355,7 +393,6 @@ class Motion:
         self.Votes["Yes"] = []
         self.Votes["No"] = []
         self.MotionID = "#NO-ID-ERR"
-        Case.motion_queue.append(self)
         return 
 
     def __del__(self):
@@ -382,7 +419,7 @@ class StatementMotion(Motion):
             motion = self.Dict()
         ))
     
-    def New(self, author, statement_content: str = None):
+    def New(self, author, statement_content: str):
         super().New(author)
         self.statement_content = statement_content
         return self
@@ -390,7 +427,61 @@ class StatementMotion(Motion):
     def LoadDict(self, DBDocument: dict):
         super().LoadDict()
         return
+
+class RushMotion(Motion):
     
+    def __init__(self, case):
+        self.Case = case
+        self.Expiry = None  # this is set by the motion manageer based on when it appears on the floors
+        self.Votes = {}
+        self.Votes["Yes"] = []
+        self.Votes["No"] = []
+        self.MotionID = "#NO-ID-ERR"
+        # TODO: cancel all other votes
+        self.rushed_motion_id = None
+
+    def New(self, author, rushed_motion_id: str, explanation: str):
+        # ported from the old code
+        self.Created = datetime.datetime.now(datetime.UTC)
+        self.Author = author
+        self.MotionID = f"{self.Case.id}-M{self.Case.motion_number}"  # 11042023-M001 for example
+        self.Case.motion_number += 1
+
+        motion = self.Case.GetMotionByID(rushed_motion_id)
+        self.rushed_motion_id = motion.MotionID
+        self.explanation = explanation
+        self.Case.event_log.append(self.Case.new_event(
+            "propose_rush_motion",
+            f"Motion {self.MotionID} has been filed to rush {self.rushed_motion().MotionID}.",
+            f"Motion {self.MotionID} has been filed to rush {self.rushed_motion().MotionID} for an immediate floor vote.\nReason: {explanation}",
+            motion = self.Dict(),
+            rushed_motion = self.rushed_motion().Dict()
+        ))
+        for motion in self.Case.motion_queue:
+            motion.CancelVoting(reason=f"Motion {self.MotionID} to rush motion {self.rushed_motion().MotionID} has been filed.")
+        
+        self.Case.motion_queue = [self] + self.Case.motion_queue
+
+    def rushed_motion(self):
+        return self.Case.GetMotionByID(self.rushed_motion_id)
+
+    def Execute(self):
+        self.Case.event_log.append(self.Case.new_event(
+            "rush_motion",
+            f"A motion {self.rushed_motion().MotionID} has been rushed to the front of the queue.",
+            f"Pursuant to motion {self.MotionID}, {self.rushed_motion().MotionID} has been rushed to the front of the queue and will now face an immediate vote.",
+            motion = self.Dict(),
+            rushed_motion = self.rushed_motion().Dict()
+        ))
+        rushed = self.rushed_motion()
+        self.Case.motion_queue.remove(rushed)
+        for motion in self.Case.motion_queue:
+            motion.CancelVoting(reason=f"Motion {rushed.MotionID} has been rushed to a vote.")
+        self.Case.motion_queue = [rushed] + self.Case.motion_queue
+        self.rushed_motion().StartVoting()
+        
+            
+
 # CREATE AN ENVIRONMENT SIMILAR TO IDLE
 
 guild = Guild()
@@ -409,6 +500,9 @@ for juror in jury:
     i += 1
     motion = StatementMotion(case).New(juror, f"This is a test statement {i}")
 
+rushed_motion = case.motion_queue[3]
+rush_motion = RushMotion(case).New(case.jury_pool[2], rushed_motion.MotionID, "This is a test of the motion rushing.")
+
 for i in range(2):
     case.Tick()
 
@@ -423,16 +517,5 @@ for i in range(12):
             case.motion_in_consideration.Votes["No"].append(juror.id)
     
 # by this point the case is filed and the jury is already selected
-
-def shell():
-    while True:
-        try:
-            user_input = input(">>> ")
-            if user_input.strip() == "":
-                continue
-            else:
-                exec(user_input)
-        except Exception as e:
-            print(f"Error: {e}")
 
 shell()
