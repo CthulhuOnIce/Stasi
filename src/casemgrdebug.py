@@ -1,3 +1,6 @@
+from __future__ import annotations
+from typing import *
+
 # this file is for testing Case classes, Motion classes, and implementations of such
 # PORTED IMPORTS
 import datetime
@@ -157,7 +160,7 @@ class Case:
         if anonymousname:
             self.anonymization[user.id] = anonymousname
 
-    def FindEligibleJurors(self):
+    def FindEligibleJurors(self) -> List[discord.Member]:
         # DEBUG CODE REMOVE LATER
         return [user for user in guild.members if user not in self.jury_invites]
     
@@ -200,7 +203,7 @@ class Case:
             # unprison prisoned users
             return
         
-    def GetMotionByID(self, motionid: str):
+    def GetMotionByID(self, motionid: str) -> "Motion":
         for motion in self.motion_queue:
             # TODO: remove prints later
             print(motion.MotionID.lower(), motionid.lower())
@@ -209,7 +212,7 @@ class Case:
                 return motion
         return None
 
-    def New(self, title: str, description: str, plaintiff: discord.Member, defense: discord.Member, penalty: dict, guild):
+    def New(self, title: str, description: str, plaintiff: discord.Member, defense: discord.Member, penalty: dict, guild) -> Case:
         self.guild = guild
 
         self.title = title
@@ -244,7 +247,7 @@ class Case:
 
         ACTIVECASES.append(self)
 
-        return
+        return 
     
     def __del__(self):
         ACTIVECASES.remove(self)
@@ -378,7 +381,7 @@ class Motion:
     def LoadDict(self, DBDocument: dict):
         return self
     
-    def New(self, author):
+    def New(self, author) -> Motion:  # the event log entry should be updated by the subtype's New() function
         self.Created = datetime.datetime.now(datetime.UTC)
         self.Author = author
         self.MotionID = f"{self.Case.id}-M{self.Case.motion_number}"  # 11042023-M001 for example
@@ -476,6 +479,8 @@ class RushMotion(Motion):
         rushed = self.rushed_motion()
         self.Case.motion_queue.remove(rushed)
         for motion in self.Case.motion_queue:
+            if motion == self:
+                continue
             motion.CancelVoting(reason=f"Motion {rushed.MotionID} has been rushed to a vote.")
         self.Case.motion_queue = [rushed] + self.Case.motion_queue
         self.rushed_motion().StartVoting()
