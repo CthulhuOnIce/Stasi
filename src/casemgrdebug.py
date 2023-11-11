@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import *
+import pyperclip
 
 # this file is for testing Case classes, Motion classes, and implementations of such
 # PORTED IMPORTS
@@ -9,6 +10,7 @@ import random
 # TESTING IMPORTS  
 import base64
 import json
+from discord import Embed
 
 # DOC LINKS
 # https://docs.pycord.dev/en/stable/api/models.html
@@ -99,17 +101,24 @@ class discord:  # just so that we can use discord.Member and discord.User and po
     Member: User = None
     Guild: Guild = None
     User: User = None
+    Embed = Embed
 
 # --- END DEBUG CLASSES AND FUNCTIONS - EVERYTHING BELOW MUST BE PORTED TO THE BOT ---
 
 ACTIVECASES: List[Case] = []
 
+# makes intellisense work for event dictionaries
 class Event(TypedDict):
     event_id: str
     name: str
     desc: str
     timestamp: datetime.datetime
     timestamp_utc: float
+
+def eventToEmbed(event: Event) -> discord.Embed:
+    embed = discord.Embed(title=event["name"], description=event["desc"], timestamp=event["timestamp"])
+    embed.set_footer(text=f"Event ID: {event['event_id']}")
+    return embed
 
 class Case:
 
@@ -119,8 +128,6 @@ class Case:
         return Motion(self).New()
 
     def newEvent(self, event_id: str, name, desc, **kwargs) -> Event:
-        # Q: Can i make intellisense know the schema for this?
-        # A: 
         event = {
                     "event_id": event_id,
                     "name": name,
@@ -132,7 +139,7 @@ class Case:
             event[kw] = kwargs[kw]
         return event
 
-    def generate_new_id(self):
+    def generateNewID(self):
         # 11042023-01, 11042023-02, etc.
         number = str(len(ACTIVECASES)).zfill(2)
         return f"{datetime.datetime.now(datetime.UTC).strftime('%m%d%Y')}-{number}"
@@ -212,7 +219,7 @@ class Case:
             # unprison prisoned users
             return
         
-    def GetMotionByID(self, motionid: str) -> "Motion":
+    def getMotionByID(self, motionid: str) -> "Motion":
         for motion in self.motion_queue:
             # TODO: remove prints later
             if motion.MotionID.lower() == motionid.lower():
@@ -224,7 +231,7 @@ class Case:
 
         self.title = title
         self.description = description
-        self.id = self.generate_new_id()
+        self.id = self.generateNewID()
         self.created = datetime.datetime.now(datetime.UTC)
         self.plaintiff = plaintiff
         self.defense = defense
@@ -236,7 +243,11 @@ class Case:
         self.anonymization = {}
         self.known_users = {}
         self.votes = {}
-        self.event_log = []
+        self.event_log = [self.newEvent(
+            "case_filed",
+            f"Case {self.id} has been filed.",
+            f"Case {self.id} has been filed by {self.nameUserByID(self.plaintiff.id)} against {self.nameUserByID(self.defense.id)}.\n{self.description}"
+        )]
         self.juror_chat_log = []
         self.motion_in_consideration = None
         self.motion_number = 100  # motion IDs start as {caseid}-100, {caseid}-101, etc. 
@@ -432,6 +443,12 @@ class StatementMotion(Motion):
     def New(self, author, statement_content: str):
         super().New(author)
         self.statement_content = statement_content
+        self.Case.event_log.append(self.Case.newEvent(
+            "propose_statement",
+            f"Motion {self.MotionID} has been filed to make a statement.",
+            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to have the jury make a statement.\nStatement: {statement_content}",
+            motion = self.Dict()
+        ))
         return self
 
     def LoadDict(self, DBDocument: dict):
@@ -457,13 +474,13 @@ class RushMotion(Motion):
         self.MotionID = f"{self.Case.id}-M{self.Case.motion_number}"  # 11042023-M001 for example
         self.Case.motion_number += 1
 
-        motion = self.Case.GetMotionByID(rushed_motion_id)
+        motion = self.Case.getMotionByID(rushed_motion_id)
         self.rushed_motion_id = motion.MotionID
         self.explanation = explanation
         self.Case.event_log.append(self.Case.newEvent(
             "propose_rush_motion",
             f"Motion {self.MotionID} has been filed to rush {self.rushed_motion().MotionID}.",
-            f"Motion {self.MotionID} has been filed to rush {self.rushed_motion().MotionID} for an immediate floor vote.\nReason: {explanation}",
+            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to rush motion {self.rushed_motion().MotionID} for an immediate floor vote.\nReason: {explanation}",
             motion = self.Dict(),
             rushed_motion = self.rushed_motion().Dict()
         ))
@@ -473,7 +490,7 @@ class RushMotion(Motion):
         self.Case.motion_queue = [self] + self.Case.motion_queue
 
     def rushed_motion(self):
-        return self.Case.GetMotionByID(self.rushed_motion_id)
+        return self.Case.getMotionByID(self.rushed_motion_id)
 
     def Execute(self):
         self.Case.event_log.append(self.Case.newEvent(
@@ -514,6 +531,8 @@ for juror in jury:
 
 rushed_motion = case.motion_queue[3]
 rush_motion = RushMotion(case).New(case.jury_pool[2], rushed_motion.MotionID, "This is a test of the motion rushing.")
+
+del rushed_motion, rush_motion, motion
 
 for i in range(2):
     case.Tick()
