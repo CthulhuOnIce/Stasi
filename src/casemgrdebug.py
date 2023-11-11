@@ -69,10 +69,10 @@ class User:
             if random.choice([True, False]):
                 pseudo = f"Juror {random.choice(nouns).title()}"
                 print(f"{self} Joining case {ACTIVECASES[0]} as " + pseudo)
-                ACTIVECASES[0].AddJuror(self, pseudo)
+                ACTIVECASES[0].addJuror(self, pseudo)
             else:
                 print(f"{self} Joining case {ACTIVECASES[0]} without pseudonym")
-                ACTIVECASES[0].AddJuror(self)
+                ACTIVECASES[0].addJuror(self)
         return
      
     # what is printed when this object is printed
@@ -86,7 +86,7 @@ class User:
 class Guild:
     name = "Test Guild"
     def __init__(self):
-        self.members = [User() for i in range(800)]
+        self.members: List[discord.Member] = [User() for i in range(800)]
         return
     
     def get_user(self, id):
@@ -102,16 +102,25 @@ class discord:  # just so that we can use discord.Member and discord.User and po
 
 # --- END DEBUG CLASSES AND FUNCTIONS - EVERYTHING BELOW MUST BE PORTED TO THE BOT ---
 
-ACTIVECASES = []
+ACTIVECASES: List[Case] = []
+
+class Event(TypedDict):
+    event_id: str
+    name: str
+    desc: str
+    timestamp: datetime.datetime
+    timestamp_utc: float
 
 class Case:
 
     motion_timeout_days = 1  # how long it takes for voting to close on a motion in the absence of all parties voting
 
-    def CreateMotion(self):
+    def createMotion(self) -> "Motion":
         return Motion(self).New()
 
-    def new_event(self, event_id: str, name, desc, **kwargs):
+    def newEvent(self, event_id: str, name, desc, **kwargs) -> Event:
+        # Q: Can i make intellisense know the schema for this?
+        # A: 
         event = {
                     "event_id": event_id,
                     "name": name,
@@ -137,10 +146,10 @@ class Case:
         # news_wire = whether or not to send this announcement to the public news wire channel
         return
     
-    def GenerateKnownUserName(self, user):
+    def generateKnownUserName(self, user):
         return f"{user}"
     
-    def NameUserByID(self, userid: int):
+    def nameUserByID(self, userid: int):
         if userid in self.anonymization:
             return self.anonymization[userid]
         if str(userid) in self.anonymization:
@@ -155,20 +164,20 @@ class Case:
             return self.known_users[str(userid)]
         return f"Unknown User #{utils.int_to_base64(userid)}"
 
-    def RegisterUser(self, user, anonymousname: str = None):
-        self.known_users[user.id] = self.GenerateKnownUserName(user)
+    def registerUser(self, user, anonymousname: str = None):
+        self.known_users[user.id] = self.generateKnownUserName(user)
         if anonymousname:
             self.anonymization[user.id] = anonymousname
 
-    def FindEligibleJurors(self) -> List[discord.Member]:
+    def findEligibleJurors(self) -> List[discord.Member]:
         # DEBUG CODE REMOVE LATER
         return [user for user in guild.members if user not in self.jury_invites]
     
-    def AddJuror(self, user, anonymousname: str = None):
+    def addJuror(self, user, anonymousname: str = None):
         self.jury_pool.append(user)
         if user in self.jury_invites:
             self.jury_invites.remove(user)
-        self.RegisterUser(user, anonymousname)
+        self.registerUser(user, anonymousname)
         return
 
     def Tick(self):  # called by case manager or when certain events happen, like a juror leaving the case
@@ -176,7 +185,7 @@ class Case:
             if self.stage > 1:  # juror left the case
                 self.stage = 1  # back in the recruitment stage
             invites_to_send = 1   # 1 per cycle
-            eligible_jurors = self.FindEligibleJurors()
+            eligible_jurors = self.findEligibleJurors()
             for i in range(invites_to_send):
                 invitee = random.choice(eligible_jurors)
                 eligible_jurors.remove(invitee)
@@ -192,7 +201,7 @@ class Case:
         if self.stage == 2 and len(self.motion_queue):  # work the motion queue
             
             if self.motion_in_consideration != self.motion_queue[0]:  # putting up a new motion to vote
-                self.motion_queue[0].StartVoting()
+                self.motion_queue[0].startVoting()
 
             elif self.motion_in_consideration.ReadyToClose():  # everybody's voted, doesn't need to expire, or has expired
                 self.motion_in_consideration.Close()
@@ -206,9 +215,7 @@ class Case:
     def GetMotionByID(self, motionid: str) -> "Motion":
         for motion in self.motion_queue:
             # TODO: remove prints later
-            print(motion.MotionID.lower(), motionid.lower())
             if motion.MotionID.lower() == motionid.lower():
-                print("found")
                 return motion
         return None
 
@@ -223,7 +230,7 @@ class Case:
         self.defense = defense
         self.penalty = penalty
         self.stage = 1
-        self.motion_queue = []
+        self.motion_queue: List[Motion] = []
         self.jury_pool = []
         self.jury_invites = []
         self.anonymization = {}
@@ -236,8 +243,8 @@ class Case:
 
         self.Save()
 
-        self.RegisterUser(plaintiff)
-        self.RegisterUser(defense)
+        self.registerUser(plaintiff)
+        self.registerUser(defense)
 
         ACTIVECASES.append(self)
         return self
@@ -304,15 +311,15 @@ class Motion:
 
     Case: Case = None
 
-    def StartVoting(self):
+    def startVoting(self):
         self.Expiry = datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=self.expiry_hours)
         self.Votes["Yes"] = []
         self.Votes["No"] = []
         self.Case.motion_in_consideration = self
-        self.Case.event_log.append(self.Case.new_event(
+        self.Case.event_log.append(self.Case.newEvent(
             "motion_up",
-            f"The motion {self.MotionID} has been put up to be considered for a vote by {self.Case.NameUserByID(self.Author.id)}.",
-            f"The motion {self.MotionID} has been put up to be considered for a vote by {self.Case.NameUserByID(self.Author.id)}. \
+            f"The motion {self.MotionID} has been put up to be considered for a vote by {self.Case.nameUserByID(self.Author.id)}.",
+            f"The motion {self.MotionID} has been put up to be considered for a vote by {self.Case.nameUserByID(self.Author.id)}. \
             Unless another vote is rushed, voting will end on <t:{self.Expiry.timestamp()}:F>.",
             motion = self.Dict()
         ))
@@ -327,7 +334,7 @@ class Motion:
         explan = f"Voting for motion {self.MotionID} has been cancelled."
         if reason:
             explan += f"\nReason: {reason}"
-        self.Case.event_log.append(self.Case.new_event(
+        self.Case.event_log.append(self.Case.newEvent(
             "motion_cancel_vote",
             f"Voting for motion {self.MotionID} has been cancelled.",
             explan,
@@ -335,7 +342,7 @@ class Motion:
         ))
 
     def VoteFailed(self):
-        self.Case.event_log.append(self.Case.new_event(
+        self.Case.event_log.append(self.Case.newEvent(
             "motion_failed",
             f"The motion {self.MotionID} has failed its vote.",
             f"The motion {self.MotionID} has failed its jury vote. {len(self.Votes['Yes'])}/{len(self.Votes['No'])}",
@@ -344,7 +351,7 @@ class Motion:
         return
 
     def VotePassed(self):
-        self.Case.event_log.append(self.Case.new_event(
+        self.Case.event_log.append(self.Case.newEvent(
             "motion_passed",
             f"The motion {self.MotionID} has passed its vote.",
             f"The motion {self.MotionID} has passed its jury vote. {len(self.Votes['Yes'])}/{len(self.Votes['No'])}",
@@ -415,7 +422,7 @@ class Motion:
 
 class StatementMotion(Motion):
     def Execute(self):
-        self.Case.event_log.append(self.Case.new_event(
+        self.Case.event_log.append(self.Case.newEvent(
             "jury_statement",
             f"The jury has made an official statement.",
             f"Pursuant to motion {self.MotionID}, the Jury makes the following statement:\n{self.statement_content}",
@@ -453,7 +460,7 @@ class RushMotion(Motion):
         motion = self.Case.GetMotionByID(rushed_motion_id)
         self.rushed_motion_id = motion.MotionID
         self.explanation = explanation
-        self.Case.event_log.append(self.Case.new_event(
+        self.Case.event_log.append(self.Case.newEvent(
             "propose_rush_motion",
             f"Motion {self.MotionID} has been filed to rush {self.rushed_motion().MotionID}.",
             f"Motion {self.MotionID} has been filed to rush {self.rushed_motion().MotionID} for an immediate floor vote.\nReason: {explanation}",
@@ -469,7 +476,7 @@ class RushMotion(Motion):
         return self.Case.GetMotionByID(self.rushed_motion_id)
 
     def Execute(self):
-        self.Case.event_log.append(self.Case.new_event(
+        self.Case.event_log.append(self.Case.newEvent(
             "rush_motion",
             f"A motion {self.rushed_motion().MotionID} has been rushed to the front of the queue.",
             f"Pursuant to motion {self.MotionID}, {self.rushed_motion().MotionID} has been rushed to the front of the queue and will now face an immediate vote.",
@@ -483,7 +490,7 @@ class RushMotion(Motion):
                 continue
             motion.CancelVoting(reason=f"Motion {rushed.MotionID} has been rushed to a vote.")
         self.Case.motion_queue = [rushed] + self.Case.motion_queue
-        self.rushed_motion().StartVoting()
+        self.rushed_motion().startVoting()
         
             
 
