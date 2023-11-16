@@ -432,6 +432,11 @@ class Motion:
         return self.__dict__
 
 class StatementMotion(Motion):
+    
+    def __init__(self, Case: Case):
+        super().__init__(Case)
+        self.statement_content = None
+
     def Execute(self):
         self.Case.event_log.append(self.Case.newEvent(
             "jury_statement",
@@ -455,6 +460,33 @@ class StatementMotion(Motion):
         super().LoadDict()
         return
 
+class OrderMotion(Motion):
+    
+    def __init__(self, Case: Case):
+        super().__init__(Case)
+        self.target = None
+        self.order_content = None
+    
+    def Execute(self):
+        self.Case.event_log.append(self.Case.newEvent(
+            "jury_order",
+            f"The jury has given a binding order.",
+            f"Pursuant to motion {self.MotionID}, the Jury compels the following entity: {self.target}\nTo comply with the following order:\n{self.order_content}.\nNot following this order can result in penalties.",
+            motion = self.Dict()
+        ))
+
+    def New(self, author, target: str, order_content: str):
+        super().New(author)
+        self.target = target
+        self.order_content = order_content
+        self.Case.event_log.append(self.Case.newEvent(
+            "propose_order",
+            f"Motion {self.MotionID} has been filed to give a binding order.",
+            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to compel the following entity: {target}\nTo comply with the following order:\n{order_content}.",
+            motion = self.Dict()
+        ))
+        return self
+
 class RushMotion(Motion):
     
     def __init__(self, case):
@@ -475,6 +507,7 @@ class RushMotion(Motion):
         self.Case.motion_number += 1
 
         motion = self.Case.getMotionByID(rushed_motion_id)
+
         self.rushed_motion_id = motion.MotionID
         self.explanation = explanation
         self.Case.event_log.append(self.Case.newEvent(
@@ -510,6 +543,12 @@ class RushMotion(Motion):
         self.rushed_motion().startVoting()
         
             
+MOTION_TYPES = {
+    "statement": StatementMotion,
+    "rush": RushMotion,
+    "order": OrderMotion
+
+}
 
 # CREATE AN ENVIRONMENT SIMILAR TO IDLE
 
