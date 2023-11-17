@@ -226,8 +226,26 @@ class Case:
                 return motion
         return None
 
-    def New(self, title: str, description: str, plaintiff: discord.Member, defense: discord.Member, penalty: dict, guild) -> Case:
+    def getUser(self, userid: int) -> discord.Member:
+        if isinstance(userid, str):
+            userid = int(userid)
+        return self.guild.get_user(userid)
+
+    def fetchUser(self, userid: int) -> discord.Member:
+        if isinstance(userid, str):
+            userid = int(userid)
+            
+        if got := self.getUser(userid):
+            return got
+        elif got := self.guild.get_member(userid):
+            return got
+        elif got := self.guild.fetch_member(userid):
+            return got
+
+
+    def New(self, guild: discord.Guild, bot, title: str, description: str, plaintiff: discord.Member, defense: discord.Member, penalty: dict) -> Case:
         self.guild = guild
+        self.bot = bot
 
         self.title = title
         self.description = description
@@ -249,7 +267,7 @@ class Case:
             f"Case {self.id} has been filed by {self.nameUserByID(self.plaintiff.id)} against {self.nameUserByID(self.defense.id)}.\n{self.description}"
         )]
         self.juror_chat_log = []
-        self.motion_in_consideration = None
+        self.motion_in_consideration: Motion = None
         self.motion_number = 100  # motion IDs start as {caseid}-100, {caseid}-101, etc. 
 
         self.Save()
@@ -391,6 +409,13 @@ class Motion:
             print("VOTE PASSED")
             self.VotePassed()
             self.Execute()
+        if delete:
+            self.Case.motion_queue.remove(self)
+            if self.Case.motion_in_consideration == self:
+                self.Case.motion_in_consideration = None
+
+    # Close without executing, no matter what    
+    def ForceClose(self):
         self.Case.motion_queue.remove(self)
         if self.Case.motion_in_consideration == self:
             self.Case.motion_in_consideration = None
@@ -542,11 +567,86 @@ class RushMotion(Motion):
         self.Case.motion_queue = [rushed] + self.Case.motion_queue
         self.rushed_motion().startVoting()
         
-            
+
+# this motion can batch pass or deny any set of motions
+# it is not placed at the end of the queue, rather it is placed 
+# before the first motion referenced
+
+class BatchVoteMotion(Motion):
+    
+    def __init__(self, case):
+        super().__init__(case)
+    
+    def New(self, author, pass_motion_ids: List[str], deny_motion_ids: List[str], reason: str):
+        super().New(author)
+        
+        aggregate = pass_motion_ids + deny_motion_ids
+        for motion_id in aggregate:
+            motion = self.Case.getMotionByID(motion_id)
+            if not motion:
+                raise Exception(f"Motion {motion_id} does not exist.")
+        
+        self.pass_motion_ids = pass_motion_ids
+        self.deny_motion_ids = deny_motion_ids
+        self.reason = reason
+
+        # add to queue in front of first motion referenced
+        for motion in self.Case.motion_queue:
+            if motion.MotionID in aggregate:
+                index = self.Case.motion_queue.index(motion)
+                if index == 0:
+                    self.Case.motion_in_consideration.CancelVoting(reason=f"Motion {self.MotionID} has been filed to pass or deny a set of motions.")
+                self.Case.motion_queue.insert(self.Case.motion_queue.index(motion), self)
+                break
+
+        self.Case.event_log.append(self.Case.newEvent(
+            "propose_summary_motion",
+            f"Motion {self.MotionID} has been filed to pass or deny motions.",
+            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to pass the following motions: {','.join(pass_motion_ids)}\nAnd to deny the following motions: {','.join(deny_motion_ids)}\nReason: {reason}",
+            motion = self.Dict()
+        ))
+        return self
+
+    def Execute(self):
+
+        passed = []
+        failed = []
+        not_found = []
+        
+        for motion_id in self.pass_motion_ids:
+            motion = self.Case.getMotionByID(motion_id)
+            if not motion:
+                not_found.append(motion_id)
+                continue
+            passed.append(motion_id)
+            motion.Execute()
+            motion.ForceClose()
+
+        for motion_id in self.deny_motion_ids:
+            motion = self.Case.getMotionByID(motion_id)
+            if not motion:
+                not_found.append(motion_id)
+                continue
+            failed.append(motion_id)
+            motion.ForceClose()
+        
+        self.Case.event_log.append(self.Case.newEvent(
+            "batch_motion",
+            f"Execution on Batch Vote Motion {self.MotionID} has finished.",
+            f"Pursuant to motion {self.MotionID}, the following motions have been executed:\n{','.join(passed)}\nThe following motions have been denied:\n{','.join(failed)}\nThe following motions were referenced, but not found:\n{','.join(not_found)}",
+            motion = self.Dict(),
+            not_found = not_found,
+            passed = passed,
+            failed = failed
+        ))
+        
+
+
 MOTION_TYPES = {
     "statement": StatementMotion,
     "rush": RushMotion,
-    "order": OrderMotion
+    "order": OrderMotion,
+    "batch": BatchVoteMotion
 
 }
 
@@ -557,7 +657,9 @@ case = Case()
 plaintiff = random.choice(guild.members)
 defense = random.choice(guild.members)
 
-case.New(f"{plaintiff} v. {defense}", "This is a test case.", plaintiff, defense, {"type": "prison", "length": 10}, guild)
+# case.New(f"{plaintiff} v. {defense}", "This is a test case.", plaintiff, defense, {"type": "prison", "length": 10}, guild)
+# updated for new style
+case.New(guild, None, f"{plaintiff} v. {defense}", "This is a test case.", plaintiff, defense, {"type": "prison", "length": 10})
 
 for i in range(6):
     case.Tick()
