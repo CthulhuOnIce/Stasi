@@ -732,9 +732,6 @@ class AdjustPenalty(Motion):
             old_penalty = old_penalty,
             new_penalty = self.new_penalty
         ))
-
-class 
-
     
 
 
