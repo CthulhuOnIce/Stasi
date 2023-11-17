@@ -311,7 +311,7 @@ class Case:
         self.motion_in_consideration: Motion = None
         self.motion_number = 101  # motion IDs start as {caseid}-101, {caseid}-102, etc. 
 
-        # if this is set to true, Tick() won't do anything 
+        # if this is set to true, Tick() won't do anything, good for completely freezing the case 
         self.no_tick: bool = False
 
         self.Save()
