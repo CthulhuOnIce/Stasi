@@ -592,7 +592,11 @@ class RushMotion(Motion):
         self.MotionID = f"{self.Case.id}-M{self.Case.motion_number}"  # 11042023-M001 for example
         self.Case.motion_number += 1
 
-        motion = self.Case.getMotionByID(rushed_motion_id)
+        # if someone accidentally passes a motion instead of just its id, no worries
+        if isinstance(rushed_motion_id, Motion):
+            motion = rushed_motion_id
+        else:
+            motion = self.Case.getMotionByID(rushed_motion_id)
 
         self.rushed_motion_id = motion.MotionID
         self.explanation = explanation
@@ -640,6 +644,15 @@ class BatchVoteMotion(Motion):
     
     def New(self, author, pass_motion_ids: List[str], deny_motion_ids: List[str], reason: str):
         super().New(author)
+
+        # check if pass_motion_ids and deny_motion_ids are None and change them to []
+
+        if pass_motion_ids is None:     pass_motion_ids = []
+        if deny_motion_ids is None:     deny_motion_ids = []
+
+        # you can pass a single motion id instead of a list with 1 item and they will be processed automatically
+        if not isinstance(pass_motion_ids, list):       pass_motion_ids = [pass_motion_ids]
+        if not isinstance(deny_motion_ids, list):       deny_motion_ids = [deny_motion_ids]
         
         aggregate = pass_motion_ids + deny_motion_ids
         for motion_id in aggregate:
@@ -764,33 +777,77 @@ defense = random.choice(guild.members)
 # updated for new style
 case.New(guild, None, f"{plaintiff} v. {defense}", "This is a test case.", plaintiff, defense, {"type": "prison", "length": 10})
 
+# TODO: plea deal logic here
+
+# appoint jury
 for i in range(6):
     case.Tick()
 
+def random_pass(jury, motion):
+    # populate the motion with a passing amount of votes
+    return
+
+def random_fail(jury, motion):
+    # populate the motion with a failing amount of votes
+    return
+
 jury = case.jury_pool
-i = 0
-for juror in jury:
-    i += 1
-    motion = StatementMotion(case).New(juror, f"This is a test statement {i}")
+mq = case.motion_queue
 
-rushed_motion = case.motion_queue[3]
-rush_motion = RushMotion(case).New(case.jury_pool[2], rushed_motion.MotionID, "This is a test of the motion rushing.")
+prosecutor_statement = case.personalStatement(plaintiff, "This is a test personal statement from the plaintiff")
+defense_statement = case.personalStatement(defense, "This is a test personal statement from the defense")
 
-del rushed_motion, rush_motion, motion
+jury_statement_one = StatementMotion(case).New(jury[0], f"This is the first test statement. It should be voted on and then dismissed from a batch motion.")  # BATCH FAIL @ batch_motion
+jury_statement_two = StatementMotion(case).New(jury[1], f"This is the first test statement. It should be voted on and then passed from a batch motion.") # BATCH PASS @  batch_motion
 
-for i in range(2):
-    case.Tick()
+case.Tick()
 
-for i in range(12):
-    case.Tick()
-    for juror in jury:
-        if not case.motion_in_consideration:
-            continue
-        if random.choice([True, False]):
-            case.motion_in_consideration.Votes["Yes"].append(juror.id)
-        else:
-            case.motion_in_consideration.Votes["No"].append(juror.id)
-    
-# by this point the case is filed and the jury is already selected
+# jury_statement_one should be the active motion now.
 
+# now jury[1] tries to dismiss jury_statement_one and pass jury_statement_two
+batch_motion = BatchVoteMotion(case).New(jury[1], jury_statement_two.MotionID, jury_statement_one.MotionID, "This is a test of batch motions.") # PASS
+
+# At this point, BatchVoteMotion().New() should have removed jury_statement_one from the vote and at the front, but voting shouldn't begin yet
+
+
+jury_order_one = OrderMotion(case).New(jury[2], f"{defense} and {plaintiff}", "This is a test of the order motion.")  # PASS then FAIL after rushed statement motion
+case.Tick()
+
+# now voting for the batch motion should begin
+
+# everybody votes for it
+random_pass(jury, batch_motion)
+case.Tick()
+
+# now it should have passed and taken effect
+
+case.Tick()
+
+# now jury_order_one should be voted on
+random_pass(jury, jury_order_one)
+
+# juror #4 files statement motion and rushes it
+jury_statement_three_rushed = StatementMotion(case).New(jury[3], f"This is the third test statement motion, it should be rushed and then passed before {jury_order_one} is voted on for the second time, this time failing.")
+rush_motion = RushMotion(case).New(jury[3], jury_statement_three_rushed, "Rush motion test.")
+
+# just for fun, defense makes a statement
+case.personalStatement(defense, "This is the defense's second personal statement")
+
+# now the votes for jo1 should be cancelled and js3r should be first in queue but not voted on.
+
+# this should start voting on rush_motion and get it the votes to pass
+case.Tick()
+random_pass(jury, rush_motion)
+
+# officially pass and execute the motion
+# TODO: decide whether Tick() should both execute AND put up the next motion for a vote, or allow this 15 minutes to act as a recess
+case.Tick()
+
+# if Tick() only executes the voted-on motion, this should place jo1 up for vote again
+# if Tick() executes AND starts the next vote, this should do nothing
+case.Tick()
+
+
+
+# instead of terminating, open an interactive environment
 shell()
