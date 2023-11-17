@@ -180,16 +180,21 @@ class Case:
         # DEBUG CODE REMOVE LATER
         return [user for user in guild.members if user not in self.jury_invites]
     
-    def addJuror(self, user, anonymousname: str = None):
+    def addJuror(self, user, pseudonym: str = None):
         self.jury_pool.append(user)
         if user in self.jury_invites:
             self.jury_invites.remove(user)
-        self.registerUser(user, anonymousname)
+        self.registerUser(user, pseudonym)
         return
 
     def Tick(self):  # called by case manager or when certain events happen, like a juror leaving the case
         if len(self.jury_pool) < 5:
-            if self.stage > 1:  # juror left the case
+            # juror left the case, but it was already in the body stage
+            # when this happens, the case basically has to revert to the recruitment stage
+            if self.stage > 1:  
+                self.updateStatus("Jury Re-Selection to Fill Vacancy")
+                for motion in self.motion_queue:
+                    motion.CancelVoting(reason=f"Jury cannot act on motions until 5 jurors are present.")
                 self.stage = 1  # back in the recruitment stage
             invites_to_send = 1   # 1 per cycle
             eligible_jurors = self.findEligibleJurors()
@@ -202,7 +207,8 @@ class Case:
                 except:
                     pass  # already removed from eligible jurors
             return
-        elif self.stage == 1:
+        elif self.stage == 1:  # we have jurors selected, so move the case to the next stage
+            self.updateStatus("Argumentation and Case Body")
             self.stage = 2
         # switching from stage 1 to 2 should be done by the function which assigns a juror to the case
         if self.stage == 2 and len(self.motion_queue):  # work the motion queue
@@ -249,10 +255,12 @@ class Case:
 
         self.title = title
         self.description = description
+        # "Jury Selection", "Guilty", "Not Guilty", 
+        self.status = "Jury Selection"
         self.id = self.generateNewID()
         self.created = datetime.datetime.now(datetime.UTC)
-        self.plaintiff = plaintiff
-        self.defense = defense
+        self.plaintiff = plaintiff.id
+        self.defense = defense.id
         self.penalty = penalty
         self.stage = 1
         self.motion_queue: List[Motion] = []
@@ -260,6 +268,7 @@ class Case:
         self.jury_invites = []
         self.anonymization = {}
         self.known_users = {}
+        # MIGHT REMOVE in favor of delivering verdict ny a motion
         self.votes = {}
         self.event_log = [self.newEvent(
             "case_filed",
@@ -268,7 +277,7 @@ class Case:
         )]
         self.juror_chat_log = []
         self.motion_in_consideration: Motion = None
-        self.motion_number = 100  # motion IDs start as {caseid}-100, {caseid}-101, etc. 
+        self.motion_number = 101  # motion IDs start as {caseid}-101, {caseid}-102, etc. 
 
         self.Save()
 
@@ -293,6 +302,16 @@ class Case:
     
     def __repr__(self):
         return self.title
+    
+    def updateStatus(self, new_status: str):
+        old_status = self.status
+        self.status = new_status
+        self.event_log.append(self.newEvent(
+            "case_status_update",
+            f"The status of the case has been updated.",
+            f"Case {self.id} has been updated by {self.nameUserByID(self.plaintiff.id)}.\nStatus: {old_status} -> {new_status}"
+        ))
+        return
 
     def Save(self):
         case_dict = {
@@ -300,8 +319,9 @@ class Case:
                 "_id": self.id,
                 "title": self.title,
                 "description": self.description,
+                "status": self.status,
                 "filed_date": self.created,
-                "filed_date_utc": self.created.timestamp(),
+                "filed_date_timestamp": self.created.timestamp(),
 
                 # plaintiff and defense
                 "plaintiff_id": self.plaintiff.id,
