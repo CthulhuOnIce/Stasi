@@ -696,7 +696,7 @@ class AdjustPenalty(Motion):
         self.Case.event_log.append(self.Case.newEvent(
             "propose_new_penalty",
             f"Pursuant to Motion {self.MotionID}, the guilty penalty has been adjusted",
-            f"Pursuant to motion {self.MotionID}, the guilty penalty has been adjusted From:\n{old_penalty}\nTo:\n{new_penalty}",
+            f"Pursuant to motion {self.MotionID}, the guilty penalty has been adjusted From:\n{old_penalty}\nTo:\n{self.new_penalty}",
             motion = self.Dict(),
             old_penalty = old_penalty,
             new_penalty = self.new_penalty
