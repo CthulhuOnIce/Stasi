@@ -144,7 +144,7 @@ class Case:
         number = str(len(ACTIVECASES)).zfill(2)
         return f"{datetime.datetime.now(datetime.UTC).strftime('%m%d%Y')}-{number}"
     
-    def Announce(self, content = None, embed = None, jurors: bool = True, defense: bool = True, prosecution: bool = True, news_wire: bool = True):
+    def Announce(self, content: str = None, embed: discord.Embed = None, jurors: bool = True, defense: bool = True, prosecution: bool = True, news_wire: bool = True):
         # content = plain text content
         # embed = an embed
         # jurors = whether or not to send this announcement to the jury
@@ -153,8 +153,11 @@ class Case:
         # news_wire = whether or not to send this announcement to the public news wire channel
         return
     
-    def generateKnownUserName(self, user):
-        return f"{user}"
+    def normalUsername(self, user):
+        if not user.discriminator:
+            return f"@{user.name}"
+        else:
+            return f"{user}"
     
     def nameUserByID(self, userid: int):
         if userid in self.anonymization:
@@ -172,7 +175,7 @@ class Case:
         return f"Unknown User #{utils.int_to_base64(userid)}"
 
     def registerUser(self, user, anonymousname: str = None):
-        self.known_users[user.id] = self.generateKnownUserName(user)
+        self.known_users[user.id] = self.normalUsername(user)
         if anonymousname:
             self.anonymization[user.id] = anonymousname
 
@@ -207,9 +210,11 @@ class Case:
                 except:
                     pass  # already removed from eligible jurors
             return
+        
         elif self.stage == 1:  # we have jurors selected, so move the case to the next stage
             self.updateStatus("Argumentation and Case Body")
             self.stage = 2
+        
         # switching from stage 1 to 2 should be done by the function which assigns a juror to the case
         if self.stage == 2 and len(self.motion_queue):  # work the motion queue
             
@@ -411,7 +416,7 @@ class Motion:
     def Execute(self):
         return
     
-    def ReadyToClose(self):
+    def ReadyToClose(self) -> bool:
         if len(self.Votes["Yes"]) + len(self.Votes["No"]) == len(self.Case.jury_pool):
             return True
         if datetime.datetime.now(datetime.UTC) > self.Expiry:
@@ -660,13 +665,54 @@ class BatchVoteMotion(Motion):
             failed = failed
         ))
         
+class AdjustPenalty(Motion):
+
+    def __init__(self, case):
+        super().init(case)
+        self.reason: str = None
+        self.new_penalty: dict = None
+
+    def New(self, author, new_penalty: dict, reason: str) -> Motion:
+        super().New(author)
+
+        old_penalty = self.Case.penalty
+        self.reason = reason
+        self.new_penalty = new_penalty
+
+        # TODO: write a function which describes a penalty in natural language ("7 days prison sentence")
+        # TODO: include new and old penalty in event body.
+        self.Case.event_log.append(self.Case.newEvent(
+            "propose_new_penalty",
+            f"Motion {self.MotionID} has been filed to adjust the Penalty if found guilty.",
+            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to adjust the penalty of a guilty verdict From:\n{old_penalty}\nTo:\n{new_penalty}\nReason: {reason}",
+            motion = self.Dict(),
+            old_penalty = old_penalty,
+            new_penalty = new_penalty
+        ))
+    
+    def Execute(self):
+        old_penalty = self.Case.penalty
+        self.Case.penalty = self.new_penalty
+        self.Case.event_log.append(self.Case.newEvent(
+            "propose_new_penalty",
+            f"Pursuant to Motion {self.MotionID}, the guilty penalty has been adjusted",
+            f"Pursuant to motion {self.MotionID}, the guilty penalty has been adjusted From:\n{old_penalty}\nTo:\n{new_penalty}",
+            motion = self.Dict(),
+            old_penalty = old_penalty,
+            new_penalty = self.new_penalty
+        ))
+
+
+
+    
 
 
 MOTION_TYPES = {
     "statement": StatementMotion,
     "rush": RushMotion,
     "order": OrderMotion,
-    "batch": BatchVoteMotion
+    "batch": BatchVoteMotion,
+    "penaltyadjust": 
 
 }
 
