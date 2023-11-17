@@ -712,7 +712,7 @@ MOTION_TYPES = {
     "rush": RushMotion,
     "order": OrderMotion,
     "batch": BatchVoteMotion,
-    "penaltyadjust": 
+    "penaltyadjust": AdjustPenalty
 
 }
 
