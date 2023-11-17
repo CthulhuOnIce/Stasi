@@ -211,6 +211,10 @@ class Case:
         return
 
     def Tick(self):  # called by case manager or when certain events happen, like a juror leaving the case
+
+        if self.no_tick:
+            return
+
         if len(self.jury_pool) < 5:
             # juror left the case, but it was already in the body stage
             # when this happens, the case basically has to revert to the recruitment stage
@@ -307,6 +311,9 @@ class Case:
         self.motion_in_consideration: Motion = None
         self.motion_number = 101  # motion IDs start as {caseid}-101, {caseid}-102, etc. 
 
+        # if this is set to true, Tick() won't do anything 
+        self.no_tick: bool = False
+
         self.Save()
 
         self.registerUser(plaintiff)
@@ -377,7 +384,9 @@ class Case:
 
                 "votes": self.votes,  # guilty vs not guilty votes
                 "event_log": self.event_log,
-                "juror_chat_log": self.juror_chat_log
+                "juror_chat_log": self.juror_chat_log,
+                
+                "no_tick": self.no_tick
             }
         return case_dict
     
