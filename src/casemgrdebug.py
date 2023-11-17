@@ -666,6 +666,10 @@ class BatchVoteMotion(Motion):
         ))
         
 class AdjustPenalty(Motion):
+    """
+    Adjusts the penalty if the case is delivered a guilty verdict.
+    This is a WIP, as the way the penalty is tracked and managed may change down the line.
+    """
 
     def __init__(self, case):
         super().init(case)
