@@ -138,6 +138,26 @@ class Case:
         for kw in kwargs:
             event[kw] = kwargs[kw]
         return event
+    
+    class Statement(TypedDict):
+        author_id: int
+        content: str
+
+    def personalStatement(self, author, text):
+
+        statement: self.Statement = {
+            "author_id": author.id,
+            "content": text,
+            "timestamp": datetime.datetime.now(datetime.UTC)
+        }
+
+        self.personal_statements.append(statement)
+        self.event_log.append(self.newEvent(
+            "personal_statement",
+            f"{self.nameUserByID(statement['author_id'])} has submitted a personal statement",
+            f"{self.nameUserByID(statement['author_id'])} has submitted a personal statement:\n{statement['content']}",
+            statement = statement
+        ))
 
     def generateNewID(self):
         # 11042023-01, 11042023-02, etc.
@@ -269,6 +289,9 @@ class Case:
         self.penalty = penalty
         self.stage = 1
         self.motion_queue: List[Motion] = []
+        # used to keep track of timeouts and whatnot
+        self.locks = []
+        self.personal_statements = []
         self.jury_pool = []
         self.jury_invites = []
         self.anonymization = {}
@@ -331,6 +354,10 @@ class Case:
                 # plaintiff and defense
                 "plaintiff_id": self.plaintiff.id,
                 "defense_id": self.defense.id,
+
+                "personal_statements": self.personal_statements,
+
+                "locks": self.locks,
                 
                 "penalty": self.penalty,
                 
@@ -706,7 +733,7 @@ class AdjustPenalty(Motion):
             new_penalty = self.new_penalty
         ))
 
-
+class 
 
     
 
