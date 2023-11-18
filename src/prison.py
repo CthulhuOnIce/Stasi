@@ -84,9 +84,9 @@ class Prison(commands.Cog):
         d_b = await db.create_connection("users")
         user = await d_b.find({
             # last seen less than 2 weeks ago
-            "last_seen": {"$gt": datetime.datetime.utcnow() - datetime.timedelta(days=14)},
+            # "last_seen": {"$gt": datetime.datetime.utcnow() - datetime.timedelta(days=14)},
             # greater than 300 messages
-            "messages": {"$gt": 300},
+            "messages": {"$gt": 200},
         }).to_list(None)
 
         # get time
@@ -101,6 +101,29 @@ class Prison(commands.Cog):
         total_time_diff = time_resolve_end - time_start
 
         return await ctx.respond(f"Found ({len(user)} total/{len(user_resolved)} discord.Member) eligible jurors in {total_time_diff} seconds. (db: {time_db_end - time_start}, resolve: {time_resolve_end - time_db_end})", ephemeral=True)
+
+    @slash_command(name='playercsv', description='Get a CSV of all players.')
+    async def playercsv(self, ctx):
+        if not security.is_sudoer(ctx.author):
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        
+        time_start = time.time()
+        d_b = await db.create_connection("users")
+        user = await d_b.find().to_list(None)
+        time_db_end = time.time()
+
+        with open("logs/usercsv.csv", "a+") as a:
+            for u in user:
+                if "messages" not in u:
+                    u["messages"] = 0
+                if "last_seen" not in u:
+                    u["last_seen"] = None
+                a.write(f"{u['_id']},{u['messages']},{u['last_seen']}\n")
+
+        time_csv_end = time.time()
+
+        total_time_diff = time_csv_end - time_start
+        await ctx.respond(f"Found ({len(user)} total) players in {total_time_diff} seconds. (db: {time_db_end - time_start}, csv: {time_csv_end - time_db_end})", ephemeral=True)
 
     @slash_command(name='prison', description='Prison a user.')
     @option('member', discord.Member, description='The member to prison')
