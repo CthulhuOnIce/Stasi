@@ -159,6 +159,8 @@ class Case:
             statement = statement
         ))
 
+        return statement
+
     def generateNewID(self):
         # 11042023-01, 11042023-02, etc.
         number = str(len(ACTIVECASES)).zfill(2)
@@ -171,33 +173,62 @@ class Case:
         # defense = whether or not to send this announcement to the defense
         # prosucution = whether or not to send this announcement to the prosecution
         # news_wire = whether or not to send this announcement to the public news wire channel
-        return
+        returnnameuserby
     
     def normalUsername(self, user):
         if not user.discriminator:
             return f"@{user.name}"
         else:
             return f"{user}"
-    
-    def nameUserByID(self, userid: int):
-        if userid in self.anonymization:
-            return self.anonymization[userid]
-        if str(userid) in self.anonymization:
-            return self.anonymization[str(userid)]
-        if self.guild:
-            user = self.guild.get_user(userid)
-            if user:
-                return user
-        if userid in self.known_users:
-            return self.known_users[userid]
-        if str(userid) in self.known_users:
-            return self.known_users[str(userid)]
-        return f"Unknown User #{utils.int_to_base64(userid)}"
 
     def registerUser(self, user, anonymousname: str = None):
         self.known_users[user.id] = self.normalUsername(user)
         if anonymousname:
             self.anonymization[user.id] = anonymousname
+
+    def nameUserByID(self, userid: int, title: bool = True):
+        # TODO: Docstring
+        if userid in self.anonymization:
+            res = self.anonymization[userid]
+       
+        elif str(userid) in self.anonymization:
+            res = self.anonymization[str(userid)]
+       
+        elif userid in self.known_users:
+            res = self.known_users[userid]
+       
+        elif str(userid) in self.known_users:
+            res = self.known_users[str(userid)]
+    
+        # last resort, look them up and register them
+        elif self.guild:
+            user = self.guild.get_user(userid)
+            if user:
+                # TODO: change to log
+                print(f"nameUserByID for {case} ({case.id}) just had to look up an unregistered user {user} ({user.id}), make sure you're registering users to cases properly")
+                registerUser(user)
+                res = normalUsername(user)
+
+        if title:
+            if userid == self.defense.id:
+                res += " (Defense)"
+
+            if userid == self.plaintiff.id:
+                res += " (Plaintiff)"
+            
+            for juror in self.jury_pool:
+                if userid == juror.id:
+                    res += " (Juror)"
+                # no duplicates so no reason to continue
+                break
+
+
+        if res:
+            return res
+        else:
+            # TODO: change to log
+            print(f"nameUserByID for {case} ({case.id}) Could not look up {userid}. This should never happen.")
+            return f"Unknown User #{utils.int_to_base64(userid)}"
 
     def findEligibleJurors(self) -> List[discord.Member]:
         # DEBUG CODE REMOVE LATER
@@ -376,6 +407,8 @@ class Case:
                 "motion_queue": [motion.Dict() for motion in self.motion_queue],
 
                 # jury stuff
+                # TODO: turn jury_pool (list[member]) into jury_pool_ids (list[int]), and use jury_pool() method to resolve jury pool as members instead
+                # TODO: do a similar thing with plaintiff and defense 
                 "jury_pool": [user.id for user in self.jury_pool],
                 "jury_invites": [user.id for user in self.jury_invites],  # people who have been invited to the jury but are yet to accept
                 
@@ -714,7 +747,7 @@ class BatchVoteMotion(Motion):
             failed = failed
         ))
         
-class AdjustPenalty(Motion):
+class AdjustPenaltyMotion(Motion):
     """
     Adjusts the penalty if the case is delivered a guilty verdict.
     This is a WIP, as the way the penalty is tracked and managed may change down the line.
@@ -762,7 +795,7 @@ MOTION_TYPES = {
     "rush": RushMotion,
     "order": OrderMotion,
     "batch": BatchVoteMotion,
-    "penaltyadjust": AdjustPenalty
+    "penaltyadjust": AdjustPenaltyMotion
 
 }
 
@@ -772,6 +805,10 @@ guild = Guild()
 case = Case()
 plaintiff = random.choice(guild.members)
 defense = random.choice(guild.members)
+
+# TODO Masterlist
+# - everything in "next steps" list below
+# - consider 
 
 # case.New(f"{plaintiff} v. {defense}", "This is a test case.", plaintiff, defense, {"type": "prison", "length": 10}, guild)
 # updated for new style
@@ -815,7 +852,7 @@ case.Tick()
 
 # now voting for the batch motion should begin
 
-# everybody votes for it
+# everybody votes for it, it is passed
 random_pass(jury, batch_motion)
 case.Tick()
 
@@ -846,6 +883,30 @@ case.Tick()
 # if Tick() only executes the voted-on motion, this should place jo1 up for vote again
 # if Tick() executes AND starts the next vote, this should do nothing
 case.Tick()
+
+# fails vote and is removed from the floor
+random_fail(jury, jury_order_one)
+case.Tick()
+
+# motion queue should be empty, idle period starts
+
+# within 15 minute idle period after jo1 is failed, defense makes a statement, moves to adjust penalty, and jury[2] makes a new order motion
+case.PersonalStatement(defense, "Another personal statement from the defense")
+defense_adjust_penalty = AdjustPenaltyMotion(case).New(defense, {"type": "prison", "length": 5}, "This is a test of the defense trying to lower their penalty.")  # PASS
+jury_order_two = OrderMotion(case).New(jury[2], f"{defense} and {plaintiff}", "This is a test of another order motion. It should pass.")  # PASS 
+
+# dap voting begins, idle period ends
+case.Tick()
+
+# both dap and jo2 are voted on and pass
+random_pass(jury, defense_adjust_penalty)
+case.Tick()
+random_pass(jury, jury_order_two)
+case.Tick()
+
+# Next steps as implementation continues:
+# - juror has to leave case and another juror is appointed
+# - 
 
 
 
