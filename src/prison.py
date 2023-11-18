@@ -7,9 +7,11 @@ from discord.ext import commands, tasks
 from . import database as db
 from . import config
 from . import utils
+from . import security
 from .stasilogging import log, log_user, discord_dynamic_timestamp
 
 import datetime
+import time
 
 class Prison(commands.Cog):
     bot: commands.Bot
@@ -70,6 +72,30 @@ class Prison(commands.Cog):
 
         log("justice", "release", f"{log_user(member)} has been successfully released from prison")
 
+
+    # TODO: debug command remove later
+    @slash_command(name='eligiblejurors', description='Test the speed of the juror selection algorithm.')
+    async def eligiblejurors(self, ctx):
+        if not security.is_sudoer(ctx.author):
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        # get time
+        time_start = time.time()
+
+        d_b = await db.create_connection("users")
+        user = await d_b.find({
+            # last seen less than 2 weeks ago
+            "last_seen": {"$gt": datetime.datetime.utcnow() - datetime.timedelta(days=14)},
+            # greater than 300 messages
+            "messages": {"$gt": 300},
+        }).to_list(None)
+
+        # get time
+        time_end = time.time()
+
+        # get time difference
+        time_diff = time_end - time_start
+
+        return await ctx.respond(f"Found {len(user)} eligible jurors in {time_diff} seconds.", ephemeral=True)
 
     @slash_command(name='prison', description='Prison a user.')
     @option('member', discord.Member, description='The member to prison')
