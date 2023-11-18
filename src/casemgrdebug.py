@@ -70,7 +70,8 @@ def el(case: Case, trim_proposition: bool = False):
                                 or "motion_passed" in event["event_id"] 
                                 or "rush_motion" in event["event_id"]):
             continue
-        s += f"{event['name']}\n\t{event['desc'].replace('\n', '\n\t')}\n\n"
+        desc = event["desc"].replace("\n", "\n\t")
+        s += f"{event['name']}\n\t{desc}\n\n"
     print(s)
     pyperclip.copy(s)
 
