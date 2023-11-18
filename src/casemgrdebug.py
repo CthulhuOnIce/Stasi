@@ -7,6 +7,8 @@ import pyperclip
 import datetime
 import random
 from stasilogging import *
+import io
+import zipfile
 
 # TESTING IMPORTS  
 import base64
@@ -71,7 +73,7 @@ def el(case: Case, trim_proposition: bool = False):
                                 or "rush_motion" in event["event_id"]):
             continue
         desc = event["desc"].replace("\n", "\n\t")
-        s += f"{event['name']}\n\t{desc}\n\n"
+        s += f"{event['timestamp'].isoformat()}: {event['name']}\n\t{desc}\n\n"
     print(s)
     pyperclip.copy(s)
 
@@ -626,6 +628,50 @@ class Case:
                 "no_tick": self.no_tick
             }
         return case_dict
+
+    def safedump(self, d: dict):
+        def default(o):
+            if isinstance(o, (datetime.date, datetime.datetime)):
+                return o.isoformat()
+            return f"<<non-serializable: {type(o).__qualname__}>>"
+        return json.dumps(d, default=default, indent=2)
+    
+    def sanitize_event(self, event: Event) -> Event:
+        san_event = event.copy()
+        for key in event:
+            if key not in Event.__annotations__ and key in san_event:
+                del san_event[key]
+        return san_event
+
+    # create in-memory zip file archive of the case
+    def Zip(self) -> io.BytesIO:
+        zip = zipfile.ZipFile(io.BytesIO(), "w")
+
+        # sanitize the event log to remove any pii or other sensitive information
+        zip.writestr("raw/event_log.json", safedump([self.sanitize_event(event) for event in self.event_log]))
+
+        # save the event log as a simple text file
+        s = ""
+        for event in self.event_log:
+            desc = event["desc"].replace("\n", "\n\t")
+            s += f"{event['timestamp'].isoformat()}: {event['name']}\n\t{desc}\n\n"
+        zip.writestr("event_log.log", s)
+        
+        # TODO: create an evidence manifest and an evidence folder
+        # raw/evidence_manifest.json
+        # .evidence/manifest.log
+        # .evidence/locker/*.* (evidence files)
+
+        # TODO: create a juror chat log
+        # raw/juror_chat_log.json
+        # juror_chat_log.log
+
+        # Summary file
+        # raw/summary.json
+        # summary.txt
+        # README.md
+
+        return zip
     
     def __init__(self):
         self.id = random.randint(100000000000000000, 999999999999999999)
@@ -669,19 +715,23 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
         ))
 
     def VoteFailed(self):
+        yes = ', '.join([self.Case.nameUserByID(user.id) for user in self.Votes["Yes"]])
+        no = ', '.join([self.Case.nameUserByID(user.id) for user in self.Votes["No"]])
         self.Case.event_log.append(self.Case.newEvent(
             "motion_failed",
             f"The motion {self.MotionID} has failed its vote.",
-            f"The motion {self.MotionID} has failed its jury vote. {len(self.Votes['Yes'])}/{len(self.Votes['No'])}",
+            f"The motion {self.MotionID} has failed its jury vote ({len(self.Votes['Yes'])}/{len(self.Votes['No'])}).\n\nIn Support: {yes}\n\nIn Opposition: {no}",
             motion = self.Dict()
         ))
         return
 
     def VotePassed(self):
+        yes = ', '.join([self.Case.nameUserByID(user.id) for user in self.Votes["Yes"]])
+        no = ', '.join([self.Case.nameUserByID(user.id) for user in self.Votes["No"]])
         self.Case.event_log.append(self.Case.newEvent(
             "motion_passed",
             f"The motion {self.MotionID} has passed its vote.",
-            f"The motion {self.MotionID} has passed its jury vote. {len(self.Votes['Yes'])}/{len(self.Votes['No'])}",
+            f"The motion {self.MotionID} has passed its jury vote ({len(self.Votes['Yes'])}/{len(self.Votes['No'])}).\n\nIn Support: {yes}\n\nIn Opposition: {no}",
             motion = self.Dict()
         ))
         return
