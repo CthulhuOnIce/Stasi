@@ -282,6 +282,7 @@ class Case:
 
             elif self.motion_in_consideration.ReadyToClose():  # everybody's voted, doesn't need to expire, or has expired
                 self.motion_in_consideration.Close()
+                self.motion_queue[0].startVoting()
             
             return
 
@@ -880,12 +881,7 @@ case.personalStatement(defense, "This is the defense's second personal statement
 case.Tick()
 random_pass(jury, rush_motion)
 
-# officially pass and execute the motion
-# TODO: decide whether Tick() should both execute AND put up the next motion for a vote, or allow this 15 minutes to act as a recess
-case.Tick()
-
-# if Tick() only executes the voted-on motion, this should place jo1 up for vote again
-# if Tick() executes AND starts the next vote, this should do nothing
+# officially pass and execute the motion, put jo1 up for vote again
 case.Tick()
 
 # fails vote and is removed from the floor
