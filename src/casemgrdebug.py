@@ -158,7 +158,11 @@ class Penalty:
         return "Blank Penalty"
     
     def save(self):
-        return self.__dict__
+        s = self.__dict__
+        s["type"] = self.__class__.__name__
+        if "case" in s:
+            del s["case"]
+        return s
 
     def load(self):
         return
@@ -167,10 +171,14 @@ class Penalty:
         return
 
 class WarningPenalty(Penalty):
-    def __init__(self, case, warning_text: str):
+    def __init__(self, case):
         super().__init__(case)
-        self.warning_text = warning_text
+        self.warning_text = None
         return
+    
+    def New(self, warning_text: str):
+        self.warning_text = warning_text
+        return self
 
     def describe(self):
         return f"Warning: {self.warning_text}"
@@ -181,10 +189,14 @@ class WarningPenalty(Penalty):
         print(f"User Warned as Penalty of Case {self.case.id}: `{self.warning_text}`")
     
 class PermanentBanPenalty(Penalty):
-    def __init__(self, case, ban_text: str):
+    def __init__(self, case):
         super().__init__(case)
-        self.ban_text = ban_text
+        self.ban_text = None
         return
+    
+    def New(self, ban_text: str):
+        self.ban_text = ban_text
+        return self
     
     def describe(self):
         return f"Permanent Ban: {self.ban_text}"
@@ -193,6 +205,17 @@ class PermanentBanPenalty(Penalty):
         # await self.case.guild.ban(self.case.defense, reason=f"User Banned as Penalty of Case {self.case.id}: `{self.ban_text}`")
         self.case.guild.ban(self.case.defense, reason=f"User Banned as Penalty of Case {self.case.id}: `{self.ban_text}`")
         print(f"User Banned as Penalty of Case {self.case.id}: `{self.ban_text}`")
+
+def penaltyFromDict(case, d: dict) -> Penalty:
+    # dynamically locate the class and instantiate it
+    for subclass in Penalty.__subclasses__():
+        if subclass.__name__ == d["type"]:
+            new_penalty = subclass(case)
+            # assign all the values from the dictionary to the new penalty
+            for key in d:
+                new_penalty.__dict__[key] = d[key]
+            return new_penalty
+
 
 def eventToEmbed(event: Event) -> discord.Embed:
     embed = discord.Embed(title=event["name"], description=event["desc"], timestamp=event["timestamp"])
@@ -1026,10 +1049,10 @@ defense = random.choice(guild.members)
 
 # case.New(f"{plaintiff} v. {defense}", "This is a test case.", plaintiff, defense, {"type": "prison", "length": 10}, guild)
 # updated for new style
-case.New(guild, None, f"{plaintiff} v. {defense}", "This is a test case.", plaintiff, defense, PermanentBanPenalty(case, "This is a test permanent ban."))
+case.New(guild, None, f"{plaintiff} v. {defense}", "This is a test case.", plaintiff, defense, PermanentBanPenalty(case).New("This is a test permanent ban."))
 
 # TODO: plea deal logic here
-case.offerPleaDeal([WarningPenalty(case, "This is a test warning.")], datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1))
+case.offerPleaDeal([WarningPenalty(case).New("This is a test warning.")], datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1))
 
 # appoint jury
 for i in range(6):
@@ -1116,7 +1139,7 @@ case.Tick()
 
 # within 15 minute idle period after jo1 is failed, defense makes a statement, moves to adjust penalty, and jury[2] makes a new order motion
 case.personalStatement(defense, "Another personal statement from the defense")
-defense_adjust_penalty = AdjustPenaltyMotion(case).New(defense, WarningPenalty(case, "Sample warning text"), "This is a test of the defense trying to lower their penalty.")  # PASS
+defense_adjust_penalty = AdjustPenaltyMotion(case).New(defense, WarningPenalty(case).New("Sample warning text"), "This is a test of the defense trying to lower their penalty.")  # PASS
 jury_order_two = OrderMotion(case).New(jury[2], f"{defense} and {plaintiff}", "This is a test of another order motion. It should pass.")  # PASS 
 
 # dap voting begins, idle period ends
