@@ -90,12 +90,17 @@ class Prison(commands.Cog):
         }).to_list(None)
 
         # get time
-        time_end = time.time()
+        time_db_end = time.time()
+
+        # resolve user ids to discord.Member objects
+        user_resolved = [ctx.guild.get_member(u["_id"]) for u in user if u]
+
+        time_resolve_end = time.time()
 
         # get time difference
-        time_diff = time_end - time_start
+        total_time_diff = time_resolve_end - time_start
 
-        return await ctx.respond(f"Found {len(user)} eligible jurors in {time_diff} seconds.", ephemeral=True)
+        return await ctx.respond(f"Found ({len(user)} total/{len(user_resolved)} discord.Member) eligible jurors in {total_time_diff} seconds. (db: {time_db_end - time_start}, resolve: {time_resolve_end - time_db_end})", ephemeral=True)
 
     @slash_command(name='prison', description='Prison a user.')
     @option('member', discord.Member, description='The member to prison')
