@@ -291,9 +291,9 @@ class Case:
             return
         
     def getMotionByID(self, motionid: str) -> "Motion":
+        motionid = motionid.lower()
         for motion in self.motion_queue:
-            # TODO: remove prints later
-            if motion.MotionID.lower() == motionid.lower():
+            if motion.MotionID.lower() == motionid:
                 return motion
         return None
 
@@ -620,7 +620,6 @@ class RushMotion(Motion):
         self.Votes["Yes"] = []
         self.Votes["No"] = []
         self.MotionID = "#NO-ID-ERR"
-        # TODO: cancel all other votes
         self.rushed_motion_id = None
 
     def New(self, author, rushed_motion_id: str, explanation: str):
@@ -771,7 +770,6 @@ class AdjustPenaltyMotion(Motion):
         self.new_penalty = new_penalty
 
         # TODO: write a function which describes a penalty in natural language ("7 days prison sentence")
-        # TODO: include new and old penalty in event body.
         self.Case.event_log.append(self.Case.newEvent(
             "propose_new_penalty",
             f"Motion {self.MotionID} has been filed to adjust the Penalty if found guilty.",
