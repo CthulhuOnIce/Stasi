@@ -154,8 +154,8 @@ class Case:
                     "event_id": event_id,
                     "name": name,
                     "desc": desc,
-                    "timestamp": datetime.datetime.now(datetime.UTC),
-                    "timestamp_utc": datetime.datetime.now(datetime.UTC).timestamp(),
+                    "timestamp": datetime.datetime.now(datetime.timezone.utc),
+                    "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).timestamp(),
                 }
         for kw in kwargs:
             event[kw] = kwargs[kw]
@@ -170,7 +170,7 @@ class Case:
         statement: self.Statement = {
             "author_id": author.id,
             "content": text,
-            "timestamp": datetime.datetime.now(datetime.UTC)
+            "timestamp": datetime.datetime.now(datetime.timezone.utc)
         }
 
         self.personal_statements.append(statement)
@@ -186,7 +186,7 @@ class Case:
     def generateNewID(self):
         # 11042023-01, 11042023-02, etc.
         number = str(len(ACTIVECASES)).zfill(2)
-        return f"{datetime.datetime.now(datetime.UTC).strftime('%m%d%Y')}-{number}"
+        return f"{datetime.datetime.now(datetime.timezone.utc).strftime('%m%d%Y')}-{number}"
     
     def Announce(self, content: str = None, embed: discord.Embed = None, jurors: bool = True, defense: bool = True, prosecution: bool = True, news_wire: bool = True):
         # content = plain text content
@@ -356,7 +356,7 @@ class Case:
         # "Jury Selection", "Guilty", "Not Guilty", 
         self.status = "Jury Selection"
         self.id = self.generateNewID()
-        self.created = datetime.datetime.now(datetime.UTC)
+        self.created = datetime.datetime.now(datetime.timezone.utc)
         self.plaintiff = plaintiff
         self.defense = defense
         self.penalty = penalty
@@ -473,7 +473,7 @@ class Motion:
     Case: Case = None
 
     def startVoting(self):
-        self.Expiry = datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=self.expiry_hours)
+        self.Expiry = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=self.expiry_hours)
         self.Votes["Yes"] = []
         self.Votes["No"] = []
         self.Case.motion_in_consideration = self
@@ -526,7 +526,7 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
     def ReadyToClose(self) -> bool:
         if len(self.Votes["Yes"]) + len(self.Votes["No"]) == len(self.Case.jury_pool):
             return True
-        if datetime.datetime.now(datetime.UTC) > self.Expiry:
+        if datetime.datetime.now(datetime.timezone.utc) > self.Expiry:
             return True
         return False
 
@@ -555,7 +555,7 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
         return self
     
     def New(self, author) -> Motion:  # the event log entry should be updated by the subtype's New() function
-        self.Created = datetime.datetime.now(datetime.UTC)
+        self.Created = datetime.datetime.now(datetime.timezone.utc)
         self.Author = author
         self.MotionID = f"{self.Case.id}-M{self.Case.motion_number}"  # 11042023-M001 for example
         self.Case.motion_number += 1
@@ -655,7 +655,7 @@ class RushMotion(Motion):
 
     def New(self, author, rushed_motion_id: str, explanation: str):
         # ported from the old code
-        self.Created = datetime.datetime.now(datetime.UTC)
+        self.Created = datetime.datetime.now(datetime.timezone.utc)
         self.Author = author
         self.MotionID = f"{self.Case.id}-M{self.Case.motion_number}"  # 11042023-M001 for example
         self.Case.motion_number += 1
@@ -712,7 +712,7 @@ class BatchVoteMotion(Motion):
         super().__init__(case)
     
     def New(self, author, pass_motion_ids: List[str], deny_motion_ids: List[str], reason: str):
-        self.Created = datetime.datetime.now(datetime.UTC)
+        self.Created = datetime.datetime.now(datetime.timezone.utc)
         self.Author = author
         self.MotionID = f"{self.Case.id}-M{self.Case.motion_number}"  # 11042023-M001 for example
         self.Case.motion_number += 1
