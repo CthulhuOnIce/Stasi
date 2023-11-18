@@ -374,7 +374,7 @@ class Motion:
             "motion_up",
             f"The motion {self.MotionID} has been put up to be considered for a vote by {self.Case.NameUserByID(self.Author.id)}.",
             f"The motion {self.MotionID} has been put up to be considered for a vote by {self.Case.NameUserByID(self.Author.id)}. \
-            Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(self.Expiry, "F")}.",
+            Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(self.Expiry, 'F')}.",
             motion = self.Dict()
         ))
 
