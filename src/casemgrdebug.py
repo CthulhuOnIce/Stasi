@@ -901,7 +901,6 @@ case.Tick()
 # both dap and jo2 are voted on and pass
 random_pass(jury, defense_adjust_penalty)
 case.Tick()
-case.Tick()
 random_pass(jury, jury_order_two)
 case.Tick()
 
