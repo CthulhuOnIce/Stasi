@@ -84,9 +84,11 @@ class Prison(commands.Cog):
         d_b = await db.create_connection("users")
         user = await d_b.find({
             # last seen less than 2 weeks ago
-            # "last_seen": {"$gt": datetime.datetime.utcnow() - datetime.timedelta(days=14)},
-            # greater than 300 messages
-            "messages": {"$gt": 200},
+            "last_seen": {"$gt": datetime.datetime.utcnow() - datetime.timedelta(days=14)},
+            # greater than 100 messages
+            "messages": {"$gt": 100},
+            # doesn't have "jury_ban" key set
+            "jury_ban": {"$exists": False},
         }).to_list(None)
 
         # get time
