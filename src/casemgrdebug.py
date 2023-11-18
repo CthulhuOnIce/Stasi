@@ -182,6 +182,10 @@ class Case:
             return f"{user}"
 
     def registerUser(self, user, anonymousname: str = None):
+        # TODO: decide whether known_users is mapped to int or str and remove these double cases
+        if user.id in self.known_users[user.id] or str(user.id) in self.known_users:  # don't re-register
+            return
+        
         self.known_users[user.id] = self.normalUsername(user)
         if anonymousname:
             self.anonymization[user.id] = anonymousname
@@ -905,8 +909,9 @@ random_pass(jury, jury_order_two)
 case.Tick()
 
 # Next steps as implementation continues:
-# - juror has to leave case and another juror is appointed
-# - 
+# - [ ] juror has to leave case and another juror is appointed
+# - [ ] evidentiary stuff
+# - [ ] witness management and registration
 
 
 
