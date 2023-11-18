@@ -113,6 +113,12 @@ class Guild:
         self.members: List[discord.Member] = [User() for i in range(800)]
         return
     
+    def ban(self, user, reason):
+        print(f"Banned {user} for {reason}")
+        if user in self.members:
+            self.members.remove(user)
+        return
+    
     def get_user(self, id):
         for member in self.members:
             if member.id == id:
@@ -137,6 +143,57 @@ class Event(TypedDict):
     timestamp: datetime.datetime
     timestamp_utc: float
 
+class Penalty:
+    def __init__(self, case):
+        self.case: Case = case
+        return
+
+    def __str__(self):
+        return self.describe()
+
+    def __repr__(self):
+        return self.describe()
+
+    def describe(self):
+        return "Blank Penalty"
+    
+    def save(self):
+        return self.__dict__
+
+    def load(self):
+        return
+    
+    def execute(self):
+        return
+
+class WarningPenalty(Penalty):
+    def __init__(self, case, warning_text: str):
+        super().__init__(case)
+        self.warning_text = warning_text
+        return
+
+    def describe(self):
+        return f"Warning: {self.warning_text}"
+
+    # needs to be made async for implementation
+    def Execute(self):
+        # note = await db.add_note(self.case.defense.id, self.case.plaintiff.id, f"User Warned as Penalty of Case {self.case.id}: `{self.warning_text}`")
+        print(f"User Warned as Penalty of Case {self.case.id}: `{self.warning_text}`")
+    
+class PermanentBanPenalty(Penalty):
+    def __init__(self, case, ban_text: str):
+        super().__init__(case)
+        self.ban_text = ban_text
+        return
+    
+    def describe(self):
+        return f"Permanent Ban: {self.ban_text}"
+    
+    def Execute(self):
+        # await self.case.guild.ban(self.case.defense, reason=f"User Banned as Penalty of Case {self.case.id}: `{self.ban_text}`")
+        self.case.guild.ban(self.case.defense, reason=f"User Banned as Penalty of Case {self.case.id}: `{self.ban_text}`")
+        print(f"User Banned as Penalty of Case {self.case.id}: `{self.ban_text}`")
+
 def eventToEmbed(event: Event) -> discord.Embed:
     embed = discord.Embed(title=event["name"], description=event["desc"], timestamp=event["timestamp"])
     embed.set_footer(text=f"Event ID: {event['event_id']}")
@@ -145,6 +202,18 @@ def eventToEmbed(event: Event) -> discord.Embed:
 class Case:
 
     motion_timeout_days = 1  # how long it takes for voting to close on a motion in the absence of all parties voting
+
+    def describePenalties(self, penalties: List[Penalty]) -> str:
+
+        if not penalties:
+            penalties = self.penalties
+        
+        if isinstance(penalties, Penalty):
+            penalties = [penalties]
+
+        penalty_desc = [penalty.describe() for penalty in penalties]
+        penalty_str = "\n".join([f"- {penalty}" for penalty in penalty_desc])
+        return penalty_str
 
     def createMotion(self) -> "Motion":
         return Motion(self).New()
@@ -347,7 +416,11 @@ class Case:
             return got
 
 
-    def New(self, guild: discord.Guild, bot, title: str, description: str, plaintiff: discord.Member, defense: discord.Member, penalty: dict) -> Case:
+    def New(self, guild: discord.Guild, bot, title: str, description: str, plaintiff: discord.Member, defense: discord.Member, penalties: List[Penalty]) -> Case:
+
+        if isinstance(penalties, Penalty):
+            penalties = [penalties]
+
         self.guild = guild
         self.bot = bot
 
@@ -359,7 +432,7 @@ class Case:
         self.created = datetime.datetime.now(datetime.timezone.utc)
         self.plaintiff = plaintiff
         self.defense = defense
-        self.penalty = penalty
+        self.penalties: List[Penalty] = penalties
         self.stage = 1
         self.motion_queue: List[Motion] = []
         # used to keep track of timeouts and whatnot
@@ -435,7 +508,7 @@ class Case:
 
                 "locks": self.locks,
                 
-                "penalty": self.penalty,
+                "penalty": [penalty.save() for penalty in self.penalties],
                 
                 # processing stuff
                 "stage": self.stage,  # 0 - done (archived), 1 - jury selection, 2 - argumentation / body, 3 - ready to close, awaiting archive 
@@ -814,36 +887,49 @@ class AdjustPenaltyMotion(Motion):
     def __init__(self, case):
         super().__init__(case)
         self.reason: str = None
-        self.new_penalty: dict = None
+        self.new_penalties: dict = None
 
-    def New(self, author, new_penalty: dict, reason: str) -> Motion:
+    def New(self, author, new_penalties: List[Penalty], reason: str) -> Motion:
         super().New(author)
 
-        old_penalty = self.Case.penalty
+        if isinstance(new_penalties, Penalty):
+            new_penalties = [new_penalties]
+
         self.reason = reason
-        self.new_penalty = new_penalty
+        self.new_penalties = new_penalties
+
+        old_penalty_str = self.Case.describePenalties(self.Case.penalties)
+    
+        new_penalties_str = self.Case.describePenalties(new_penalties)
 
         # TODO: write a function which describes a penalty in natural language ("7 days prison sentence")
         self.Case.event_log.append(self.Case.newEvent(
             "propose_new_penalty",
             f"Motion {self.MotionID} has been filed to adjust the Penalty if found guilty.",
-            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to adjust the penalty of a guilty verdict From:\n{old_penalty}\n\nTo:\n{new_penalty}\nReason: {reason}",
+            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to adjust the penalty of a guilty verdict From:\n{old_penalty_str}\n\nTo:\n{new_penalties_str}\nReason: {reason}",
             motion = self.Dict(),
-            old_penalty = old_penalty,
-            new_penalty = new_penalty
+            old_penalties = [penalty.save() for penalty in self.Case.penalties],
+            new_penalties = [penalty.save() for penalty in new_penalties]
         ))
         return self
     
     def Execute(self):
-        old_penalty = self.Case.penalty
-        self.Case.penalty = self.new_penalty
+
+        old_penalty_str = self.Case.describePenalties(self.Case.penalties)
+    
+        new_penalties_str = self.Case.describePenalties(self.new_penalties)
+    
+        old_penalties = [penalty.save() for penalty in self.Case.penalties]
+        
+        self.Case.penalties = self.new_penalties
+
         self.Case.event_log.append(self.Case.newEvent(
             "new_penalty",
             f"The Penalty of the Case has been adjusted.",
-            f"Pursuant to motion {self.MotionID}, the guilty penalty has been adjusted From:\n{old_penalty}\n\nTo:\n{self.new_penalty}",
+            f"Pursuant to motion {self.MotionID}, the guilty penalty has been adjusted From:\n{old_penalty_str}\n\nTo:\n{new_penalties_str}",
             motion = self.Dict(),
-            old_penalty = old_penalty,
-            new_penalty = self.new_penalty
+            old_penalties = old_penalties,
+            new_penalties = [penalty.save() for penalty in self.new_penalties]
         ))
     
 
@@ -870,7 +956,7 @@ defense = random.choice(guild.members)
 
 # case.New(f"{plaintiff} v. {defense}", "This is a test case.", plaintiff, defense, {"type": "prison", "length": 10}, guild)
 # updated for new style
-case.New(guild, None, f"{plaintiff} v. {defense}", "This is a test case.", plaintiff, defense, {"type": "prison", "length": 10})
+case.New(guild, None, f"{plaintiff} v. {defense}", "This is a test case.", plaintiff, defense, PermanentBanPenalty(case, "This is a test permanent ban."))
 
 # TODO: plea deal logic here
 
@@ -957,7 +1043,7 @@ case.Tick()
 
 # within 15 minute idle period after jo1 is failed, defense makes a statement, moves to adjust penalty, and jury[2] makes a new order motion
 case.personalStatement(defense, "Another personal statement from the defense")
-defense_adjust_penalty = AdjustPenaltyMotion(case).New(defense, {"type": "prison", "length": 5}, "This is a test of the defense trying to lower their penalty.")  # PASS
+defense_adjust_penalty = AdjustPenaltyMotion(case).New(defense, WarningPenalty(case, "Sample warning text"), "This is a test of the defense trying to lower their penalty.")  # PASS
 jury_order_two = OrderMotion(case).New(jury[2], f"{defense} and {plaintiff}", "This is a test of another order motion. It should pass.")  # PASS 
 
 # dap voting begins, idle period ends
