@@ -1,3 +1,4 @@
+aiohttp
 py-cord
 pyyaml
 asyncio

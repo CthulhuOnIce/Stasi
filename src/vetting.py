@@ -9,7 +9,7 @@ from . import database as db
 from . import config
 from . import artificalint as ai
 from . import security
-from .logging import log, log_user, lid
+from .stasilogging import log, log_user, lid
 
 class Verification(commands.Cog):
 

@@ -3,7 +3,7 @@ from . import config
 from typing import List
 import discord
 import asyncio
-from .logging import log, log_user, lid
+from .stasilogging import log, log_user, lid
 from copy import deepcopy
 
 openai.api_key = config.C["openai"]["key"]

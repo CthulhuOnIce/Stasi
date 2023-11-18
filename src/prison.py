@@ -7,10 +7,9 @@ from discord.ext import commands, tasks
 from . import database as db
 from . import config
 from . import utils
-from .logging import log, log_user, discord_dynamic_timestamp
+from .stasilogging import log, log_user, discord_dynamic_timestamp
 
 import datetime
-import pytz
 
 class Prison(commands.Cog):
     bot: commands.Bot

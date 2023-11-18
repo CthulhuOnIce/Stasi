@@ -7,7 +7,7 @@ from discord.ext import commands, tasks, pages
 from . import database as db
 from . import config
 from . import artificalint as ai
-from .logging import discord_dynamic_timestamp, log, log_user
+from .stasilogging import discord_dynamic_timestamp, log, log_user
 
 class Social(commands.Cog):
     def __init__(self, bot):

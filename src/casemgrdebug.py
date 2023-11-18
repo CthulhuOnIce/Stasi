@@ -6,6 +6,7 @@ import pyperclip
 # PORTED IMPORTS
 import datetime
 import random
+from stasilogging import *
 
 # TESTING IMPORTS  
 import base64
@@ -45,13 +46,33 @@ def shell():
 
 # --- START DEBUG CLASSES AND FUNCTIONS - THIS IS FOR EMULATING AND TESTING AND SHOULD NOT BE PORTED TO THE BOT ---
 
-nouns = open("../wordlists/nouns.txt", "r").read().split("\n")
-adjectives = open("../wordlists/adjectives.txt", "r").read().split("\n")
-elements = open("../wordlists/elements.txt", "r").read().split("\n")
+nouns = open("wordlists/nouns.txt", "r").read().split("\n")
+adjectives = open("wordlists/adjectives.txt", "r").read().split("\n")
+elements = open("wordlists/elements.txt", "r").read().split("\n")
 
 def safedump(d: dict):
     default = lambda o: f"<<non-serializable: {type(o).__qualname__}>>"
     return json.dumps(d, default=default, indent=2)
+
+def el(case: Case, trim_proposition: bool = False):
+    """Create a simple text file log of the case. Trim_proposition removes all the bureaucratic log entries.
+
+    Args:
+        case (Case): The case
+        trim_proposition (bool, optional): Whether or not to remove "boring" entries. Defaults to False.
+    """
+    s = ""
+    for event in case.event_log:
+        if trim_proposition and ("propose_" in event["event_id"] 
+                                or "motion_up" in event["event_id"] 
+                                or "motion_cancel_vote" in event["event_id"] 
+                                or "motion_failed" in event["event_id"] 
+                                or "motion_passed" in event["event_id"] 
+                                or "rush_motion" in event["event_id"]):
+            continue
+        s += f"{event['name']}\n\t{event['desc'].replace('\n', '\n\t')}\n\n"
+    print(s)
+    pyperclip.copy(s)
 
 class User:
     def __init__(self):
@@ -183,7 +204,7 @@ class Case:
 
     def registerUser(self, user, anonymousname: str = None):
         # TODO: decide whether known_users is mapped to int or str and remove these double cases
-        if user.id in self.known_users[user.id] or str(user.id) in self.known_users:  # don't re-register
+        if user.id in self.known_users or str(user.id) in self.known_users:  # don't re-register
             return
         
         self.known_users[user.id] = self.normalUsername(user)
@@ -192,6 +213,7 @@ class Case:
 
     def nameUserByID(self, userid: int, title: bool = True):
         # TODO: Docstring
+        userid = int(userid)
         if userid in self.anonymization:
             res = self.anonymization[userid]
        
@@ -210,21 +232,20 @@ class Case:
             if user:
                 # TODO: change to log
                 print(f"nameUserByID for {case} ({case.id}) just had to look up an unregistered user {user} ({user.id}), make sure you're registering users to cases properly")
-                registerUser(user)
-                res = normalUsername(user)
+                self.registerUser(user)
+                res = self.normalUsername(user)
 
         if title:
             if userid == self.defense.id:
                 res += " (Defense)"
 
-            if userid == self.plaintiff.id:
+            elif userid == self.plaintiff.id:
                 res += " (Plaintiff)"
             
-            for juror in self.jury_pool:
-                if userid == juror.id:
+            else:
+                jury_pool = [user.id for user in self.jury_pool]
+                if userid in jury_pool:
                     res += " (Juror)"
-                # no duplicates so no reason to continue
-                break
 
 
         if res:
@@ -239,10 +260,20 @@ class Case:
         return [user for user in guild.members if user not in self.jury_invites]
     
     def addJuror(self, user, pseudonym: str = None):
+        
         self.jury_pool.append(user)
+
         if user in self.jury_invites:
             self.jury_invites.remove(user)
+        
         self.registerUser(user, pseudonym)
+        
+        self.event_log.append(self.newEvent(
+            "juror_join",
+            f"{self.nameUserByID(user.id)} has joined the jury.",
+            f"{self.nameUserByID(user.id)} has joined the jury.",
+            juror = user.id
+        ))
         return
 
     def Tick(self):  # called by case manager or when certain events happen, like a juror leaving the case
@@ -282,7 +313,8 @@ class Case:
 
             elif self.motion_in_consideration.ReadyToClose():  # everybody's voted, doesn't need to expire, or has expired
                 self.motion_in_consideration.Close()
-                self.motion_queue[0].startVoting()
+                if len(self.motion_queue):  # if there's another motion in the queue, start voting on it
+                    self.motion_queue[0].startVoting()
             
             return
 
@@ -324,8 +356,8 @@ class Case:
         self.status = "Jury Selection"
         self.id = self.generateNewID()
         self.created = datetime.datetime.now(datetime.UTC)
-        self.plaintiff = plaintiff.id
-        self.defense = defense.id
+        self.plaintiff = plaintiff
+        self.defense = defense
         self.penalty = penalty
         self.stage = 1
         self.motion_queue: List[Motion] = []
@@ -338,7 +370,7 @@ class Case:
         self.known_users = {}
         # MIGHT REMOVE in favor of delivering verdict ny a motion
         self.votes = {}
-        self.event_log = [self.newEvent(
+        self.event_log: List[Event] = [self.newEvent(
             "case_filed",
             f"Case {self.id} has been filed.",
             f"Case {self.id} has been filed by {self.nameUserByID(self.plaintiff.id)} against {self.nameUserByID(self.defense.id)}.\n{self.description}"
@@ -380,7 +412,7 @@ class Case:
         self.event_log.append(self.newEvent(
             "case_status_update",
             f"The status of the case has been updated.",
-            f"Case {self.id} has been updated by {self.nameUserByID(self.plaintiff.id)}.\nStatus: {old_status} -> {new_status}"
+            f"Case {self.id} has been updated.\nStatus: {old_status} -> {new_status}"
         ))
         return
 
@@ -447,8 +479,8 @@ class Motion:
         self.Case.event_log.append(self.Case.newEvent(
             "motion_up",
             f"The motion {self.MotionID} has been put up to be considered for a vote by {self.Case.nameUserByID(self.Author.id)}.",
-            f"The motion {self.MotionID} has been put up to be considered for a vote by {self.Case.nameUserByID(self.Author.id)}. \
-            Unless another vote is rushed, voting will end on <t:{self.Expiry.timestamp()}:F>.",
+            f"""The motion {self.MotionID} has been put up to be considered for a vote by {self.Case.nameUserByID(self.Author.id)}. 
+Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(self.Expiry, 'F')}.""",
             motion = self.Dict()
         ))
     
@@ -502,10 +534,8 @@ class Motion:
 
         print(f"Closing motion {self}")
         if len(self.Votes["No"]) >= len(self.Votes["Yes"]):
-            print("VOTE FAILED")
             self.VoteFailed()
         else:
-            print("VOTE PASSED")
             self.VotePassed()
             self.Execute()
         if delete:
@@ -514,7 +544,7 @@ class Motion:
                 self.Case.motion_in_consideration = None
 
     # Close without executing, no matter what    
-    def ForceClose(self):
+    def forceClose(self):
         self.Case.motion_queue.remove(self)
         if self.Case.motion_in_consideration == self:
             self.Case.motion_in_consideration = None
@@ -595,7 +625,7 @@ class OrderMotion(Motion):
         self.Case.event_log.append(self.Case.newEvent(
             "jury_order",
             f"The jury has given a binding order.",
-            f"Pursuant to motion {self.MotionID}, the Jury compels the following entity: {self.target}\nTo comply with the following order:\n{self.order_content}.\nNot following this order can result in penalties.",
+            f"Pursuant to motion {self.MotionID}, the Jury compels the following entity:\n{self.target}\n\nTo comply with the following order:\n{self.order_content}.\nNot following this order can result in penalties.",
             motion = self.Dict()
         ))
 
@@ -648,6 +678,7 @@ class RushMotion(Motion):
             motion.CancelVoting(reason=f"Motion {self.MotionID} to rush motion {self.rushed_motion().MotionID} has been filed.")
         
         self.Case.motion_queue = [self] + self.Case.motion_queue
+        return self
 
     def rushed_motion(self):
         return self.Case.getMotionByID(self.rushed_motion_id)
@@ -680,7 +711,10 @@ class BatchVoteMotion(Motion):
         super().__init__(case)
     
     def New(self, author, pass_motion_ids: List[str], deny_motion_ids: List[str], reason: str):
-        super().New(author)
+        self.Created = datetime.datetime.now(datetime.UTC)
+        self.Author = author
+        self.MotionID = f"{self.Case.id}-M{self.Case.motion_number}"  # 11042023-M001 for example
+        self.Case.motion_number += 1
 
         # check if pass_motion_ids and deny_motion_ids are None and change them to []
 
@@ -695,11 +729,27 @@ class BatchVoteMotion(Motion):
         for motion_id in aggregate:
             motion = self.Case.getMotionByID(motion_id)
             if not motion:
+                print(self.Case.motion_queue)
                 raise Exception(f"Motion {motion_id} does not exist.")
         
         self.pass_motion_ids = pass_motion_ids
         self.deny_motion_ids = deny_motion_ids
         self.reason = reason
+
+        execute_str = ""
+        if pass_motion_ids:
+            execute_str += f"The following motions will be passed: {','.join(pass_motion_ids)}\n"
+        
+        if deny_motion_ids:
+            execute_str += f"The following motions will be denied: {','.join(deny_motion_ids)}\n"
+
+
+        self.Case.event_log.append(self.Case.newEvent(
+            "propose_summary_motion",
+            f"Motion {self.MotionID} has been filed to pass or deny motions.",
+            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)}.\n{execute_str}\nReason: {reason}",
+            motion = self.Dict()
+        ))
 
         # add to queue in front of first motion referenced
         for motion in self.Case.motion_queue:
@@ -709,13 +759,6 @@ class BatchVoteMotion(Motion):
                     self.Case.motion_in_consideration.CancelVoting(reason=f"Motion {self.MotionID} has been filed to pass or deny a set of motions.")
                 self.Case.motion_queue.insert(self.Case.motion_queue.index(motion), self)
                 break
-
-        self.Case.event_log.append(self.Case.newEvent(
-            "propose_summary_motion",
-            f"Motion {self.MotionID} has been filed to pass or deny motions.",
-            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to pass the following motions: {','.join(pass_motion_ids)}\nAnd to deny the following motions: {','.join(deny_motion_ids)}\nReason: {reason}",
-            motion = self.Dict()
-        ))
         return self
 
     def Execute(self):
@@ -731,7 +774,7 @@ class BatchVoteMotion(Motion):
                 continue
             passed.append(motion_id)
             motion.Execute()
-            motion.ForceClose()
+            motion.forceClose()
 
         for motion_id in self.deny_motion_ids:
             motion = self.Case.getMotionByID(motion_id)
@@ -739,12 +782,22 @@ class BatchVoteMotion(Motion):
                 not_found.append(motion_id)
                 continue
             failed.append(motion_id)
-            motion.ForceClose()
+            motion.forceClose()
         
+        executed_str = ""
+        if passed:
+            executed_str += f"The following motions have been passed: {','.join(passed)}\n"
+        
+        if failed:
+            executed_str += f"The following motions have been denied: {','.join(failed)}\n"
+        
+        if not_found:
+            executed_str += f"The following motions were referenced, but not found: {','.join(not_found)}"
+
         self.Case.event_log.append(self.Case.newEvent(
             "batch_motion",
             f"Execution on Batch Vote Motion {self.MotionID} has finished.",
-            f"Pursuant to motion {self.MotionID}, the following motions have been executed:\n{','.join(passed)}\nThe following motions have been denied:\n{','.join(failed)}\nThe following motions were referenced, but not found:\n{','.join(not_found)}",
+            f"Pursuant to motion {self.MotionID}, the following has been executed:\n{executed_str}",
             motion = self.Dict(),
             not_found = not_found,
             passed = passed,
@@ -758,7 +811,7 @@ class AdjustPenaltyMotion(Motion):
     """
 
     def __init__(self, case):
-        super().init(case)
+        super().__init__(case)
         self.reason: str = None
         self.new_penalty: dict = None
 
@@ -773,19 +826,20 @@ class AdjustPenaltyMotion(Motion):
         self.Case.event_log.append(self.Case.newEvent(
             "propose_new_penalty",
             f"Motion {self.MotionID} has been filed to adjust the Penalty if found guilty.",
-            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to adjust the penalty of a guilty verdict From:\n{old_penalty}\nTo:\n{new_penalty}\nReason: {reason}",
+            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to adjust the penalty of a guilty verdict From:\n{old_penalty}\n\nTo:\n{new_penalty}\nReason: {reason}",
             motion = self.Dict(),
             old_penalty = old_penalty,
             new_penalty = new_penalty
         ))
+        return self
     
     def Execute(self):
         old_penalty = self.Case.penalty
         self.Case.penalty = self.new_penalty
         self.Case.event_log.append(self.Case.newEvent(
-            "propose_new_penalty",
-            f"Pursuant to Motion {self.MotionID}, the guilty penalty has been adjusted",
-            f"Pursuant to motion {self.MotionID}, the guilty penalty has been adjusted From:\n{old_penalty}\nTo:\n{self.new_penalty}",
+            "new_penalty",
+            f"The Penalty of the Case has been adjusted.",
+            f"Pursuant to motion {self.MotionID}, the guilty penalty has been adjusted From:\n{old_penalty}\n\nTo:\n{self.new_penalty}",
             motion = self.Dict(),
             old_penalty = old_penalty,
             new_penalty = self.new_penalty
@@ -823,13 +877,24 @@ case.New(guild, None, f"{plaintiff} v. {defense}", "This is a test case.", plain
 for i in range(6):
     case.Tick()
 
+# randomly assign each juror to a yes or no vote, but make sure Yes has more
 def random_pass(jury, motion):
-    # populate the motion with a passing amount of votes
-    return
+    margin = random.randint(3, 5)
+    three_yes_voters = random.sample(jury, margin)
+    for juror in jury:
+        if juror in three_yes_voters:
+            motion.Votes["Yes"].append(juror)
+        else:
+            motion.Votes["No"].append(juror)
 
 def random_fail(jury, motion):
-    # populate the motion with a failing amount of votes
-    return
+    margin = random.randint(3, 5)
+    three_no_voters = random.sample(jury, margin)
+    for juror in jury:
+        if juror in three_no_voters:
+            motion.Votes["No"].append(juror)
+        else:
+            motion.Votes["Yes"].append(juror)
 
 jury = case.jury_pool
 mq = case.motion_queue
@@ -838,7 +903,7 @@ prosecutor_statement = case.personalStatement(plaintiff, "This is a test persona
 defense_statement = case.personalStatement(defense, "This is a test personal statement from the defense")
 
 jury_statement_one = StatementMotion(case).New(jury[0], f"This is the first test statement. It should be voted on and then dismissed from a batch motion.")  # BATCH FAIL @ batch_motion
-jury_statement_two = StatementMotion(case).New(jury[1], f"This is the first test statement. It should be voted on and then passed from a batch motion.") # BATCH PASS @  batch_motion
+jury_statement_two = StatementMotion(case).New(jury[1], f"This is the second test statement. It should be voted on and then passed from a batch motion.") # BATCH PASS @  batch_motion
 
 case.Tick()
 
@@ -858,7 +923,6 @@ case.Tick()
 # everybody votes for it, it is passed
 random_pass(jury, batch_motion)
 case.Tick()
-
 # now it should have passed and taken effect
 
 case.Tick()
@@ -879,7 +943,9 @@ case.personalStatement(defense, "This is the defense's second personal statement
 case.Tick()
 random_pass(jury, rush_motion)
 
-# officially pass and execute the motion, put jo1 up for vote again
+# officially pass and execute the motion, puts js3r at the front of the queue, pass it, and then put jo1 up to vote
+case.Tick()
+random_pass(jury, jury_statement_three_rushed)
 case.Tick()
 
 # fails vote and is removed from the floor
@@ -889,7 +955,7 @@ case.Tick()
 # motion queue should be empty, idle period starts
 
 # within 15 minute idle period after jo1 is failed, defense makes a statement, moves to adjust penalty, and jury[2] makes a new order motion
-case.PersonalStatement(defense, "Another personal statement from the defense")
+case.personalStatement(defense, "Another personal statement from the defense")
 defense_adjust_penalty = AdjustPenaltyMotion(case).New(defense, {"type": "prison", "length": 5}, "This is a test of the defense trying to lower their penalty.")  # PASS
 jury_order_two = OrderMotion(case).New(jury[2], f"{defense} and {plaintiff}", "This is a test of another order motion. It should pass.")  # PASS 
 
@@ -900,6 +966,7 @@ case.Tick()
 random_pass(jury, defense_adjust_penalty)
 case.Tick()
 random_pass(jury, jury_order_two)
+case.Tick()
 case.Tick()
 
 # Next steps as implementation continues:

@@ -9,7 +9,8 @@ import yaml
 from discord.ext import commands
 import git
 
-from src import config, prison, vetting, administration, social, errortracking, logging
+from src import config, prison, vetting, administration, social, errortracking
+from src import stasilogging as logging
 
 # from disputils import BotEmbedPaginator, BotConfirmation, BotMultipleChoice
 
