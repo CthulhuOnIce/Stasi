@@ -252,6 +252,59 @@ class Case:
 
         return statement
 
+    def offerPleaDeal(self, penalties: List[Penalty], expiration: datetime.datetime = None):
+        self.plea_deal_penalties = penalties
+
+        desc = f"{self.nameUserByID(self.defense.id)} has offered a plea deal.\nOld Penalties:\n{self.describePenalties(self.penalties)}\n\nBargain Penalties:\n{self.describePenalties(penalties)}"
+        if expiration:
+            desc += f"\n\nThis plea deal will expire on {discord_dynamic_timestamp(expiration, 'F')} ({discord_dynamic_timestamp(expiration, 'R')})"
+            self.plea_deal_expiration = expiration
+        
+        self.event_log.append(self.newEvent(
+            "plea_deal",
+            f"{self.nameUserByID(self.defense.id)} has offered a plea deal.",
+            desc
+        ))
+        return
+    
+    def declinePleaDeal(self):
+        self.plea_deal_penalties = []
+        self.plea_deal_expiration = None
+        self.event_log.append(self.newEvent(
+            "plea_deal_declined",
+            f"{self.nameUserByID(self.plaintiff.id)} has declined the plea deal.",
+            f"{self.nameUserByID(self.plaintiff.id)} has declined the plea deal."
+        ))
+        return
+    
+    def acceptPleaDeal(self):
+        self.penalties = self.plea_deal_penalties
+        self.plea_deal_penalties = []
+        # 
+        self.plea_deal_expiration = None
+        self.event_log.append(self.newEvent(
+            "plea_deal_accepted",
+            f"{self.nameUserByID(self.plaintiff.id)} has accepted the plea deal.",
+            f"{self.nameUserByID(self.plaintiff.id)} has accepted the plea deal."
+        ))
+        return
+
+    def executePunishments(self):
+        for penalty in self.penalties:
+            penalty.Execute()
+        return
+    
+    # doesn't log or document the case closing, or act on punishments, which should all be done by 
+    # preceding functions
+    def closeCase(self):
+        self.no_tick = True 
+        self.stage = 3
+        ACTIVECASES.remove(self)
+        # TODO: unprison prisoned users
+        # TODO: remove case from database and archive it
+        return
+
+
     def generateNewID(self):
         # 11042023-01, 11042023-02, etc.
         number = str(len(ACTIVECASES)).zfill(2)
@@ -350,6 +403,17 @@ class Case:
 
         if self.no_tick:
             return
+        
+        # check if plea bargain has expired
+        if self.plea_deal_expiration and datetime.datetime.now(datetime.timezone.utc) > self.plea_deal_expiration:
+            self.plea_deal_penalties = []
+            self.plea_deal_expiration = None
+            self.event_log.append(self.newEvent(
+                "plea_deal_expired",
+                f"The plea deal has expired.",
+                f"The plea deal has expired and is no longer offered.",
+                penalties = self.penalties
+            ))
 
         if len(self.jury_pool) < 5:
             # juror left the case, but it was already in the body stage
@@ -433,6 +497,11 @@ class Case:
         self.plaintiff = plaintiff
         self.defense = defense
         self.penalties: List[Penalty] = penalties
+
+        self.plea_deal_penalties: List[Penalty] = []
+        self.plea_deal_expiration: datetime.datetime = None
+
+
         self.stage = 1
         self.motion_queue: List[Motion] = []
         # used to keep track of timeouts and whatnot
@@ -508,7 +577,8 @@ class Case:
 
                 "locks": self.locks,
                 
-                "penalty": [penalty.save() for penalty in self.penalties],
+                "penalties": [penalty.save() for penalty in self.penalties],
+                "plea_deal_penalties": [penalty.save() for penalty in self.plea_deal_penalties],
                 
                 # processing stuff
                 "stage": self.stage,  # 0 - done (archived), 1 - jury selection, 2 - argumentation / body, 3 - ready to close, awaiting archive 
@@ -959,9 +1029,12 @@ defense = random.choice(guild.members)
 case.New(guild, None, f"{plaintiff} v. {defense}", "This is a test case.", plaintiff, defense, PermanentBanPenalty(case, "This is a test permanent ban."))
 
 # TODO: plea deal logic here
+case.offerPleaDeal([WarningPenalty(case, "This is a test warning.")], datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1))
 
 # appoint jury
 for i in range(6):
+    if i == 4:  # expire the plea deal
+        case.plea_deal_expiration = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=1)
     case.Tick()
 
 # randomly assign each juror to a yes or no vote, but make sure Yes has more
