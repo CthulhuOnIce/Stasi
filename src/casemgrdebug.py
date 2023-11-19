@@ -110,7 +110,9 @@ class User:
         return f"{self.name}#{self.discriminator}"
 
 class Guild:
+
     name = "Test Guild"
+
     def __init__(self):
         self.members: List[discord.Member] = [User() for i in range(800)]
         return
@@ -291,6 +293,26 @@ class Case:
             desc
         ))
         return
+    
+    class jsay(TypedDict):
+        user_id: int
+        content: str
+        timestamp: datetime.datetime
+    
+    def juror_say(self, user, content):
+        jsay: jsay = {
+            "user_id": user.id,
+            "content": content,
+            "timestamp": datetime.datetime.now(datetime.timezone.utc)
+        }
+
+        self.juror_chat_log.append(jsay)
+
+        for juror in self.jury_pool:
+            juror.send(f"**JSAY: {self.nameUserByID(user.id)}:** {content}")
+        
+        return jsay
+
     
     def declinePleaDeal(self):
         self.plea_deal_penalties = []
