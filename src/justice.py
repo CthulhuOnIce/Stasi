@@ -89,11 +89,11 @@ class Justice(commands.Cog):
 
     jury = discord.SlashCommandGroup("jury", "Jury commands")
     
-    async def active_case_options(ctx: discord.AutocompleteContext):
+    async def juror_case_options(ctx: discord.AutocompleteContext):
         return [f"{case}: {case.id}" for case in cm.ACTIVECASES if case.stage == 1 and ctx.author.id in case.jurors]
 
     @jury.command(name="join", description="Join an active case as a juror.")
-    async def jury_join(self, ctx, case: discord.Option(str, autocomplete=discord.utils.basic_autocomplete(active_case_options))):
+    async def jury_join(self, ctx, case: discord.Option(str, autocomplete=discord.utils.basic_autocomplete(juror_case_options))):
         case = cm.getCaseByID(case.split(" ")[-1])
         if case is None:
             return await ctx.respond("Invalid case ID.", ephemeral=True)
