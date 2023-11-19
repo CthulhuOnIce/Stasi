@@ -64,7 +64,6 @@ class Justice(commands.Cog):
         embed.add_field(name="Filed By", value=case.nameUserByID(case.plaintiff_id), inline=False)
         embed.add_field(name="Filed Against", value=case.nameUserByID(case.defense_id), inline=False)
         embed.add_field(name="Event Log Length", value=len(case.event_log), inline=False)
-        embed.add_field(name="Guilty Penalty", value=case.describePenalties(case.penalties), inline=False)
         embed.add_field(name="Last Event Title", value=case.event_log[-1]["name"])
         embed.add_field(name="Last Event Desc", value=case.event_log[-1]["desc"])
         embed.add_field(name="Last Event Datetime", value=discord_dynamic_timestamp(case.event_log[-1]["timestamp"], 'F'))
@@ -72,6 +71,8 @@ class Justice(commands.Cog):
             embed.add_field(name="Motion in Consideration", value=case.motion_in_consideration, inline=False)
             embed.add_field(name="Voting Ends", value=discord_dynamic_timestamp(case.motion_in_consideration.Expiry, 'R'), inline=False)
         await ctx.respond(embed=embed, ephemeral=ephemeral)
+        embed.add_field(name="Guilty Penalty", value=case.describePenalties(case.penalties), inline=False)
+
 
     @slash_command(name='normalusername', description='Get a user\'s normal username.')
     @option("member", discord.Member, description="The member to get the normal username of.")
