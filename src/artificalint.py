@@ -1,4 +1,6 @@
-import openai
+from openai import AsyncOpenAI
+
+aclient = AsyncOpenAI(api_key=config.C["openai"]["key"])
 from . import config
 from typing import List
 import discord
@@ -6,29 +8,23 @@ import asyncio
 from .stasilogging import log, log_user, lid
 from copy import deepcopy
 
-openai.api_key = config.C["openai"]["key"]
+
 
 max_errors = 6 # 1 and a half minutes
 
 async def make_chatgpt_request(messages: List[dict]):
-    res = await openai.ChatCompletion.acreate(
-  model="gpt-3.5-turbo",
-  messages=messages
-)
+    res = await aclient.chat.completions.create(model="gpt-3.5-turbo",
+    messages=messages)
     return res["choices"][0]["message"]
 
 async def make_vetting_chatgpt_request(messages: List[dict]):
-    res = await openai.ChatCompletion.acreate(
-  model=config.C["openai"]["vettingmodel"],
-  messages=messages
-)
+    res = await aclient.chat.completions.create(model=config.C["openai"]["vettingmodel"],
+    messages=messages)
     return res["choices"][0]["message"]
 
 async def make_chatgpt4_request(messages: List[dict]):
-    res = await openai.ChatCompletion.acreate(
-  model="gpt-4",
-  messages=messages
-)
+    res = await aclient.chat.completions.create(model="gpt-4",
+    messages=messages)
     return res["choices"][0]["message"]
 
 def build_verification_embed(user, messages, verdict):
