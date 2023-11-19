@@ -266,7 +266,7 @@ class Case:
                 await recipient.send(content, embed=embed)
     
     def normalUsername(self, user):
-        if not user.discriminator:
+        if not user.discriminator or user.discriminator == "0":
             return f"@{user.name}"
         else:
             return f"{user}"
@@ -460,7 +460,7 @@ class Case:
         self.known_users = {}
         self.registerUser(plaintiff)
         self.registerUser(defense)
-        
+
         # MIGHT REMOVE in favor of delivering verdict ny a motion
         self.votes = {}
         self.event_log: List[Event] = [await self.newEvent(

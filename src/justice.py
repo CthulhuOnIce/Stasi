@@ -21,6 +21,22 @@ class Justice(commands.Cog):
         self.bot = bot
         self.CaseManager.start()
 
+    
+    case_selection = {}
+    
+    def setActiveCase(member, case):
+        global case_selection
+        case_selection[member.id] = case
+
+    def getActiveCase(member):
+        global case_selection
+        return case_selection[member.id] if member.id in case_selection else None
+
+    @slash_command(name='normalusername', description='Get a user\'s normal username.')
+    @option("member", discord.Member, description="The member to get the normal username of.")
+    async def normal_username(self, ctx, member: discord.Member):
+        await ctx.respond(cm.Case.normalUsername(None, member), ephemeral=True)
+
     @slash_command(name='filetestcase', description='File a test case.')
     @option("member", discord.Member, description="The member to file a case against.")
     @option("reason", str, description="The reason for filing a case.")
