@@ -43,10 +43,8 @@ class Justice(commands.Cog):
         self.setActiveCase(ctx.author, case)
         return await ctx.respond(f"Selected case **{case}** (`{case.id}`) as your active case.", ephemeral=True)
     
-
-    case = discord.SlashCommandGroup("case", "Basic case management commands")
     @case.command(name="info", description="Get information about a case.")
-    async def case_info(self, ctx):
+    async def case_info(self, ctx, ephemeral: bool = True):
         case = self.getActiveCase(ctx.author)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
@@ -54,6 +52,18 @@ class Justice(commands.Cog):
         embed.add_field(name="Filed Datetime", value=discord_dynamic_timestamp(case.created, 'F'), inline=False)
         embed.add_field(name="Filed Relative", value=discord_dynamic_timestamp(case.created, 'R'), inline=False)
         embed.add_field(name="Filed By", value=case.nameUserByID(case.plaintiff_id), inline=False)
+        embed.add_field(name="Filed Against", value=case.nameUserByID(case.defense_id), inline=False)
+        embed.add_field(name="Event Log Length", value=len(case.event_log), inline=False)
+        embed.add_field(name="Guilty Penalty", value=case.describePenalties(case.penalties), inline=False)
+        embed.add_field(name="Last Event Title", value=case.event_log[-1]["name"])
+        embed.add_field(name="Last Event Desc", value=case.event_log[-1]["desc"])
+        embed.add_field(name="Last Event Datetime", value=discord_dynamic_timestamp(case.event_log[-1]["timestamp"], 'F'))
+        if case.motion_in_consideration is not None:
+            embed.add_field(name="Motion in Consideration", value=case.motion_in_consideration, inline=False)
+            embed.add_field(name="Voting Ends", value=discord_dynamic_timestamp(case.motion_in_consideration.Expiry, 'R'), inline=False)
+        await ctx.respond(embed=embed, ephemeral=ephemeral)
+
+
 
 
 

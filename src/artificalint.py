@@ -1,6 +1,4 @@
 from openai import AsyncOpenAI
-
-aclient = AsyncOpenAI(api_key=config.C["openai"]["key"])
 from . import config
 from typing import List
 import discord
@@ -9,6 +7,8 @@ from .stasilogging import log, log_user, lid
 from copy import deepcopy
 
 
+
+aclient = AsyncOpenAI(api_key=config.C["openai"]["key"])
 
 max_errors = 6 # 1 and a half minutes
 
