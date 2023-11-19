@@ -43,6 +43,16 @@ class Justice(commands.Cog):
         self.setActiveCase(ctx.author, case)
         return await ctx.respond(f"Selected case **{case}** (`{case.id}`) as your active case.", ephemeral=True)
     
+    # TODO: Confirmation message
+    @case.command(name="statement", description="Make a statement in your active case.")
+    async def statement(self, ctx, statement: str):
+        case = self.getActiveCase(ctx.author)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        # TODO: check if user is actually involved in case before allowing them to make a statement
+        await case.personalStatement(ctx.author, statement)
+        await ctx.respond("Statement added.", ephemeral=True)
+
     @case.command(name="info", description="Get information about a case.")
     async def case_info(self, ctx, ephemeral: bool = True):
         case = self.getActiveCase(ctx.author)
