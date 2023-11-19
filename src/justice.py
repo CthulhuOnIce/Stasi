@@ -58,21 +58,52 @@ class Justice(commands.Cog):
         case = self.getActiveCase(ctx.author)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
-        embed=discord.Embed(title=str(case), description=str(case.id))
-        embed.add_field(name="Filed Datetime", value=discord_dynamic_timestamp(case.created, 'F'), inline=False)
-        embed.add_field(name="Filed Relative", value=discord_dynamic_timestamp(case.created, 'R'), inline=False)
-        embed.add_field(name="Filed By", value=case.nameUserByID(case.plaintiff_id), inline=False)
-        embed.add_field(name="Filed Against", value=case.nameUserByID(case.defense_id), inline=False)
-        embed.add_field(name="Event Log Length", value=len(case.event_log), inline=False)
-        embed.add_field(name="Last Event Title", value=case.event_log[-1]["name"])
-        embed.add_field(name="Last Event Desc", value=case.event_log[-1]["desc"])
-        embed.add_field(name="Last Event Datetime", value=discord_dynamic_timestamp(case.event_log[-1]["timestamp"], 'F'))
-        if case.motion_in_consideration is not None:
-            embed.add_field(name="Motion in Consideration", value=case.motion_in_consideration, inline=False)
-            embed.add_field(name="Voting Ends", value=discord_dynamic_timestamp(case.motion_in_consideration.Expiry, 'R'), inline=False)
-        await ctx.respond(embed=embed, ephemeral=ephemeral)
-        embed.add_field(name="Guilty Penalty", value=case.describePenalties(case.penalties), inline=False)
 
+        front_page = discord.Embed(title=str(case), description=str(case.id))
+        front_page.add_field(name="Current Status", value=case.status, inline=False)
+        front_page.add_field(name="Filed Datetime", value=discord_dynamic_timestamp(case.created, 'F'), inline=True)
+        front_page.add_field(name="Filed Relative", value=discord_dynamic_timestamp(case.created, 'R'), inline=True)
+        front_page.add_field(name="Filed By", value=case.nameUserByID(case.plaintiff_id), inline=True)
+        front_page.add_field(name="Filed Against", value=case.nameUserByID(case.defense_id), inline=True)
+        if case.motion_in_consideration is not None:
+            front_page.add_field(name="Motion in Consideration", value=case.motion_in_consideration, inline=False)
+            front_page.add_field(name="Voting Ends", value=discord_dynamic_timestamp(case.motion_in_consideration.Expiry, 'R'), inline=False)
+        front_page.add_field(name="Guilty Penalty", value=case.describePenalties(case.penalties), inline=False)
+
+        event_page = discord.Embed(title=str(case), description=str(case.id))
+        event_page.add_field(name="Event Log Length", value=len(case.event_log), inline=False)
+        event_page.add_field(name="Last Event Title", value=case.event_log[-1]["name"])
+        event_page.add_field(name="Last Event Desc", value=case.event_log[-1]["desc"])
+        event_page.add_field(name="Last Event Datetime", value=discord_dynamic_timestamp(case.event_log[-1]["timestamp"], 'F'))
+
+        class caseinfoview(discord.ui.View):
+            @discord.ui.button(label="Main Info", style=discord.ButtonStyle.primary, emoji="📔")
+            async def main_info(self, button, interaction: discord.Interaction):
+                await interaction.response.edit_message(embed=front_page)
+
+            @discord.ui.button(label="Event Log Info", style=discord.ButtonStyle.primary, emoji="📇")
+            async def event_log(self, button, interaction: discord.Interaction):
+                await interaction.response.edit_message(embed=event_page)
+            
+        await ctx.respond(embed=front_page, view=caseinfoview(), ephemeral=ephemeral)
+
+    jury = discord.SlashCommandGroup("jury", "Jury commands")
+    
+    async def active_case_options(ctx: discord.AutocompleteContext):
+        return [f"{case}: {case.id}" for case in cm.ACTIVECASES if case.stage == 1 and ctx.author.id in case.jurors]
+
+    @jury.command(name="join", description="Join an active case as a juror.")
+    async def jury_join(self, ctx, case: discord.Option(str, autocomplete=discord.utils.basic_autocomplete(active_case_options))):
+        case = cm.getCaseByID(case.split(" ")[-1])
+        if case is None:
+            return await ctx.respond("Invalid case ID.", ephemeral=True)
+        if ctx.author.id not in case.jury_invites:
+            return await ctx.respond("You have not been invited to this case.", ephemeral=True)
+        
+        self.setActiveCase(ctx.author, case)
+        await case.addJuror(ctx.author)
+
+        return await ctx.respond(f"Joined case **{case}** (`{case.id}`) as a juror.", ephemeral=True)
 
     @slash_command(name='normalusername', description='Get a user\'s normal username.')
     @option("member", discord.Member, description="The member to get the normal username of.")

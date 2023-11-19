@@ -13,6 +13,7 @@ from discord import Embed
 import discord
 import simplejson as json
 from . import utils
+from . import database as db
 
 
 nouns = open("wordlists/nouns.txt", "r").read().split("\n")
@@ -330,16 +331,33 @@ class Case:
             print(f"nameUserByID for {self.case} ({self.case.id}) Could not look up {userid}. This should never happen.")
             return f"Unknown User #{utils.int_to_base64(userid)}"
 
-    def findEligibleJurors(self) -> List[discord.Member]:
-        # DEBUG CODE REMOVE LATER
-        return [user for user in guild.members if user not in self.jury_invites]
+    async def findEligibleJurors(self) -> List[discord.Member]:
+        d_b = await db.create_connection("users")
+        user = await d_b.find({
+            # last seen less than 2 weeks ago
+            "last_seen": {"$gt": datetime.datetime.utcnow() - datetime.timedelta(days=14)},
+            # greater than 100 messages
+            "messages": {"$gt": 100},
+            # doesn't have "jury_ban" key set
+            "jury_ban": {"$exists": False},
+        }).to_list(None)
+
+        # resolve user ids to discord.Member objects
+        user_resolved = []
+        for u in user:
+            if u["_id"] not in self.jury_pool_ids and u["_id"] not in self.jury_invites:
+                member = self.guild.get_member(u["_id"])
+                if member:
+                    user_resolved.append(member)
+        return user_resolved
+
     
     async def addJuror(self, user, pseudonym: str = None):
         
         self.jury_pool_ids.append(user.id)
 
-        if user in self.jury_invites:
-            self.jury_invites.remove(user)
+        if user.id in self.jury_invites:
+            self.jury_invites.remove(user.id)
         
         self.registerUser(user, pseudonym)
         
@@ -377,11 +395,10 @@ class Case:
                 self.stage = 1  # back in the recruitment stage
             invites_to_send = 1   # 1 per cycle
             eligible_jurors = self.findEligibleJurors()
-            for i in range(invites_to_send):
-                invitee = random.choice(eligible_jurors)
-                eligible_jurors.remove(invitee)
+            for invitee in random.sample(eligible_jurors, invites_to_send):
                 try:
-                    self.jury_invites.append(invitee)
+                    print(f"Sending invite to {invitee} ({invitee.id}) for case {self} ({self.id})")
+                    self.jury_invites.append(invitee.id)
                     invitee.send(f"You have been invited to be a juror for {self.title} (`{self.id}`).\nTo accept, use `/jury join`.")
                 except:
                     pass  # already removed from eligible jurors
@@ -553,7 +570,7 @@ class Case:
                 # TODO: turn jury_pool (list[member]) into jury_pool_ids (list[int]), and use jury_pool() method to resolve jury pool as members instead
                 # TODO: do a similar thing with plaintiff and defense 
                 "jury_pool_ids": self.jury_pool_ids,
-                "jury_invites": [user.id for user in self.jury_invites],  # people who have been invited to the jury but are yet to accept
+                "jury_invites": self.jury_invites,  # people who have been invited to the jury but are yet to accept
                 
                 "anonymization": self.anonymization,  # id: name - anybody in this list will be anonymized and referred to by their dict value
                 "known_users": self.known_users,
