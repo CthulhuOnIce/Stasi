@@ -73,11 +73,6 @@ class Justice(commands.Cog):
             embed.add_field(name="Voting Ends", value=discord_dynamic_timestamp(case.motion_in_consideration.Expiry, 'R'), inline=False)
         await ctx.respond(embed=embed, ephemeral=ephemeral)
 
-
-
-
-
-
     @slash_command(name='normalusername', description='Get a user\'s normal username.')
     @option("member", discord.Member, description="The member to get the normal username of.")
     async def normal_username(self, ctx, member: discord.Member):
@@ -87,7 +82,10 @@ class Justice(commands.Cog):
     @option("member", discord.Member, description="The member to file a case against.")
     @option("reason", str, description="The reason for filing a case.")
     async def test_case(self, ctx, member: discord.Member, reason: str):
-        await cm.Case().New(ctx.guild, self.bot, f"{cm.Case.normalUsername(None, ctx.author)} v. {cm.Case.normalUsername(None, member)}", reason, ctx.author, member, cm.WarningPenalty(cm.Case))
+        case = await cm.Case().New(ctx.guild, self.bot, f"{cm.Case.normalUsername(None, ctx.author)} v. {cm.Case.normalUsername(None, member)}", reason, ctx.author, member, cm.WarningPenalty(cm.Case))
+        self.setActiveCase(ctx.author, case)
+        self.setActiveCase(member, case)
+        await ctx.respond(f"Filed test case **{case}** (`{case.id}`) It has automatically been set as your active case.", ephemeral=True)
 
     # add option to report a user by right clicking a message
     @commands.message_command(name="Report Message to Server Staff")
