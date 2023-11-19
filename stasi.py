@@ -9,7 +9,7 @@ import yaml
 from discord.ext import commands
 import git
 
-from src import config, prison, vetting, administration, social, errortracking
+from src import config, prison, vetting, administration, social, errortracking, justice
 from src import stasilogging as logging
 
 # from disputils import BotEmbedPaginator, BotConfirmation, BotMultipleChoice
@@ -24,7 +24,7 @@ logging.log("main", "setup", "Setting up cogs...")
 
 # Setup cogs
 i = 0
-COGS = [prison, vetting, administration, social, errortracking]
+COGS = [prison, vetting, administration, social, errortracking, justice]
 for cog in COGS:
     i += 1
     cog.setup(bot)
