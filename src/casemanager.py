@@ -23,6 +23,13 @@ elements = open("wordlists/elements.txt", "r").read().split("\n")
 
 ACTIVECASES: List[Case] = []
 
+def getCaseByID(case_id: str) -> Case:
+    case_id = case_id.lower()  # just in case
+    for case in ACTIVECASES:
+        if case.id == case_id:
+            return case
+    return None
+
 # makes intellisense work for event dictionaries
 class Event(TypedDict):
     event_id: str
@@ -192,7 +199,7 @@ class Case:
 
         self.juror_chat_log.append(jsay)
 
-        for juror in self.jury_pool:
+        for juror in self.jury_pool():
             juror.send(f"**JSAY: {self.nameUserByID(user.id)}:** {content}")
         
         return jsay
@@ -203,8 +210,8 @@ class Case:
         self.plea_deal_expiration = None
         self.event_log.append(await self.newEvent(
             "plea_deal_declined",
-            f"{self.nameUserByID(self.plaintiff.id)} has declined the plea deal.",
-            f"{self.nameUserByID(self.plaintiff.id)} has declined the plea deal."
+            f"{self.nameUserByID(self.plaintiff_id)} has declined the plea deal.",
+            f"{self.nameUserByID(self.plaintiff_id)} has declined the plea deal."
         ))
         return
     
@@ -215,8 +222,8 @@ class Case:
         self.plea_deal_expiration = None
         self.event_log.append(await self.newEvent(
             "plea_deal_accepted",
-            f"{self.nameUserByID(self.plaintiff.id)} has accepted the plea deal.",
-            f"{self.nameUserByID(self.plaintiff.id)} has accepted the plea deal."
+            f"{self.nameUserByID(self.plaintiff_id)} has accepted the plea deal.",
+            f"{self.nameUserByID(self.plaintiff_id)} has accepted the plea deal."
         ))
         return
 
@@ -251,11 +258,11 @@ class Case:
 
         recipients = []
         if jurors:
-            recipients.extend(self.jury_pool)
+            recipients.extend(self.jury_pool())
         if defense:
-            recipients.append(self.defense)
+            recipients.append(self.defense())
         if prosecution:
-            recipients.append(self.plaintiff)
+            recipients.append(self.plaintiff())
         if news_wire:
             recipients.append(self.guild.get_channel(863539768306171928))
 
@@ -305,15 +312,14 @@ class Case:
                 res = self.normalUsername(user)
 
         if title:
-            if userid == self.defense.id:
+            if userid == self.defense_id:
                 res += " (Defense)"
 
-            elif userid == self.plaintiff.id:
+            elif userid == self.plaintiff_id:
                 res += " (Plaintiff)"
             
             else:
-                jury_pool = [user.id for user in self.jury_pool]
-                if userid in jury_pool:
+                if userid in self.jury_pool_ids:
                     res += " (Juror)"
 
 
@@ -330,7 +336,7 @@ class Case:
     
     async def addJuror(self, user, pseudonym: str = None):
         
-        self.jury_pool.append(user)
+        self.jury_pool_ids.append(user.id)
 
         if user in self.jury_invites:
             self.jury_invites.remove(user)
@@ -361,7 +367,7 @@ class Case:
                 penalties = self.penalties
             ))
 
-        if len(self.jury_pool) < 5:
+        if len(self.jury_pool_ids) < 5:
             # juror left the case, but it was already in the body stage
             # when this happens, the case basically has to revert to the recruitment stage
             if self.stage > 1:  
@@ -422,9 +428,15 @@ class Case:
             return got
         elif got := self.guild.get_member(userid):
             return got
-        elif got := self.guild.fetch_member(userid):
-            return got
 
+    def plaintiff(self):
+        return self.fetchUser(self.plaintiff_id)
+
+    def defense(self):
+        return self.fetchUser(self.defense_id)
+    
+    def jury_pool(self):
+        return [self.fetchUser(user) for user in self.jury_pool_ids]
 
     async def New(self, guild: discord.Guild, bot, title: str, description: str, plaintiff: discord.Member, defense: discord.Member, penalties: List[Penalty]) -> Case:
 
@@ -440,8 +452,9 @@ class Case:
         self.status = "Jury Selection"
         self.id = self.generateNewID()
         self.created = datetime.datetime.now(datetime.timezone.utc)
-        self.plaintiff = plaintiff
-        self.defense = defense
+
+        self.plaintiff_id = plaintiff.id
+        self.defense_id = defense.id
         self.penalties: List[Penalty] = penalties
 
         self.plea_deal_penalties: List[Penalty] = []
@@ -453,7 +466,7 @@ class Case:
         # used to keep track of timeouts and whatnot
         self.locks = []
         self.personal_statements = []
-        self.jury_pool = []
+        self.jury_pool_ids = []
         self.jury_invites = []
         self.anonymization = {}
         
@@ -466,7 +479,7 @@ class Case:
         self.event_log: List[Event] = [await self.newEvent(
             "case_filed",
             f"Case {self.id} has been filed.",
-            f"Case {self.id} has been filed by {self.nameUserByID(self.plaintiff.id)} against {self.nameUserByID(self.defense.id)}.\n{self.description}"
+            f"Case {self.id} has been filed by {self.nameUserByID(self.plaintiff_id)} against {self.nameUserByID(self.defense_id)}.\n{self.description}"
         )]
         self.juror_chat_log = []
         self.motion_in_consideration: Motion = None
@@ -519,8 +532,8 @@ class Case:
                 "filed_date_timestamp": self.created.timestamp(),
 
                 # plaintiff and defense
-                "plaintiff_id": self.plaintiff.id,
-                "defense_id": self.defense.id,
+                "plaintiff_id": self.plaintiff_id,
+                "defense_id": self.defense_id,
 
                 "personal_statements": self.personal_statements,
 
@@ -539,7 +552,7 @@ class Case:
                 # jury stuff
                 # TODO: turn jury_pool (list[member]) into jury_pool_ids (list[int]), and use jury_pool() method to resolve jury pool as members instead
                 # TODO: do a similar thing with plaintiff and defense 
-                "jury_pool": [user.id for user in self.jury_pool],
+                "jury_pool_ids": self.jury_pool_ids,
                 "jury_invites": [user.id for user in self.jury_invites],  # people who have been invited to the jury but are yet to accept
                 
                 "anonymization": self.anonymization,  # id: name - anybody in this list will be anonymized and referred to by their dict value
@@ -639,8 +652,8 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
         ))
 
     async def VoteFailed(self):
-        yes = ', '.join([self.Case.nameUserByID(user.id) for user in self.Votes["Yes"]])
-        no = ', '.join([self.Case.nameUserByID(user.id) for user in self.Votes["No"]])
+        yes = ', '.join([self.Case.nameUserByID(user) for user in self.Votes["Yes"]])
+        no = ', '.join([self.Case.nameUserByID(user) for user in self.Votes["No"]])
         self.Case.event_log.append(await self.Case.newEvent(
             "motion_failed",
             f"The motion {self.MotionID} has failed its vote.",
@@ -650,8 +663,8 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
         return
 
     async def VotePassed(self):
-        yes = ', '.join([self.Case.nameUserByID(user.id) for user in self.Votes["Yes"]])
-        no = ', '.join([self.Case.nameUserByID(user.id) for user in self.Votes["No"]])
+        yes = ', '.join([self.Case.nameUserByID(user) for user in self.Votes["Yes"]])
+        no = ', '.join([self.Case.nameUserByID(user) for user in self.Votes["No"]])
         self.Case.event_log.append(await self.Case.newEvent(
             "motion_passed",
             f"The motion {self.MotionID} has passed its vote.",
@@ -664,7 +677,7 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
         return
     
     def ReadyToClose(self) -> bool:
-        if len(self.Votes["Yes"]) + len(self.Votes["No"]) == len(self.Case.jury_pool):
+        if len(self.Votes["Yes"]) + len(self.Votes["No"]) >= len(self.Case.jury_pool_ids):
             return True
         if datetime.datetime.now(datetime.timezone.utc) > self.Expiry:
             return True

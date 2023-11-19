@@ -24,13 +24,39 @@ class Justice(commands.Cog):
     
     case_selection = {}
     
-    def setActiveCase(member, case):
-        global case_selection
-        case_selection[member.id] = case
+    def setActiveCase(self, member, case):
+        self.case_selection[member.id] = case
 
-    def getActiveCase(member):
-        global case_selection
-        return case_selection[member.id] if member.id in case_selection else None
+    def getActiveCase(self, member) -> cm.Case:
+        return self.case_selection[member.id] if member.id in self.case_selection else None
+
+    async def active_case_options(ctx: discord.AutocompleteContext):
+        return [f"{case}: {case.id}" for case in cm.ACTIVECASES]
+
+    case = discord.SlashCommandGroup("case", "Basic case management commands")
+    @case.command(name="select", description="Select a case as your active case.")
+    async def select_case(self, ctx, case: discord.Option(str, autocomplete=discord.utils.basic_autocomplete(active_case_options))):
+        case = cm.getCaseByID(case.split(" ")[-1])
+        if case is None:
+            return await ctx.respond("Invalid case ID.", ephemeral=True)
+        
+        self.setActiveCase(ctx.author, case)
+        return await ctx.respond(f"Selected case **{case}** (`{case.id}`) as your active case.", ephemeral=True)
+    
+
+    case = discord.SlashCommandGroup("case", "Basic case management commands")
+    @case.command(name="info", description="Get information about a case.")
+    async def case_info(self, ctx):
+        case = self.getActiveCase(ctx.author)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        embed=discord.Embed(title=str(case), description=str(case.id))
+        embed.add_field(name="Filed Datetime", value=discord_dynamic_timestamp(case.created, 'F'), inline=False)
+        embed.add_field(name="Filed Relative", value=discord_dynamic_timestamp(case.created, 'R'), inline=False)
+        embed.add_field(name="Filed By", value=case.nameUserByID(case.plaintiff_id), inline=False)
+
+
+
 
     @slash_command(name='normalusername', description='Get a user\'s normal username.')
     @option("member", discord.Member, description="The member to get the normal username of.")
