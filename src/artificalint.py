@@ -15,12 +15,12 @@ max_errors = 6 # 1 and a half minutes
 async def make_chatgpt_request(messages: List[dict]):
     res = await aclient.chat.completions.create(model="gpt-3.5-turbo",
     messages=messages)
-    return res["choices"][0]["message"]
+    return res.choices[0].message.content
 
 async def make_vetting_chatgpt_request(messages: List[dict]):
     res = await aclient.chat.completions.create(model=config.C["openai"]["vettingmodel"],
     messages=messages)
-    return res["choices"][0]["message"]
+    return res.choices[0].message.content
 
 async def make_chatgpt4_request(messages: List[dict]):
     res = await aclient.chat.completions.create(model="gpt-4",

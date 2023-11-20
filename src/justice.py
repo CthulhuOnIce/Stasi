@@ -13,6 +13,7 @@ from . import config
 from . import utils
 from .stasilogging import *
 from . import casemanager as cm
+from . import report as rm
 
 
 
@@ -43,6 +44,15 @@ class Justice(commands.Cog):
         self.setActiveCase(ctx.author, case)
         return await ctx.respond(f"Selected case **{case}** (`{case.id}`) as your active case.", ephemeral=True)
     
+    # TODO: remove when done debugging
+    @case.command(name="tick", description="DEBUG: trigger a tick event on your active case.")
+    async def tick_case(self, ctx):
+        case = self.getActiveCase(ctx.author)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        await case.Tick()
+        await ctx.respond("Tick triggered.", ephemeral=True)
+
     # TODO: Confirmation message
     @case.command(name="statement", description="Make a statement in your active case.")
     async def statement(self, ctx, statement: str):
@@ -90,7 +100,7 @@ class Justice(commands.Cog):
     jury = discord.SlashCommandGroup("jury", "Jury commands")
     
     async def juror_case_options(ctx: discord.AutocompleteContext):
-        return [f"{case}: {case.id}" for case in cm.ACTIVECASES if case.stage == 1 and ctx.author.id in case.jurors]
+        return [f"{case}: {case.id}" for case in cm.ACTIVECASES if case.stage == 1 and ctx.interaction.user.id in case.jurors]
 
     @jury.command(name="join", description="Join an active case as a juror.")
     async def jury_join(self, ctx, case: discord.Option(str, autocomplete=discord.utils.basic_autocomplete(juror_case_options))):
@@ -119,14 +129,47 @@ class Justice(commands.Cog):
         self.setActiveCase(member, case)
         await ctx.respond(f"Filed test case **{case}** (`{case.id}`) It has automatically been set as your active case.", ephemeral=True)
 
+    reports = {}
+
+    report = discord.SlashCommandGroup("report", "Commands for managing reports to server staff")
+
+    @report.command(name="submit", description="Submit your active report.")
+    async def submit_report(self, ctx):
+        if ctx.author.id not in self.reports:
+            return await ctx.respond("You do not have an active report.", ephemeral=True)
+
+        report = self.reports[ctx.author.id]
+        await report.send()
+        del self.reports[ctx.author.id]
+        await ctx.respond("Report sent.", ephemeral=True)
+    
+    @report.command(name="cancel", description="Cancel your active report.")
+    async def cancel_report(self, ctx):
+        if ctx.author.id not in self.reports:
+            return await ctx.respond("You do not have an active report.", ephemeral=True)
+        
+        del self.reports[ctx.author.id]
+        await ctx.respond("Report cancelled.", ephemeral=True)
+
     # add option to report a user by right clicking a message
     @commands.message_command(name="Report Message to Server Staff")
     async def report_message(self, ctx, message: discord.Message):
-        return await ctx.respond("This command is not yet implemented.", ephemeral=True)
+        if ctx.author.id in self.reports:
+            self.reports[ctx.author.id].add_message(message)
+            await ctx.respond("Message added to report.", ephemeral=True)
+        else:
+            report = rm.UserReport(self.bot, ctx.author, message.author)
+            report.add_message(message)
+            await report.send()
+            await ctx.respond("Report sent.", ephemeral=True)
 
     @commands.user_command(name="Report User to Server Staff")
     async def report_user(self, ctx, member: discord.Member):
-        return await ctx.respond("This command is not yet implemented.", ephemeral=True)
+        if ctx.author.id in self.reports:
+            return await ctx.respond("You already have an active report. Submit it to start a new one.", ephemeral=True)
+
+        self.reports[ctx.author.id] = rm.UserReport(self.bot, ctx.author, member)
+        await ctx.respond("Report started. Select offending messages and hit 'Report Message to Server Staff' to add evidence. Then use /report submit to submit the report.", ephemeral=True)
 
     @tasks.loop(minutes=15)
     async def CaseManager(self):

@@ -343,12 +343,27 @@ class Case:
         }).to_list(None)
 
         # resolve user ids to discord.Member objects
+        disqualified = []
+        for case in ACTIVECASES:
+            disqualified.extend([case.defense_id, case.plaintiff_id])
+
         user_resolved = []
         for u in user:
-            if u["_id"] not in self.jury_pool_ids and u["_id"] not in self.jury_invites:
-                member = self.guild.get_member(u["_id"])
-                if member:
-                    user_resolved.append(member)
+            if u["_id"] in self.jury_pool_ids:
+                continue
+            if u["_id"] in self.jury_invites:
+                continue
+            if u["_id"] in disqualified:
+                continue
+
+            member: discord.Member = self.guild.get_member(u["_id"])
+            if member:
+                if member.guild_permissions.administrator:
+                    continue
+                if member.guild_permissions.ban_members:
+                    continue
+                if member.guild_permissions.manage
+                user_resolved.append(member)
         return user_resolved
 
     
@@ -393,13 +408,13 @@ class Case:
                 for motion in self.motion_queue:
                     await motion.CancelVoting(reason=f"Jury cannot act on motions until 5 jurors are present.")
                 self.stage = 1  # back in the recruitment stage
-            invites_to_send = 1   # 1 per cycle
-            eligible_jurors = self.findEligibleJurors()
+            invites_to_send = random.randint(2, 3)  # send 2-3 invites per cycle
+            eligible_jurors = await self.findEligibleJurors()
             for invitee in random.sample(eligible_jurors, invites_to_send):
                 try:
                     print(f"Sending invite to {invitee} ({invitee.id}) for case {self} ({self.id})")
                     self.jury_invites.append(invitee.id)
-                    invitee.send(f"You have been invited to be a juror for {self.title} (`{self.id}`).\nTo accept, use `/jury join`.")
+                    await invitee.send(f"You have been invited to be a juror for {self.title} (`{self.id}`).\nTo accept, use `/jury join {self.id}`.")
                 except:
                     pass  # already removed from eligible jurors
             return
