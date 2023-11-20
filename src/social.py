@@ -16,7 +16,7 @@ class Social(commands.Cog):
     @slash_command(name='profile', description='Get info about a user.')
     @option('user', discord.User, description='The user to get info about')
     @option('ephemeral', bool, description='Whether to send the message as an ephemeral message')
-    async def profile(self, ctx, user:discord.User, ephemeral:bool=False):
+    async def profile(self, ctx: discord.ApplicationContext, user:discord.User, ephemeral:bool=False):
         embed = discord.Embed(title="User Info", description=f"Info about {user.display_name}", color=0x00ff00)
         embed.set_author(name=str(user), icon_url=user.avatar.url if user.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
         if user.avatar:
@@ -48,14 +48,14 @@ class Social(commands.Cog):
 
     # option to right click a user to get their info
     @commands.user_command(name="View Profile")  # create a user command for the supplied guilds
-    async def player_information_click(self, ctx, member: discord.Member):  # user commands return the member
+    async def player_information_click(self, ctx: discord.ApplicationContext, member: discord.Member):  # user commands return the member
         await self.profile(ctx, member, ephemeral=True)  # respond with the member's display name
 
     
     @slash_command(name='interview', description='Get a user\'s vetting answers.')
     @option('user', discord.User, description='The user to get answers for')
     @option('ephemeral', bool, description='Whether to send the message as an ephemeral message')
-    async def vettinganswers(self, ctx, user:discord.User, ephemeral:bool=True):
+    async def vettinganswers(self, ctx: discord.ApplicationContext, user:discord.User, ephemeral:bool=True):
         if not ctx.author.guild_permissions.manage_roles:
             await ctx.respond("You do not have permission to use this command.", ephemeral=True)
             return
@@ -74,7 +74,7 @@ class Social(commands.Cog):
 
     @slash_command(name='interviewpaged', description='Get a user\'s vetting answers.')
     @option('user', discord.User, description='The user to get answers for')
-    async def vettinganswerspaginated(self, ctx, user:discord.User):
+    async def vettinganswerspaginated(self, ctx: discord.ApplicationContext, user:discord.User):
         if not ctx.author.guild_permissions.manage_roles:
             await ctx.respond("You do not have permission to use this command.", ephemeral=True)
             return
@@ -97,7 +97,7 @@ class Social(commands.Cog):
     @notes.command(name='view', description='Get a user\'s admin notes.')
     @option('user', discord.User, description='The user to get notes for')
     @option('ephemeral', bool, description='Whether to send the message as an ephemeral message')
-    async def viewnotes(self, ctx, user:discord.User, ephemeral:bool=True):
+    async def viewnotes(self, ctx: discord.ApplicationContext, user:discord.User, ephemeral:bool=True):
         if not ctx.author.guild_permissions.manage_roles:
             await ctx.respond("You do not have permission to use this command.", ephemeral=True)
             return
@@ -147,7 +147,7 @@ class Social(commands.Cog):
     @notes.command(name='add', description='Add a note to a user.')
     @option('member', discord.Member, description='The member to add the note to')
     @option('note', str, description='The note to add')
-    async def addnote(self, ctx, member: discord.Member, note: str):
+    async def addnote(self, ctx: discord.ApplicationContext, member: discord.Member, note: str):
         if not ctx.author.guild_permissions.moderate_members:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
 
@@ -170,7 +170,7 @@ class Social(commands.Cog):
     @notes.command(name='warn', description='Add a warning to a user. (like a note but sends a dm)')
     @option('member', discord.Member, description='The member to add the warning to')
     @option('reason', str, description='The reason for the warning')
-    async def warn(self, ctx, member: discord.Member, warning: str):
+    async def warn(self, ctx: discord.ApplicationContext, member: discord.Member, warning: str):
         if not ctx.author.guild_permissions.moderate_members:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
 
@@ -198,7 +198,7 @@ class Social(commands.Cog):
 
     @notes.command(name='remove', description='Remove a note from a user.')
     @option('note_id', str, description='The id of the note to remove')
-    async def removenote(self, ctx, note_id: str):
+    async def removenote(self, ctx: discord.ApplicationContext, note_id: str):
         if not ctx.author.guild_permissions.moderate_members:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         note = await db.get_note(note_id.lower())
@@ -235,7 +235,7 @@ class Social(commands.Cog):
 
     @notes.command(name='clear', description='Clear all notes for a user.')
     @option('member', discord.Member, description='The member to clear notes for')
-    async def clearnotes(self, ctx, member):
+    async def clearnotes(self, ctx: discord.ApplicationContext, member):
         if not ctx.author.guild_permissions.moderate_members:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         

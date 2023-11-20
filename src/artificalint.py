@@ -118,7 +118,7 @@ class VettingInterviewer:
         else:
             return False
 
-    async def vet_user(self, ctx, user):
+    async def vet_user(self, ctx: discord.ApplicationContext, user):
 
         log("aivetting", "startvetting", f"{lid(self)} starting vetting for {log_user(user)}")
 

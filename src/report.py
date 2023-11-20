@@ -4,7 +4,7 @@ from .casemanager import Case
 
 class UserReport:
 
-    def __init__(self, bot, reporter, member, description: str = None):
+    def __init__(self, bot, reporter: discord.Member, member: discord.Member, description: str = None):
         self.bot = bot
         self.reporter = reporter
         self.member = member

@@ -16,7 +16,7 @@ class Verification(commands.Cog):
     currently_beta_verifying = []
 
     @slash_command(name='betaverify', description='Test the new AI-based vetting system.')
-    async def betaverify(self, ctx):
+    async def betaverify(self, ctx: discord.ApplicationContext):
         if ctx.author.id in self.currently_beta_verifying:
             return await ctx.respond("You are already being verified.", ephemeral=True)
         # reject if the channel isnt a dm
@@ -56,7 +56,7 @@ class Verification(commands.Cog):
     @slash_command(name='asktutor', description='Ask Marxist AI tutor a question. [Answers may be wrong, this is for fun.]')  # TODO: move this where it actually belongs
     @option(name='question', description='The question to ask.', required=True)
     @option(name='ephemeral', description='Whether to make the response ephemeral.', required=False)
-    async def asktutor(self, ctx, question: str, ephemeral: bool = True):
+    async def asktutor(self, ctx: discord.ApplicationContext, question: str, ephemeral: bool = True):
         await ctx.interaction.response.defer(ephemeral=ephemeral)
         embed = discord.Embed(title="Question", description=question)
         embed.set_author(name=ctx.author, icon_url=ctx.author.avatar.url if ctx.author.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
@@ -81,7 +81,7 @@ class Verification(commands.Cog):
     currently_ai_verifying = {}
 
     @slash_command(name='verify', description='Verify yourself!')
-    async def verify(self, ctx):
+    async def verify(self, ctx: discord.ApplicationContext):
 
         # cant have several lines of questioning at once
         if str(ctx.author.id) in self.currently_ai_verifying:
@@ -155,7 +155,7 @@ class Verification(commands.Cog):
     @verifying.command(name='yank', description='Yank a currently verifying users\' interview progress.')
     @option('user', discord.Member, description='The user to yank progress for.')
     @option('ephemeral', bool, description='Whether to send the message as an ephemeral message or not.', default=True)
-    async def verifyyank(self, ctx, user: discord.Member, ephemeral=True):
+    async def verifyyank(self, ctx: discord.ApplicationContext, user: discord.Member, ephemeral=True):
         if not ctx.author.guild_permissions.manage_roles:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         if str(user.id) in self.currently_ai_verifying:
@@ -166,7 +166,7 @@ class Verification(commands.Cog):
             await ctx.respond("User is not being verified.", ephemeral=ephemeral)
 
     @verifying.command(name='list', description='See who is verifying currently.')
-    async def verifyinglist(self, ctx):
+    async def verifyinglist(self, ctx: discord.ApplicationContext):
         if not ctx.author.guild_permissions.manage_roles:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         if len(self.currently_ai_verifying) == 0:
@@ -197,7 +197,7 @@ class Verification(commands.Cog):
     @verifying.command(name='bypass', description='Bypass verification for a user.')
     @option('user', discord.Member, description='The user to bypass verification for.')
     @option('ruling', str, description='The ruling to give the user.', default="left")
-    async def verifybypass(self, ctx, user: discord.Member, ruling="left"):
+    async def verifybypass(self, ctx: discord.ApplicationContext, user: discord.Member, ruling="left"):
         ruling = ruling.lower()
         if not ctx.author.guild_permissions.manage_roles:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
@@ -227,7 +227,7 @@ class Verification(commands.Cog):
     
     @slash_command(name='unverify', description='Remove a user\'s verification record and make them do it again.')
     @option('user', discord.Member, description='The user to unverify.')
-    async def unverify(self, ctx, user: discord.Member):
+    async def unverify(self, ctx: discord.ApplicationContext, user: discord.Member):
         if not ctx.author.guild_permissions.manage_roles:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         await db.del_verification(user.id)

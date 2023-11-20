@@ -75,7 +75,7 @@ class Prison(commands.Cog):
 
     # TODO: debug command remove later
     @slash_command(name='eligiblejurors', description='Test the speed of the juror selection algorithm.')
-    async def eligiblejurors(self, ctx):
+    async def eligiblejurors(self, ctx: discord.ApplicationContext):
         if not security.is_sudoer(ctx.author):
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         # get time
@@ -105,7 +105,7 @@ class Prison(commands.Cog):
         return await ctx.respond(f"Found ({len(user)} total/{len(user_resolved)} discord.Member) eligible jurors in {total_time_diff} seconds. (db: {time_db_end - time_start}, resolve: {time_resolve_end - time_db_end})", ephemeral=True)
 
     @slash_command(name='playercsv', description='Get a CSV of all players.')
-    async def playercsv(self, ctx):
+    async def playercsv(self, ctx: discord.ApplicationContext):
         if not security.is_sudoer(ctx.author):
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         
@@ -132,7 +132,7 @@ class Prison(commands.Cog):
     @option('time', str, description='The time to prison the member for')
     @option('reason', str, description='The reason for the prison')
     @option('ephemeral', bool, description='Whether to send the sentence as an ephemeral message')
-    async def prison(self, ctx, member: discord.Member, time: str, reason: str, ephemeral: Optional[bool] = False):
+    async def prison(self, ctx: discord.ApplicationContext, member: discord.Member, time: str, reason: str, ephemeral: Optional[bool] = False):
         if not ctx.author.guild_permissions.manage_roles:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         
@@ -175,7 +175,7 @@ class Prison(commands.Cog):
     @sentence.command(name='view', description='Get the sentence of a user.')
     @option('member', discord.Member, description='The member to get the sentence of')
     @option('ephemeral', bool, description='Whether to send the sentence as an ephemeral message')
-    async def view_sentence(self, ctx, member: discord.Member = None, ephemeral: Optional[bool] = True):
+    async def view_sentence(self, ctx: discord.ApplicationContext, member: discord.Member = None, ephemeral: Optional[bool] = True):
         if not member:
             member = ctx.author
 
@@ -204,7 +204,7 @@ class Prison(commands.Cog):
     @option('member', discord.Member, description='The member to release')
     @option('reason', str, description='The reason for the release')
     @option('ephemeral', bool, description='Whether to send the sentence as an ephemeral message')
-    async def release(self, ctx, member: discord.Member, reason: str, ephemeral: Optional[bool] = False):
+    async def release(self, ctx: discord.ApplicationContext, member: discord.Member, reason: str, ephemeral: Optional[bool] = False):
         if not ctx.author.guild_permissions.manage_roles:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
 
@@ -225,7 +225,7 @@ class Prison(commands.Cog):
     @option('member', discord.Member, description='The member to adjust the sentence of')
     @option('time', str, description='The time to adjust the sentence by')
     @option('ephemeral', bool, description='Whether to send the sentence as an ephemeral message')
-    async def adjustsentence(self, ctx, member: discord.Member, time: str, ephemeral: Optional[bool] = True):
+    async def adjustsentence(self, ctx: discord.ApplicationContext, member: discord.Member, time: str, ephemeral: Optional[bool] = True):
         if not ctx.author.guild_permissions.manage_roles:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         

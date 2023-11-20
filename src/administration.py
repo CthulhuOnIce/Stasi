@@ -18,7 +18,7 @@ class Administration(commands.Cog):
         self.bot = bot
 
     @slash_command(name='git', description='Get currently running git information.')
-    async def git(self, ctx):
+    async def git(self, ctx: discord.ApplicationContext):
         embed = discord.Embed(title='Git Info', description='Currently running environment and version information.')
         embed.add_field(name='Python Version', value=f'`{sys.version}`', inline=False)
         embed.add_field(name='Discord Module Version', value=f'`{discord.__version__}`', inline=False)
@@ -28,7 +28,7 @@ class Administration(commands.Cog):
         await ctx.respond(embed=embed, ephemeral=True)
 
     @slash_command(name='last10', description='Get the last 10 commits made to the codebase.')
-    async def last10(self, ctx):
+    async def last10(self, ctx: discord.ApplicationContext):
         repo = git.Repo(search_parent_directories=True)
         embed = discord.Embed(title='Last 10 Commits', description='The last 10 commits made to the codebase.')
         limit = 10
@@ -42,7 +42,7 @@ class Administration(commands.Cog):
 
     @slash_command(name='update', description='Update the bot.')
     @option(name='force', description='Force update even if repo is dirty.', type=bool, required=False, default=False)
-    async def update(self, ctx, force: bool = False):
+    async def update(self, ctx: discord.ApplicationContext, force: bool = False):
         if not security.is_sudoer(ctx.author):
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
 

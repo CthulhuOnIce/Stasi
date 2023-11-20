@@ -61,7 +61,7 @@ async def on_ready():  # I just like seeing basic info like this
         
 
 @bot.event
-async def on_command_error(ctx, error):  # share certain errors with the user
+async def on_command_error(ctx: discord.ApplicationContext, error):  # share certain errors with the user
     if isinstance(error, commands.CommandNotFound):
         return
     if isinstance(error, commands.BadArgument):

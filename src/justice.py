@@ -25,10 +25,10 @@ class Justice(commands.Cog):
     
     case_selection = {}
     
-    def setActiveCase(self, member, case):
+    def setActiveCase(self, member: discord.Member, case: cm.Case):
         self.case_selection[member.id] = case
 
-    def getActiveCase(self, member) -> cm.Case:
+    def getActiveCase(self, member: discord.Member) -> cm.Case:
         return self.case_selection[member.id] if member.id in self.case_selection else None
 
     async def active_case_options(ctx: discord.AutocompleteContext):
@@ -36,7 +36,7 @@ class Justice(commands.Cog):
 
     case = discord.SlashCommandGroup("case", "Basic case management commands")
     @case.command(name="select", description="Select a case as your active case.")
-    async def select_case(self, ctx, case: discord.Option(str, autocomplete=discord.utils.basic_autocomplete(active_case_options))):
+    async def select_case(self, ctx: discord.ApplicationContext, case: discord.Option(str, autocomplete=discord.utils.basic_autocomplete(active_case_options))):
         case = cm.getCaseByID(case.split(" ")[-1])
         if case is None:
             return await ctx.respond("Invalid case ID.", ephemeral=True)
@@ -46,7 +46,7 @@ class Justice(commands.Cog):
     
     # TODO: remove when done debugging
     @case.command(name="tick", description="DEBUG: trigger a tick event on your active case.")
-    async def tick_case(self, ctx):
+    async def tick_case(self, ctx: discord.ApplicationContext):
         case = self.getActiveCase(ctx.author)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
@@ -55,7 +55,7 @@ class Justice(commands.Cog):
 
     # TODO: Confirmation message
     @case.command(name="statement", description="Make a statement in your active case.")
-    async def statement(self, ctx, statement: str):
+    async def statement(self, ctx: discord.ApplicationContext, statement: str):
         case = self.getActiveCase(ctx.author)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
@@ -64,7 +64,7 @@ class Justice(commands.Cog):
         await ctx.respond("Statement added.", ephemeral=True)
 
     @case.command(name="info", description="Get information about a case.")
-    async def case_info(self, ctx, ephemeral: bool = True):
+    async def case_info(self, ctx: discord.ApplicationContext, ephemeral: bool = True):
         case = self.getActiveCase(ctx.author)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
@@ -108,7 +108,7 @@ class Justice(commands.Cog):
         return [f"{case}: {case.id}" for case in cm.ACTIVECASES if case.stage == 1 and ctx.interaction.user.id in case.jurors]
 
     @jury.command(name="join", description="Join an active case as a juror.")
-    async def jury_join(self, ctx, case: discord.Option(str, autocomplete=discord.utils.basic_autocomplete(juror_case_options))):
+    async def jury_join(self, ctx: discord.ApplicationContext, case: discord.Option(str, autocomplete=discord.utils.basic_autocomplete(juror_case_options))):
         case = cm.getCaseByID(case.split(" ")[-1])
         if case is None:
             return await ctx.respond("Invalid case ID.", ephemeral=True)
@@ -122,13 +122,13 @@ class Justice(commands.Cog):
 
     @slash_command(name='normalusername', description='Get a user\'s normal username.')
     @option("member", discord.Member, description="The member to get the normal username of.")
-    async def normal_username(self, ctx, member: discord.Member):
+    async def normal_username(self, ctx: discord.ApplicationContext, member: discord.Member):
         await ctx.respond(cm.Case.normalUsername(None, member), ephemeral=True)
 
     @slash_command(name='filetestcase', description='File a test case.')
     @option("member", discord.Member, description="The member to file a case against.")
     @option("reason", str, description="The reason for filing a case.")
-    async def test_case(self, ctx, member: discord.Member, reason: str):
+    async def test_case(self, ctx: discord.ApplicationContext, member: discord.Member, reason: str):
         case = await cm.Case().New(ctx.guild, self.bot, f"{cm.Case.normalUsername(None, ctx.author)} v. {cm.Case.normalUsername(None, member)}", reason, ctx.author, member, cm.WarningPenalty(cm.Case))
         self.setActiveCase(ctx.author, case)
         self.setActiveCase(member, case)
@@ -139,7 +139,7 @@ class Justice(commands.Cog):
     report = discord.SlashCommandGroup("report", "Commands for managing reports to server staff")
 
     @report.command(name="submit", description="Submit your active report.")
-    async def submit_report(self, ctx):
+    async def submit_report(self, ctx: discord.ApplicationContext):
         if ctx.author.id not in self.reports:
             return await ctx.respond("You do not have an active report.", ephemeral=True)
 
@@ -149,7 +149,7 @@ class Justice(commands.Cog):
         await ctx.respond("Report sent.", ephemeral=True)
     
     @report.command(name="cancel", description="Cancel your active report.")
-    async def cancel_report(self, ctx):
+    async def cancel_report(self, ctx: discord.ApplicationContext):
         if ctx.author.id not in self.reports:
             return await ctx.respond("You do not have an active report.", ephemeral=True)
         
@@ -158,7 +158,7 @@ class Justice(commands.Cog):
 
     # add option to report a user by right clicking a message
     @commands.message_command(name="Report Message to Server Staff")
-    async def report_message(self, ctx, message: discord.Message):
+    async def report_message(self, ctx: discord.ApplicationContext, message: discord.Message):
         if ctx.author.id in self.reports:
             self.reports[ctx.author.id].add_message(message)
             await ctx.respond("Message added to report.", ephemeral=True)
@@ -169,7 +169,7 @@ class Justice(commands.Cog):
             await ctx.respond("Report sent.", ephemeral=True)
 
     @commands.user_command(name="Report User to Server Staff")
-    async def report_user(self, ctx, member: discord.Member):
+    async def report_user(self, ctx: discord.ApplicationContext, member: discord.Member):
         if ctx.author.id in self.reports:
             return await ctx.respond("You already have an active report. Submit it to start a new one.", ephemeral=True)
 
