@@ -243,12 +243,11 @@ class Case:
         # TODO: remove case from database and archive it
         return
 
-
     def generateNewID(self):
         # 11042023-01, 11042023-02, etc.
         number = str(len(ACTIVECASES)).zfill(2)
         return f"{datetime.datetime.now(datetime.timezone.utc).strftime('%m%d%Y')}-{number}"
-    
+
     async def Announce(self, content: str = None, embed: discord.Embed = None, jurors: bool = True, defense: bool = True, prosecution: bool = True, news_wire: bool = True):
         # content = plain text content
         # embed = an embed
@@ -330,6 +329,22 @@ class Case:
             # TODO: change to log
             print(f"nameUserByID for {self.case} ({self.case.id}) Could not look up {userid}. This should never happen.")
             return f"Unknown User #{utils.int_to_base64(userid)}"
+        
+    def canVote(self, user: discord.Member):
+        if user.id in self.jury_pool_ids:
+            return True
+        else:
+            return False
+        
+    def canSubmitMotions(self, user: discord.Member):
+        if user.id == self.plaintiff_id:
+            return True
+        if user.id == self.defense_id:
+            return True
+        if user.id in self.jury_pool_ids:
+            return True
+        else:
+            return False
 
     async def findEligibleJurors(self) -> List[discord.Member]:
         d_b = await db.create_connection("users")
@@ -366,7 +381,7 @@ class Case:
         return user_resolved
 
     
-    async def addJuror(self, user, pseudonym: str = None):
+    async def addJuror(self, user: discord.Member, pseudonym: str = None):
         
         self.jury_pool_ids.append(user.id)
 
@@ -381,6 +396,14 @@ class Case:
             f"{self.nameUserByID(user.id)} has joined the jury.",
             juror = user.id
         ))
+
+        # TODO: better introduction and quickstart guide
+        msg =  f"You have joined the jury for **{self.title}** (`{self.id}`).\n"
+        msg += f"Your job is to vote on motions presented in court, consider evidence, and ultimately decide the verdict.\n"
+        msg += f"You will be notified automatically for case updates.\n"
+
+        await user.send(msg)
+
         return
 
     async def Tick(self):  # called by case manager or when certain events happen, like a juror leaving the case

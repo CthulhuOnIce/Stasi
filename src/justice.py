@@ -97,11 +97,6 @@ class Justice(commands.Cog):
             
         await ctx.respond(embed=front_page, view=caseinfoview(), ephemeral=ephemeral)
 
-    @case.command(name="paginatetest", description="Test pagination.")
-    async def paginate_test(self, ctx: discord.ApplicationContext):
-        answer = await qa.bool_choice(ctx, "Hit one", cancel_option=True)
-        await ctx.interaction.edit_original_response(content=answer, embed=None, view=None)
-
     jury = discord.SlashCommandGroup("jury", "Jury commands")
     
     async def juror_case_options(ctx: discord.AutocompleteContext):
@@ -119,13 +114,21 @@ class Justice(commands.Cog):
         await case.addJuror(ctx.author)
 
         return await ctx.respond(f"Joined case **{case}** (`{case.id}`) as a juror.", ephemeral=True)
+    
+    @jury.command(name="say", description="Say something privately to the other jurors.")
+    async def jury_say(self, ctx: discord.ApplicationContext, message: str):
+        case = self.getActiveCase(ctx.author)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        if ctx.author.id not in case.jury_pool_ids:
+            return await ctx.respond("You are not a juror in this case.", ephemeral=True)
+        
+        await case.juror_say(ctx.author, message)
+        await ctx.respond("Message sent.", ephemeral=True)
 
-    @slash_command(name='normalusername', description='Get a user\'s normal username.')
-    @option("member", discord.Member, description="The member to get the normal username of.")
-    async def normal_username(self, ctx: discord.ApplicationContext, member: discord.Member):
-        await ctx.respond(cm.Case.normalUsername(None, member), ephemeral=True)
+    dbg = discord.SlashCommandGroup("debug", "Debug commands for testing purposes")
 
-    @slash_command(name='filetestcase', description='File a test case.')
+    @dbg.command(name='filetestcase', description='File a test case.')
     @option("member", discord.Member, description="The member to file a case against.")
     @option("reason", str, description="The reason for filing a case.")
     async def test_case(self, ctx: discord.ApplicationContext, member: discord.Member, reason: str):
@@ -133,6 +136,27 @@ class Justice(commands.Cog):
         self.setActiveCase(ctx.author, case)
         self.setActiveCase(member, case)
         await ctx.respond(f"Filed test case **{case}** (`{case.id}`) It has automatically been set as your active case.", ephemeral=True)
+
+    @dbg.command(name='appointjuror', description='Appoint a juror to a case.')
+    @option("member", discord.Member, description="The member to appoint as a juror.")
+    @option("pseudonym", str, description="The pseudonym to use for the juror.", optional=True)
+    async def appoint_juror(self, ctx: discord.ApplicationContext, member: discord.Member, pseudonym: Optional[str] = None):
+        case = self.getActiveCase(ctx.author)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        if case.stage != 0:
+            return await ctx.respond("This case is not in the jury selection stage.", ephemeral=True)
+        if member.id in case.jury_pool_ids:
+            return await ctx.respond("This member is already a juror in this case.", ephemeral=True)
+
+        await case.addJuror(member, pseudonym)
+        await ctx.respond(f"Appointed {cm.Case.normalUsername(None, member)} as a juror in this case.", ephemeral=True)
+
+    @dbg.command(name="viewtest", description="Test whichever view is being worked on.")
+    async def paginate_test(self, ctx: discord.ApplicationContext):
+        answer = await qa.bool_choice(ctx, "Hit one", cancel_option=True)
+        await ctx.interaction.edit_original_response(content=answer, embed=None, view=None)
+
 
     reports = {}
 
