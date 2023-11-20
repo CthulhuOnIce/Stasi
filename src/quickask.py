@@ -1,6 +1,6 @@
 import discord
 
-async def confirm(channel, user, question, embed: discord.Embed = None, cancel_option: bool = False):
+async def bool_choice(channel, user, question, embed: discord.Embed = None, cancel_option: bool = False):
     class yes_no_view(discord.ui.View):
 
         def __init__(self):

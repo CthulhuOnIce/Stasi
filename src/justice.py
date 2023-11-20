@@ -14,7 +14,7 @@ from . import utils
 from .stasilogging import *
 from . import casemanager as cm
 from . import report as rm
-
+from . import quickask as qa
 
 
 class Justice(commands.Cog):
@@ -96,6 +96,12 @@ class Justice(commands.Cog):
                 await interaction.response.edit_message(embed=event_page)
             
         await ctx.respond(embed=front_page, view=caseinfoview(), ephemeral=ephemeral)
+
+    @case.command(name="paginatetest", description="Test pagination.")
+    async def paginate_test(self, ctx):
+        pages = [discord.Embed(title="Page 1"), discord.Embed(title="Page 2"), discord.Embed(title="Page 3")]
+        view = utils.PaginateView(pages)
+        await ctx.respond(embed=pages[0], view=view)
 
     jury = discord.SlashCommandGroup("jury", "Jury commands")
     
