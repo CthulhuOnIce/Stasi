@@ -1,6 +1,6 @@
 import discord
 
-async def bool_choice(channel, user, question, embed: discord.Embed = None, cancel_option: bool = False):
+async def bool_choice(ctx: discord.ApplicationContext, question, embed: discord.Embed = None, cancel_option: bool = False):
     class yes_no_view(discord.ui.View):
 
         def __init__(self):
@@ -27,7 +27,7 @@ async def bool_choice(channel, user, question, embed: discord.Embed = None, canc
     
     view = yes_no_view()
     
-    msg = await channel.send(question, embed=embed, view=view)
+    msg = await ctx.respond(question, embed=embed, view=view, ephemeral=True)
+    
     await view.wait()
-    await msg.delete()
     return view.value

@@ -98,10 +98,9 @@ class Justice(commands.Cog):
         await ctx.respond(embed=front_page, view=caseinfoview(), ephemeral=ephemeral)
 
     @case.command(name="paginatetest", description="Test pagination.")
-    async def paginate_test(self, ctx):
-        pages = [discord.Embed(title="Page 1"), discord.Embed(title="Page 2"), discord.Embed(title="Page 3")]
-        view = utils.PaginateView(pages)
-        await ctx.respond(embed=pages[0], view=view)
+    async def paginate_test(self, ctx: discord.ApplicationContext):
+        answer = await qa.bool_choice(ctx, "Hit one", cancel_option=True)
+        await ctx.interaction.edit_original_response(content=answer, embed=None, view=None)
 
     jury = discord.SlashCommandGroup("jury", "Jury commands")
     
