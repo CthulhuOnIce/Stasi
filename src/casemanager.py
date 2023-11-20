@@ -542,7 +542,7 @@ class Case:
         # if this is set to true, Tick() won't do anything, good for completely freezing the case 
         self.no_tick: bool = False
 
-        self.Save()
+        await self.Save()
 
 
 
@@ -575,7 +575,7 @@ class Case:
         ))
         return
 
-    def Save(self):
+    async def Save(self):
         case_dict = {
                 # metadata
                 "_id": self.id,
@@ -618,7 +618,51 @@ class Case:
                 
                 "no_tick": self.no_tick
             }
+
+        db_ = await db.create_connection("cases")
+        await db_.update_one({"_id": self.id}, case_dict, upsert=True)
+
         return case_dict
+    
+    def loadFromDict(self, guild, bot, d: dict):
+        self.guild = guild
+        self.bot = bot
+
+        self.id = d["_id"]
+        self.title = d["title"]
+        self.description = d["description"]
+        self.status = d["status"]
+        self.created = d["filed_date"]
+
+        self.plaintiff_id = d["plaintiff_id"]
+        self.defense_id = d["defense_id"]
+
+        self.personal_statements = d["personal_statements"]
+        self.locks = d["locks"]
+
+        self.penalties = [penaltyFromDict(self, penalty) for penalty in d["penalties"]]
+        self.plea_deal_penalties = [penaltyFromDict(self, penalty) for penalty in d["plea_deal_penalties"]]
+
+        self.stage = d["stage"]
+        self.guilty = d["guilty"]
+
+        self.motion_number = d["motion_number"]
+        self.motion_queue = [self.loadMotionFromDict(motion) for motion in d["motion_queue"]]
+
+        self.jury_pool_ids = d["jury_pool_ids"]
+        self.jury_invites = d["jury_invites"]
+
+        self.anonymization = d["anonymization"]
+        self.known_users = d["known_users"]
+
+        self.event_log = d["event_log"]
+        self.juror_chat_log = d["juror_chat_log"]
+
+        self.no_tick = d["no_tick"]
+
+        return self
+
+
 
     def safedump(self, d: dict):
         def default(o):
