@@ -15,12 +15,12 @@ max_errors = 6 # 1 and a half minutes
 async def make_chatgpt_request(messages: List[dict]):
     res = await aclient.chat.completions.create(model="gpt-3.5-turbo",
     messages=messages)
-    return res.choices[0].message.content
+    return res.choices[0].message
 
 async def make_vetting_chatgpt_request(messages: List[dict]):
     res = await aclient.chat.completions.create(model=config.C["openai"]["vettingmodel"],
     messages=messages)
-    return res.choices[0].message.content
+    return res.choices[0].message
 
 async def make_chatgpt4_request(messages: List[dict]):
     res = await aclient.chat.completions.create(model="gpt-4",
@@ -90,7 +90,7 @@ class VettingInterviewer:
             response = await make_vetting_chatgpt_request(self.messages)
             self.errors_in_a_row = 0
             self.messages.append({"role": "assistant", "content": ["content"]})
-            return response["content"]
+            return response.content
         
         except Exception as e:
             self.errors_in_a_row += 1
@@ -165,7 +165,7 @@ class VettingInterviewer:
 
 async def tutor_question(question):
     res = await make_chatgpt4_request([{"role": "system", "content": config.C["openai"]["tutor_prompt"]}, {"role": "user", "content": question}])
-    return res["content"]
+    return res.content
 
 
 class BetaVettingInterviewer(VettingInterviewer):
@@ -194,17 +194,17 @@ class BetaVettingInterviewer(VettingInterviewer):
     async def one_off_assistant(self, system, user):
         messages = [{"role": "system", "content": system}, {"role": "assistant", "content": user}]
         res = await self.openai_request(messages)
-        return res["content"]
+        return res.content
 
     async def one_off(self, system, user):
         messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
         res = await self.openai_request(messages)
-        return res["content"]
+        return res.content
 
     async def generate_response(self):
         log("aivetting", "betaairesponse", f"Beta AI {lid(self)} Generating response...")
         response = await self.openai_request(self.messages)
-        response = response["content"]
+        response = response.content
 
         if not self.verdict_check(response):  # if there is no resolution code, check if the ai just forgot to include one
             prompt = "Evaluate the message given. If it seems like the user has made a final decision regarding someone else's ideology, respond with \"[END]\" If the user is not sure yet, or the interview is otherwise ongoing, do not respond with the code."
