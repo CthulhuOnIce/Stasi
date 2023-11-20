@@ -362,7 +362,6 @@ class Case:
                     continue
                 if member.guild_permissions.ban_members:
                     continue
-                if member.guild_permissions.manage
                 user_resolved.append(member)
         return user_resolved
 
