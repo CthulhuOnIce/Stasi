@@ -14,6 +14,7 @@ import discord
 import simplejson as json
 from . import utils
 from . import database as db
+import time
 
 
 nouns = open("wordlists/nouns.txt", "r").read().split("\n")
@@ -30,6 +31,15 @@ def getCaseByID(case_id: str) -> Case:
         if case.id == case_id:
             return case
     return None
+
+async def populateActiveCases(bot, guild: discord.Guild) -> List[Case]:
+    db_ = await db.create_connection("cases")
+    cases = await db_.find().to_list(None)
+    for case in cases:
+        new_case = Case(bot, guild)
+        new_case.loadFromDict(case)
+        ACTIVECASES.append(new_case)
+    return ACTIVECASES
 
 # makes intellisense work for event dictionaries
 class Event(TypedDict):
@@ -169,6 +179,8 @@ class Case:
             statement = statement
         ))
 
+        await self.Save()
+
         return statement
 
     async def offerPleaDeal(self, penalties: List[Penalty], expiration: datetime.datetime = None):
@@ -244,9 +256,10 @@ class Case:
         return
 
     def generateNewID(self):
-        # 11042023-01, 11042023-02, etc.
-        number = str(len(ACTIVECASES)).zfill(2)
-        return f"{datetime.datetime.now(datetime.timezone.utc).strftime('%m%d%Y')}-{number}"
+        candidate = f"{datetime.datetime.now(datetime.timezone.utc).strftime('%m%d%Y')}-{random.randint(100, 999)}"
+        while getCaseByID(candidate):
+            candidate = f"{datetime.datetime.now(datetime.timezone.utc).strftime('%m%d%Y')}-{random.randint(100, 999)}"
+        return candidate
 
     async def Announce(self, content: str = None, embed: discord.Embed = None, jurors: bool = True, defense: bool = True, prosecution: bool = True, news_wire: bool = True):
         # content = plain text content
@@ -403,10 +416,13 @@ class Case:
         msg += f"You will be notified automatically for case updates.\n"
 
         await user.send(msg)
+        await self.Save()
 
         return
 
     async def Tick(self):  # called by case manager or when certain events happen, like a juror leaving the case
+
+        await self.Save()
 
         if self.no_tick:
             return
@@ -492,15 +508,12 @@ class Case:
     def jury_pool(self):
         return [self.fetchUser(user) for user in self.jury_pool_ids]
 
-    async def New(self, guild: discord.Guild, bot, title: str, description: str, plaintiff: discord.Member, defense: discord.Member, penalties: List[Penalty]) -> Case:
+    async def New(self, plaintiff: discord.Member, defense: discord.Member, penalties: List[Penalty], description: str) -> Case:
 
         if isinstance(penalties, Penalty):
             penalties = [penalties]
 
-        self.guild = guild
-        self.bot = bot
-
-        self.title = title
+        self.title = f"{self.normalUsername(plaintiff)} v. {self.normalUsername(defense)}"
         self.description = description
         # "Jury Selection", "Guilty", "Not Guilty", 
         self.status = "Jury Selection"
@@ -542,9 +555,8 @@ class Case:
         # if this is set to true, Tick() won't do anything, good for completely freezing the case 
         self.no_tick: bool = False
 
+        log("Justice", "New", f"Created new case {self.id} with title {self.title}")
         await self.Save()
-
-
 
         ACTIVECASES.append(self)
         return self
@@ -576,6 +588,10 @@ class Case:
         return
 
     async def Save(self):
+        
+        t = time.time()
+        log("Justice", "Save", f"Saving case {self.id} to database")
+
         case_dict = {
                 # metadata
                 "_id": self.id,
@@ -608,9 +624,9 @@ class Case:
                 # TODO: do a similar thing with plaintiff and defense 
                 "jury_pool_ids": self.jury_pool_ids,
                 "jury_invites": self.jury_invites,  # people who have been invited to the jury but are yet to accept
-                
-                "anonymization": self.anonymization,  # id: name - anybody in this list will be anonymized and referred to by their dict value
-                "known_users": self.known_users,
+
+                "anonymization": {str(key): self.anonymization[key] for key in self.anonymization},
+                "known_users": {str(key): self.known_users[key] for key in self.known_users},
 
                 "votes": self.votes,  # guilty vs not guilty votes
                 "event_log": self.event_log,
@@ -620,13 +636,16 @@ class Case:
             }
 
         db_ = await db.create_connection("cases")
-        await db_.update_one({"_id": self.id}, case_dict, upsert=True)
+        await db_.update_one({"_id": self.id}, {"$set": case_dict}, upsert=True)
+
+
+
+        log("Justice", "Save", f"Saved case {self.id} to database in {round(time.time() - t, 5)} seconds")
 
         return case_dict
     
-    def loadFromDict(self, guild, bot, d: dict):
-        self.guild = guild
-        self.bot = bot
+    def loadFromDict(self, d: dict):
+        t = time.time()
 
         self.id = d["_id"]
         self.title = d["title"]
@@ -652,17 +671,17 @@ class Case:
         self.jury_pool_ids = d["jury_pool_ids"]
         self.jury_invites = d["jury_invites"]
 
-        self.anonymization = d["anonymization"]
-        self.known_users = d["known_users"]
+        self.anonymization = {int(key): d["anonymization"][key] for key in d["anonymization"]}
+        self.known_users = {int(key): d["known_users"][key] for key in d["known_users"]}
 
         self.event_log = d["event_log"]
         self.juror_chat_log = d["juror_chat_log"]
 
         self.no_tick = d["no_tick"]
 
+        log("Justice", "New", f"Loaded saved case {self.id} with title {self.title} in {round(time.time() - t, 5)} seconds")
+
         return self
-
-
 
     def safedump(self, d: dict):
         def default(o):
@@ -708,7 +727,9 @@ class Case:
 
         return zip
     
-    def __init__(self):
+    def __init__(self, bot, guild: discord.Guild):
+        self.bot = bot
+        self.guild = guild
         self.id = random.randint(100000000000000000, 999999999999999999)
         return
 

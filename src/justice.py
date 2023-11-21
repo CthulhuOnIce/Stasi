@@ -22,6 +22,11 @@ class Justice(commands.Cog):
         self.bot = bot
         self.CaseManager.start()
 
+    @commands.Cog.listener()
+    async def on_ready(self):
+        await cm.populateActiveCases(self.bot, self.bot.get_guild(config.C["guild_id"]))
+        log("Justice", "CaseManager", "Justice module ready.")
+
     
     case_selection = {}
     
@@ -132,7 +137,9 @@ class Justice(commands.Cog):
     @option("member", discord.Member, description="The member to file a case against.")
     @option("reason", str, description="The reason for filing a case.")
     async def test_case(self, ctx: discord.ApplicationContext, member: discord.Member, reason: str):
-        case = await cm.Case().New(ctx.guild, self.bot, f"{cm.Case.normalUsername(None, ctx.author)} v. {cm.Case.normalUsername(None, member)}", reason, ctx.author, member, cm.WarningPenalty(cm.Case))
+        penalty = cm.WarningPenalty(cm.Case).New("Test warning for test case.")
+        case = await cm.Case(self.bot, ctx.guild).New(ctx.author, member, penalty, "Test case for debugging the Case system")
+        
         self.setActiveCase(ctx.author, case)
         self.setActiveCase(member, case)
         await ctx.respond(f"Filed test case **{case}** (`{case.id}`) It has automatically been set as your active case.", ephemeral=True)
