@@ -294,6 +294,7 @@ class Justice(commands.Cog):
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
         for case in cm.getCasesByJuror(member):  # doesn't run if list is empty
+            log("Case", "CaseManager", f"Removing {utils.normalUsername(member)} from case {case.id} as they left the server.")
             await case.removeJuror(member)
         # for case in cm.ACTIVECASES:
             # if member.id == case.defense_id:
