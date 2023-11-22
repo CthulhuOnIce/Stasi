@@ -3,6 +3,7 @@ from typing import Optional
 import motor  # doing this locally instead of in database.py for greater modularity
 import datetime
 import random
+import time
 
 import discord
 from discord import option, slash_command
@@ -133,10 +134,23 @@ class Justice(commands.Cog):
 
     dbg = discord.SlashCommandGroup("debug", "Debug commands for testing purposes")
 
+    @dbg.command(name='wipecases', description='Wipe all cases from the database.')
+    async def wipe_cases(self, ctx: discord.ApplicationContext):
+        cm.ACTIVECASES = []
+        db_ = await db.create_connection("cases")
+        await db_.delete_many({})
+        await ctx.respond("Cases wiped.", ephemeral=True)
+
+    @dbg.command(name='tick', description='Trigger a tick event on all active cases.')
+    async def tick(self, ctx: discord.ApplicationContext):
+        t = time.time()
+        for case in cm.ACTIVECASES:
+            await case.Tick()
+        await ctx.respond(f"Tick triggered in {time.time() - t} seconds.", ephemeral=True)
+
     @dbg.command(name='filetestcase', description='File a test case.')
     @option("member", discord.Member, description="The member to file a case against.")
-    @option("reason", str, description="The reason for filing a case.")
-    async def test_case(self, ctx: discord.ApplicationContext, member: discord.Member, reason: str):
+    async def test_case(self, ctx: discord.ApplicationContext, member: discord.Member):
         penalty = cm.WarningPenalty(cm.Case).New("Test warning for test case.")
         case = await cm.Case(self.bot, ctx.guild).New(ctx.author, member, penalty, "Test case for debugging the Case system")
         
