@@ -291,6 +291,18 @@ class Justice(commands.Cog):
         self.reports[ctx.author.id] = rm.UserReport(self.bot, ctx.author, member)
         await ctx.respond("Report started. Select offending messages and hit 'Report Message to Server Staff' to add evidence. Then use /report submit to submit the report.", ephemeral=True)
 
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        for case in cm.getCasesByJuror(member):  # doesn't run if list is empty
+            await case.removeJuror(member)
+        # for case in cm.ACTIVECASES:
+            # if member.id == case.defense_id:
+            #     await case.defendantLeave()
+            # elif member.id in case.jury_pool_ids:
+            #     await case.jurorLeave(member)
+            # elif member.id == case.plaintiff_id:
+            #     await case.plaintiffLeave()
+
     @tasks.loop(minutes=15)
     async def CaseManager(self):
         log("Case", "CaseManager", "Doing Periodic Case Manager Loop")

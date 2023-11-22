@@ -44,6 +44,21 @@ async def populateActiveCases(bot, guild: discord.Guild) -> List[Case]:
     log("Case", "populateActiveCases", f"Populated {len(ACTIVECASES)} active cases for guild {guild.id} ({guild.name}) in {round(time.time() - t, 5)} seconds")
     return ACTIVECASES
 
+def memberIsJuror(member: discord.Member) -> bool:
+    member = member if isinstance(member, int) else member.id  # we don't actually care about the member object, just the id
+    for case in ACTIVECASES:
+        if member in case.jury_pool_ids:
+            return True
+    return False
+
+def getCasesByJuror(member: discord.Member) -> List[Case]:
+    member = member if isinstance(member, int) else member.id  # we don't actually care about the member object, just the id
+    cases = []
+    for case in ACTIVECASES:
+        if member in case.jury_pool_ids:
+            cases.append(case)
+    return cases
+
 # makes intellisense work for event dictionaries
 class Event(TypedDict):
     event_id: str
@@ -364,6 +379,25 @@ class Case:
             return True
         else:
             return False
+        
+    async def removeJuror(self, user: discord.Member, reason = None):
+        user = user if isinstance(user, int) else user.id  # we don't actually care about the member object, just the id
+
+        desc = f"{self.nameUserByID(user)} has left the jury."
+        if reason:
+            desc += f"\n\nReason: {reason}"
+        if user in self.jury_pool_ids:
+            self.jury_pool_ids.remove(user)
+            self.event_log.append(await self.newEvent(
+                "juror_leave",
+                f"{self.nameUserByID(user)} has left the jury.",
+                desc,
+                juror = user
+            ))
+            await self.Tick()  # immediately tick to check if we need to re-select jurors
+            return True
+        else:
+            return False
 
     async def findEligibleJurors(self) -> List[discord.Member]:
         t = time.time()
@@ -434,7 +468,7 @@ class Case:
         return
     
     async def Tick(self):
-        await self.Save()
+        # await self.Save()
         await self.HeartBeat()
         await self.Save()
 
@@ -442,6 +476,23 @@ class Case:
 
         if self.no_tick:
             return
+        
+        # Sanity checks, this should be handled by on_member_remove, but just in case, we'll do it here too
+        # for if the bot is down or something
+        removed_jurors = []
+        for juror_id in self.jury_pool_ids:
+            user = self.guild.get_member(juror_id)
+            if not user:
+                self.jury_pool_ids.remove(juror_id)
+                removed_jurors.append(juror_id)
+        
+        if removed_jurors:
+            self.event_log.append(await self.newEvent(
+                "juror_leave",
+                f"{len(removed_jurors)} jurors have left the case.",
+                f"{len(removed_jurors)} jurors were removed from the case after leaving the server:\n{', '.join([self.nameUserByID(juror_id) for juror_id in removed_jurors])}",
+                jurors = removed_jurors
+            ))
         
         # check if plea bargain has expired
         if self.plea_deal_expiration and datetime.datetime.now(datetime.timezone.utc) > self.plea_deal_expiration:
