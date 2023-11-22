@@ -280,11 +280,14 @@ class Case:
             recipients.append(self.guild.get_channel(863539768306171928))
 
         for recipient in recipients:
-            if content:
-                await recipient.send(content)
-            if embed:
-                await recipient.send(content, embed=embed)
-    
+            try:
+                if content:
+                    await recipient.send(content)
+                if embed:
+                    await recipient.send(content, embed=embed)
+            except:
+                pass
+             
     def normalUsername(self, user):
         if not user.discriminator or user.discriminator == "0":
             return f"@{user.name}"

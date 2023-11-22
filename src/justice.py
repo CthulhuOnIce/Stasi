@@ -49,15 +49,71 @@ class Justice(commands.Cog):
         
         self.setActiveCase(ctx.author, case)
         return await ctx.respond(f"Selected case **{case}** (`{case.id}`) as your active case.", ephemeral=True)
-    
-    # TODO: remove when done debugging
-    @case.command(name="tick", description="DEBUG: trigger a tick event on your active case.")
-    async def tick_case(self, ctx: discord.ApplicationContext):
-        case = self.getActiveCase(ctx.author)
-        if case is None:
-            return await ctx.respond("You do not have an active case.", ephemeral=True)
-        await case.Tick()
-        await ctx.respond("Tick triggered.", ephemeral=True)
+
+    @case.command(name='file', description='File a case against a user.')
+    @option("member", discord.Member, description="The member to file a case against.")
+    async def file_case(self, ctx: discord.ApplicationContext, member: discord.Member):
+        
+        # Collect Reason from User
+
+        class ReasonModal(discord.ui.Modal):
+            def __init__(self, *args, **kwargs) -> None:
+                super().__init__(*args, **kwargs)
+
+                self.add_item(discord.ui.InputText(label="Reason for Filing Case Against User", style=discord.InputTextStyle.long))
+
+            async def callback(self, interaction: discord.Interaction):
+                self.value = self.children[0].value
+                self.interaction = interaction
+
+        modal = ReasonModal(title="Reason for Filing Case Against User")
+        await ctx.send_modal(modal)
+        await modal.wait()
+        if modal.value is None:
+            return await modal.interaction.response.send_message("You must provide a reason for filing a case.", ephemeral=True)
+        await modal.interaction.response.defer()
+        
+
+        def generateEmbed(text):
+            embed = discord.Embed(title="Confirm Reason", description=f"Is this your reason for filing a case against {cm.Case.normalUsername(None, member)}?")
+            embed.add_field(name="Reason", value=text)
+            return embed
+
+        embed = generateEmbed(modal.value)
+        msg = await ctx.respond(embed=embed, ephemeral=True)
+
+        class confirmView(discord.ui.View):
+            
+            def __init__(self, *args, **kwargs) -> None:
+                super().__init__(*args, **kwargs)
+                self.embed = generateEmbed(modal.value)
+
+            @discord.ui.button(label="Yes", style=discord.ButtonStyle.green, emoji="✅")
+            async def yes_click(self, button, interaction: discord.Interaction):
+                self.value = modal.value
+                for child in self.children:
+                    child.disabled = True
+                await msg.edit(view=self)
+                await interaction.response.defer()
+                self.stop()
+
+            @discord.ui.button(label="No", style=discord.ButtonStyle.red, emoji="❎")
+            async def no_click(self, button, interaction: discord.Interaction):
+                modal = ReasonModal(title="Reason for Filing Case Against User")
+                await interaction.response.send_modal(modal)
+                await modal.wait()
+                await modal.interaction.response.defer()
+                await msg.edit(embed=generateEmbed(modal.value))
+        
+        cf = confirmView()
+        await msg.edit(embed=embed, view=cf)
+        await cf.wait()
+        reason = cf.value
+
+        await ctx.respond(f"Filed case against {cm.Case.normalUsername(None, member)} for reason: {reason}", ephemeral=True)
+
+        guild = self.bot.get_guild(config.C["guild_id"])
+        case = await cm.Case(self.bot, guild).New(ctx.author, member, cm.WarningPenalty(cm.Case).New("This is a test warning"), "Case filed by user")
 
     # TODO: Confirmation message
     @case.command(name="statement", description="Make a statement in your active case.")
@@ -147,6 +203,15 @@ class Justice(commands.Cog):
         for case in cm.ACTIVECASES:
             await case.Tick()
         await ctx.respond(f"Tick triggered in {time.time() - t} seconds.", ephemeral=True)
+
+    # TODO: remove when done debugging
+    @dbg.command(name="tickone", description="DEBUG: trigger a tick event on your active case.")
+    async def tick_case(self, ctx: discord.ApplicationContext):
+        case = self.getActiveCase(ctx.author)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        await case.Tick()
+        await ctx.respond("Tick triggered.", ephemeral=True)
 
     @dbg.command(name='filetestcase', description='File a test case.')
     @option("member", discord.Member, description="The member to file a case against.")
