@@ -46,7 +46,6 @@ def seconds_to_time(time: int):
         return f"{seconds}s"
     else: # 0 seconds
         return "now"
-    
 
 def seconds_to_time_long(time: int):  # "one day, 10 hours, 10 minutes, 10 seconds"
     
@@ -90,4 +89,10 @@ def int_to_base64(n: int):
     base64_string = base64_bytes.decode('utf-8')
     
     return base64_string
+
+def normalUsername(user):
+    if not user.discriminator or user.discriminator == "0":
+        return f"@{user.name}"
+    else:
+        return f"{user}"
 

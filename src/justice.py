@@ -75,7 +75,7 @@ class Justice(commands.Cog):
         
 
         def generateEmbed(text):
-            embed = discord.Embed(title="Confirm Reason", description=f"Is this your reason for filing a case against {cm.Case.normalUsername(None, member)}?")
+            embed = discord.Embed(title="Confirm Reason", description=f"Is this your reason for filing a case against {utils.normalUsername(member)}?")
             embed.add_field(name="Reason", value=text)
             return embed
 
@@ -110,7 +110,7 @@ class Justice(commands.Cog):
         await cf.wait()
         reason = cf.value
 
-        await ctx.respond(f"Filed case against {cm.Case.normalUsername(None, member)} for reason: {reason}", ephemeral=True)
+        await ctx.respond(f"Filed case against {utils.normalUsername(member)} for reason: {reason}", ephemeral=True)
 
         guild = self.bot.get_guild(config.C["guild_id"])
         case = await cm.Case(self.bot, guild).New(ctx.author, member, cm.WarningPenalty(cm.Case).New("This is a test warning"), "Case filed by user")
@@ -236,7 +236,7 @@ class Justice(commands.Cog):
             return await ctx.respond("This member is already a juror in this case.", ephemeral=True)
 
         await case.addJuror(member, pseudonym)
-        await ctx.respond(f"Appointed {cm.Case.normalUsername(None, member)} as a juror in this case.", ephemeral=True)
+        await ctx.respond(f"Appointed {utils.normalUsername(member)} as a juror in this case.", ephemeral=True)
 
     @dbg.command(name="viewtest", description="Test whichever view is being worked on.")
     async def paginate_test(self, ctx: discord.ApplicationContext):

@@ -287,19 +287,13 @@ class Case:
                     await recipient.send(content, embed=embed)
             except:
                 pass
-             
-    def normalUsername(self, user):
-        if not user.discriminator or user.discriminator == "0":
-            return f"@{user.name}"
-        else:
-            return f"{user}"
 
     def registerUser(self, user, anonymousname: str = None):
         # TODO: decide whether known_users is mapped to int or str and remove these double cases
         if user.id in self.known_users or str(user.id) in self.known_users:  # don't re-register
             return
         
-        self.known_users[user.id] = self.normalUsername(user)
+        self.known_users[user.id] = utils.normalUsername(user)
         if anonymousname:
             self.anonymization[user.id] = anonymousname
 
@@ -325,7 +319,7 @@ class Case:
                 # TODO: change to log
                 print(f"nameUserByID for {self} ({self.id}) just had to look up an unregistered user {user} ({user.id}), make sure you're registering users to cases properly")
                 self.registerUser(user)
-                res = self.normalUsername(user)
+                res = utils.normalUsername(user)
 
         if title:
             if userid == self.defense_id:
@@ -516,7 +510,7 @@ class Case:
         if isinstance(penalties, Penalty):
             penalties = [penalties]
 
-        self.title = f"{self.normalUsername(plaintiff)} v. {self.normalUsername(defense)}"
+        self.title = f"{utils.normalUsername(plaintiff)} v. {utils.normalUsername(defense)}"
         self.description = description
         # "Jury Selection", "Guilty", "Not Guilty", 
         self.status = "Jury Selection"
