@@ -140,10 +140,39 @@ def penaltyFromDict(case, d: dict) -> Penalty:
                 new_penalty.__dict__[key] = d[key]
             return new_penalty
 
+# https://twemoji-cheatsheet.vercel.app/
+author_images = {
+    "normal": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9fe.png",  # 🧾
+    "ballot": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f5f3.png",  # 🗳️
+    "outbox": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4e4.png",  # 📤
+    "inbox":  "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4e5.png",  # 📥
+    "sign":   "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1faa7.png",  # 🪧
+    "lock":   "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f510.png",  # 🔐
+    "label":  "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f3f7.png",  # 🏷
+    "scroll": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4dc.png",  # 📜  
+    "opencab":"https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f5c3.png",  # 🗃
+    "scale":  "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2696.png",   # ⚖
+    "sentenv":"https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4e8.png",  # 📨
+    "pager":  "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4df.png",  # 📟
+}
 
-def eventToEmbed(event: Event) -> discord.Embed:
+def eventToEmbed(event: Event, case_name: str) -> discord.Embed:
     embed = discord.Embed(title=event["name"], description=event["desc"], timestamp=event["timestamp"])
     embed.set_footer(text=f"Event ID: {event['event_id']}")
+    icon_url = author_images["normal"]
+    
+    if event["event_id"] == "case_filed":
+        icon_url = author_images["opencab"]
+    elif event["event_id"] == "status_update":
+        icon_url = author_images["label"]
+    elif event["event_id"] == "juror_join":
+        icon_url = author_images["scale"]
+    elif event["event_id"] == "juror_leave":
+        icon_url = author_images["scale"]
+    elif event["event_id"] == "motion_up":
+        icon_url = author_images["ballot"]
+
+    embed.set_author(name=case_name, icon_url=icon_url)
     return embed
 
 class Case:
@@ -173,7 +202,7 @@ class Case:
         for kw in kwargs:
             event[kw] = kwargs[kw]
         
-        await self.Announce(None, embed=eventToEmbed(event), jurors=True, defense=True, prosecution=True, news_wire=True)
+        await self.Announce(None, embed=eventToEmbed(event, f"{self} ({self.id})"), jurors=True, defense=True, prosecution=True, news_wire=True)
 
         log("CaseEventLog", "newEvent", f"New event {self} ({self.id}): {event}", False)
 

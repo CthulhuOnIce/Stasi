@@ -116,7 +116,7 @@ class Justice(commands.Cog):
         await ctx.respond(f"Filed case against {utils.normalUsername(member)} for reason: {reason}", ephemeral=True)
 
         guild = self.bot.get_guild(config.C["guild_id"])
-        case = await cm.Case(self.bot, guild).New(ctx.author, member, cm.WarningPenalty(cm.Case).New("This is a test warning"), "Case filed by user")
+        case = await cm.Case(self.bot, guild).New(ctx.author, member, cm.WarningPenalty(cm.Case).New("This is a test warning"), reason)
         self.setActiveCase(ctx.author, case)
         self.setActiveCase(member, case)
 
