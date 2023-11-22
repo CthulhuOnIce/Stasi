@@ -855,7 +855,9 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
         return self.MotionID
 
     def Dict(self):  # like Motion.Save() but doesn't save the dictionary, just returns it instead. Motions are saved when their 
-        return self.__dict__
+        save = self.__dict__
+        save["type"] = self.__class__.__name__
+        return save
 
 class StatementMotion(Motion):
     
