@@ -15,7 +15,7 @@ import simplejson as json
 from . import utils
 from . import database as db
 import time
-
+from . import config
 
 nouns = open("wordlists/nouns.txt", "r").read().split("\n")
 adjectives = open("wordlists/adjectives.txt", "r").read().split("\n")
@@ -33,12 +33,15 @@ def getCaseByID(case_id: str) -> Case:
     return None
 
 async def populateActiveCases(bot, guild: discord.Guild) -> List[Case]:
+    t = time.time()
+    log("Case", "populateActiveCases", f"Populating active cases for guild {guild.id} ({guild.name})")
     db_ = await db.create_connection("cases")
     cases = await db_.find().to_list(None)
     for case in cases:
         new_case = Case(bot, guild)
         new_case.loadFromDict(case)
         ACTIVECASES.append(new_case)
+    log("Case", "populateActiveCases", f"Populated {len(ACTIVECASES)} active cases for guild {guild.id} ({guild.name}) in {round(time.time() - t, 5)} seconds")
     return ACTIVECASES
 
 # makes intellisense work for event dictionaries
@@ -157,6 +160,8 @@ class Case:
         
         await self.Announce(None, embed=eventToEmbed(event), jurors=True, defense=True, prosecution=True, news_wire=True)
 
+        log("CaseEventLog", "newEvent", f"New event {self} ({self.id}): {event}", False)
+
         return event
     
     class Statement(TypedDict):
@@ -178,6 +183,8 @@ class Case:
             f"{self.nameUserByID(statement['author_id'])} has submitted a personal statement:\n{statement['content']}",
             statement = statement
         ))
+
+        log("Case", "personalStatement", f"New personal statement from {self.nameUserByID(statement['author_id'])} ({statement['author_id']}) for case {self} ({self.id})")
 
         await self.Save()
 
@@ -214,6 +221,8 @@ class Case:
 
         for juror in self.jury_pool():
             juror.send(f"**JSAY: {self.nameUserByID(user.id)}:** {content}")
+
+        log("Case", "JSAY", f"{self.nameUserByID(user.id)} ({user.id}): {self.id}: {content}")
         
         return jsay
 
@@ -357,6 +366,8 @@ class Case:
             return False
 
     async def findEligibleJurors(self) -> List[discord.Member]:
+        t = time.time()
+        log("Case", "findEligibleJurors", f"Finding eligible jurors for case {self} ({self.id})")
         d_b = await db.create_connection("users")
         user = await d_b.find({
             # last seen less than 2 weeks ago
@@ -381,14 +392,19 @@ class Case:
             if u["_id"] in disqualified:
                 continue
 
+            disqual_role = self.guild.get_role(config.C["rightwing_role"])
             member: discord.Member = self.guild.get_member(u["_id"])
             if member:
                 if member.guild_permissions.administrator:
                     continue
                 if member.guild_permissions.ban_members:
                     continue
+                if disqual_role and disqual_role in member.roles:
+                    continue
                 user_resolved.append(member)
+        log("Case", "findEligibleJurors", f"Found {len(user_resolved)} eligible jurors for case {self} ({self.id}) in {round(time.time() - t, 5)} seconds")
         return user_resolved
+    
 
     
     async def addJuror(self, user: discord.Member, pseudonym: str = None):
@@ -416,10 +432,13 @@ class Case:
         await self.Save()
 
         return
-
-    async def Tick(self):  # called by case manager or when certain events happen, like a juror leaving the case
-
+    
+    async def Tick(self):
         await self.Save()
+        await self.HeartBeat()
+        await self.Save()
+
+    async def HeartBeat(self):  # called by case manager or when certain events happen, like a juror leaving the case
 
         if self.no_tick:
             return
@@ -447,9 +466,9 @@ class Case:
             eligible_jurors = await self.findEligibleJurors()
             for invitee in random.sample(eligible_jurors, invites_to_send):
                 try:
-                    print(f"Sending invite to {invitee} ({invitee.id}) for case {self} ({self.id})")
+                    log("Case", "InviteSent", f"Sending jury invite to {utils.normalUsername(invitee)} ({invitee.id}) for case {self} {self.id}")
                     self.jury_invites.append(invitee.id)
-                    await invitee.send(f"You have been invited to be a juror for {self.title} (`{self.id}`).\nTo accept, use `/jury join {self.id}`.")
+                    # await invitee.send(f"You have been invited to be a juror for {self.title} (`{self.id}`).\nTo accept, use `/jury join {self.id}`.")
                 except:
                     pass  # already removed from eligible jurors
             return
@@ -523,6 +542,7 @@ class Case:
 
         self.plea_deal_penalties: List[Penalty] = []
         self.plea_deal_expiration: datetime.datetime = None
+        self.motion_in_consideration = None
 
 
         self.stage = 1
@@ -539,6 +559,7 @@ class Case:
         self.registerUser(defense)
 
         # MIGHT REMOVE in favor of delivering verdict ny a motion
+        # alternatively, keep in place for archive purposes
         self.votes = {}
         self.event_log: List[Event] = [await self.newEvent(
             "case_filed",
@@ -552,7 +573,7 @@ class Case:
         # if this is set to true, Tick() won't do anything, good for completely freezing the case 
         self.no_tick: bool = False
 
-        log("Justice", "New", f"Created new case {self.id} with title {self.title}")
+        log("Case", "New", f"Created new case {self.id} with title {self.title}")
         await self.Save()
 
         ACTIVECASES.append(self)
@@ -566,7 +587,7 @@ class Case:
         return 
     
     def __del__(self):
-        ACTIVECASES.remove(self)
+        log("Case", "CaseDelete", f"Case {self} ({self.id}) has been deleted")
 
     def __str__(self):
         return self.title
@@ -587,7 +608,7 @@ class Case:
     async def Save(self):
         
         t = time.time()
-        log("Justice", "Save", f"Saving case {self.id} to database")
+        log("Case", "Save", f"Saving case {self.id} to database")
 
         case_dict = {
                 # metadata
@@ -603,11 +624,13 @@ class Case:
                 "defense_id": self.defense_id,
 
                 "personal_statements": self.personal_statements,
+                "motion_in_consideration": self.motion_in_consideration.MotionID if self.motion_in_consideration else None,
 
                 "locks": self.locks,
                 
                 "penalties": [penalty.save() for penalty in self.penalties],
                 "plea_deal_penalties": [penalty.save() for penalty in self.plea_deal_penalties],
+                "plea_deal_expiration": self.plea_deal_expiration,
                 
                 # processing stuff
                 "stage": self.stage,  # 0 - done (archived), 1 - jury selection, 2 - argumentation / body, 3 - ready to close, awaiting archive 
@@ -637,7 +660,7 @@ class Case:
 
 
 
-        log("Justice", "Save", f"Saved case {self.id} to database in {round(time.time() - t, 5)} seconds")
+        log("Case", "Save", f"Saved case {self.id} to database in {round(time.time() - t, 5)} seconds")
 
         return case_dict
     
@@ -658,12 +681,14 @@ class Case:
 
         self.penalties = [penaltyFromDict(self, penalty) for penalty in d["penalties"]]
         self.plea_deal_penalties = [penaltyFromDict(self, penalty) for penalty in d["plea_deal_penalties"]]
+        self.plea_deal_expiration = d["plea_deal_expiration"]
 
         self.stage = d["stage"]
         self.guilty = d["guilty"]
 
         self.motion_number = d["motion_number"]
         self.motion_queue = [self.loadMotionFromDict(motion) for motion in d["motion_queue"]]
+        self.motion_in_consideration = self.getMotionByID(d["motion_in_consideration"]) if d["motion_in_consideration"] else None
 
         self.jury_pool_ids = d["jury_pool_ids"]
         self.jury_invites = d["jury_invites"]
@@ -673,10 +698,11 @@ class Case:
 
         self.event_log = d["event_log"]
         self.juror_chat_log = d["juror_chat_log"]
+        self.votes = d["votes"]
 
         self.no_tick = d["no_tick"]
 
-        log("Justice", "New", f"Loaded saved case {self.id} with title {self.title} in {round(time.time() - t, 5)} seconds")
+        log("Case", "Load", f"Loaded saved case {self.id} with title {self.title} in {round(time.time() - t, 5)} seconds")
 
         return self
 

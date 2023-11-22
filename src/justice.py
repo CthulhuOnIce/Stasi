@@ -26,7 +26,7 @@ class Justice(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         await cm.populateActiveCases(self.bot, self.bot.get_guild(config.C["guild_id"]))
-        log("Justice", "CaseManager", "Justice module ready.")
+        log("Case", "CaseManager", "Justice module ready.")
 
     
     case_selection = {}
@@ -86,14 +86,15 @@ class Justice(commands.Cog):
             
             def __init__(self, *args, **kwargs) -> None:
                 super().__init__(*args, **kwargs)
+                self.value = modal.value
                 self.embed = generateEmbed(modal.value)
 
             @discord.ui.button(label="Yes", style=discord.ButtonStyle.green, emoji="✅")
             async def yes_click(self, button, interaction: discord.Interaction):
-                self.value = modal.value
                 for child in self.children:
                     child.disabled = True
                 await msg.edit(view=self)
+                
                 await interaction.response.defer()
                 self.stop()
 
@@ -102,6 +103,8 @@ class Justice(commands.Cog):
                 modal = ReasonModal(title="Reason for Filing Case Against User")
                 await interaction.response.send_modal(modal)
                 await modal.wait()
+                self.value = modal.value
+                log("Justice", "CaseManager", f"Modal value: {modal.value}")
                 await modal.interaction.response.defer()
                 await msg.edit(embed=generateEmbed(modal.value))
         
@@ -114,6 +117,8 @@ class Justice(commands.Cog):
 
         guild = self.bot.get_guild(config.C["guild_id"])
         case = await cm.Case(self.bot, guild).New(ctx.author, member, cm.WarningPenalty(cm.Case).New("This is a test warning"), "Case filed by user")
+        self.setActiveCase(ctx.author, case)
+        self.setActiveCase(member, case)
 
     # TODO: Confirmation message
     @case.command(name="statement", description="Make a statement in your active case.")
@@ -288,7 +293,7 @@ class Justice(commands.Cog):
 
     @tasks.loop(minutes=15)
     async def CaseManager(self):
-        log("Justice", "CaseManager", "Doing Periodic Case Manager Loop")
+        log("Case", "CaseManager", "Doing Periodic Case Manager Loop")
         for case in cm.ACTIVECASES:
             await case.Tick()
         return
