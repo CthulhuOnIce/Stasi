@@ -172,7 +172,6 @@ class Prisoner:
         log("justice", "prisoner", f"Archiving prisoner: {utils.normalUsername(self.prisoner())} ({self._id})")
         db_ = await db.create_connection("Warden")
         grab = await db_.delete_one({"_id": self._id})
-        print(grab.deleted_count)
         PRISONERS.remove(self)
 
     async def Save(self):

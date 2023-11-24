@@ -15,6 +15,7 @@ from . import utils
 from . import database as db
 import time
 from . import config
+from . import warden
 
 nouns = open("wordlists/nouns.txt", "r").read().split("\n")
 adjectives = open("wordlists/adjectives.txt", "r").read().split("\n")
@@ -126,8 +127,27 @@ class PermanentBanPenalty(Penalty):
     
     async def Execute(self):
         # await self.case.guild.ban(self.case.defense, reason=f"User Banned as Penalty of Case {self.case.id}: `{self.ban_text}`")
-        self.case.guild.ban(self.case.defense, reason=f"User Banned as Penalty of Case {self.case.id}: `{self.ban_text}`")
+        self.case.guild.ban(self.case.defense(), reason=f"User Banned as Penalty of Case {self.case.id}: `{self.ban_text}`")
         print(f"User Banned as Penalty of Case {self.case.id}: `{self.ban_text}`")
+
+class PrisonPenalty(Penalty):
+    def __init__(self, case):
+        super().__init__(case)
+        self.prison_length_seconds = None
+        return
+
+    def New(self, prison_length_seconds: int):
+        self.prison_length_seconds = prison_length_seconds
+        return self
+    
+    def describe(self):
+        if self.prison_length_seconds > 0:
+            return f"Prison: {utils.seconds_to_time_long(self.prison_length_seconds)}"
+        else:
+            return f"Prison: Permanent / Indefinite"
+        
+    async def Execute(self):
+        await warden.newWarrant(self.case.defense(), "case", f"Case {self.case.id} Verdict", self.case.plaintiff_id, self.prison_length_seconds)
 
 def penaltyFromDict(case, d: dict) -> Penalty:
     # dynamically locate the class and instantiate it
