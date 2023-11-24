@@ -21,6 +21,13 @@ prisoner = {
         "category": "admin",
     }
 }
+
+- [ ] Handling when user leaves server
+- [ ] Void warrants by ID
+-  [ ] Fail gracefully if warrant doesn't exist
+- [ ] Void warrants by category
+- [ ] Void warrants by author
+- [ ] Void warrants by prisoner
 """
 
 PRISONERS: List["Warrant"] = []
