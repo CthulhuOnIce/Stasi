@@ -272,7 +272,7 @@ async def populatePrisoners(guild: discord.Guild):
         p.loadFromDict(prisoner)
         PRISONERS.append(p)
 
-async def voidWarrantByID(warrant_id: str, reason: str):
+async def voidWarrantByID(warrant_id: str, reason: str = None):
     for prisoner in PRISONERS:
         for warrant in prisoner.warrants:
             if warrant._id == warrant_id:
@@ -286,7 +286,8 @@ async def voidWarrantByID(warrant_id: str, reason: str):
                 else:
                     embed.add_field(name="Sentence Length", value=utils.seconds_to_time_long(warrant.len_seconds) if warrant.len_seconds > 0 else "Indefinite", inline=False)
                 embed.add_field(name="Description", value=warrant.description, inline=False)
-                embed.add_field(name="Reason For Voiding", value=reason, inline=False)
+                if reason:
+                    embed.add_field(name="Reason For Voiding", value=reason, inline=False)
                 embed.set_author(name=utils.normalUsername(prisoner.prisoner()), icon_url=utils.author_images["ticket"])
                 await prisoner.communicate(embed=embed)
                 log("justice", "warrant", f"Warrant voided: {utils.normalUsername(prisoner.prisoner())} ({warrant._id})")
