@@ -144,8 +144,10 @@ class Prisoner:
         return
 
     async def Archive(self):
+        log("justice", "prisoner", f"Archiving prisoner: {utils.normalUsername(self.prisoner())} ({self._id})")
         db_ = await db.create_connection("Warden")
-        await db_.delete_one({"_id": self._id})
+        grab = await db_.delete_one({"_id": self._id})
+        print(grab.deleted_count)
         PRISONERS.remove(self)
 
     async def Save(self):
@@ -157,7 +159,8 @@ class Prisoner:
 
     async def Tick(self):
         await self.HeartBeat()
-        await self.Save()
+        if not self.canArchive():
+            await self.Save()
 
     async def HeartBeat(self):
         

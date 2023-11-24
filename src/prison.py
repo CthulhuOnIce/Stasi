@@ -32,7 +32,7 @@ class Prison(commands.Cog):
     async def new_warrant(self, ctx: discord.ApplicationContext):
         for prisoner in warden.PRISONERS:
             await prisoner.Tick()
-        await ctx.send("Done")
+        await ctx.respond("Done", ephemeral=True)
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
