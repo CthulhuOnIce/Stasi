@@ -279,6 +279,23 @@ class Prison(commands.Cog):
         await ctx.respond("Done", ephemeral=True)
 
     @commands.Cog.listener()
+    async def on_member_remove(self, member):
+        roles = [role.id for role in member.roles]
+        await db.set_roles(member.id, roles)
+        log("admin", "leave", f"{log_user(member)} left the server")
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member):
+        user = await db.get_user(member.id)
+        if "roles" in user:
+            roles = [member.guild.get_role(role) for role in user["roles"]]
+            await member.edit(roles=roles)
+
+        elif user == {}:
+            unverified_role = member.guild.get_role(config.C["unverified_role"])
+            await member.edit(roles=[unverified_role])
+
+    @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
         entry = await guild.audit_logs(limit=1, action=discord.AuditLogAction.ban)
         entry = entry.flatten()

@@ -22,12 +22,12 @@ prisoner = {
     }
 }
 
-- [ ] Handling when user leaves server
-- [ ] Void warrants by ID
--  [ ] Fail gracefully if warrant doesn't exist
+- [ ] Handling when user leaves server, or warrants issued against people not currently in the server
+- [x] Void warrants by ID
+-  [x] Fail gracefully if warrant doesn't exist
 - [ ] Void warrants by category
 - [ ] Void warrants by author
-- [ ] Void warrants by prisoner
+- [ ] Void warrants by prisoner (implemented in prison.py)
 """
 
 PRISONERS: List["Prisoner"] = []
@@ -272,7 +272,7 @@ async def populatePrisoners(guild: discord.Guild):
         p.loadFromDict(prisoner)
         PRISONERS.append(p)
 
-async def voidWarrantByID(warrant_id: str):
+async def voidWarrantByID(warrant_id: str, reason: str):
     for prisoner in PRISONERS:
         for warrant in prisoner.warrants:
             if warrant._id == warrant_id:
@@ -286,6 +286,8 @@ async def voidWarrantByID(warrant_id: str):
                 else:
                     embed.add_field(name="Sentence Length", value=utils.seconds_to_time_long(warrant.len_seconds) if warrant.len_seconds > 0 else "Indefinite", inline=False)
                 embed.add_field(name="Description", value=warrant.description, inline=False)
+                embed.add_field(name="Reason For Voiding", value=reason, inline=False)
+                embed.set_author(name=utils.normalUsername(prisoner.prisoner()), icon_url=utils.author_images["ticket"])
                 await prisoner.communicate(embed=embed)
                 log("justice", "warrant", f"Warrant voided: {utils.normalUsername(prisoner.prisoner())} ({warrant._id})")
                 return
