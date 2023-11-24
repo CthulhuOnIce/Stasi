@@ -98,12 +98,13 @@ async def on_application_command_error(ctx, error):  # share certain errors with
         if isinstance(original, IndexError):
             await ctx.send(f"IndexError: {original}\n[This might mean your search found no results]")
             return
-    await ctx.respond("That command caused an error. This has been reported to the developer.", ephemeral = True)
-
+    
     error_raw = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     errortracking.report_error(error_raw)
 
     logging.log("main", "runtime", f"Error {logging.lid(error)} in '{ctx.command}' by '{logging.log_user(ctx.author) if ctx.author else 'unknown'}'. Check runtimes.log for more details.")
     logging.log("runtimes", "error", f"Error {logging.lid(error)} in '{ctx.command}' by '{logging.log_user(ctx.author) if ctx.author else 'unknown'}': \n```\n{error_raw}\n```", False, True)
+
+    await ctx.respond("That command caused an error. This has been reported to the developer.", ephemeral = True)
 
 bot.run(config.C["token"])

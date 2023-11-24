@@ -163,7 +163,7 @@ class Prison(commands.Cog):
         embed = discord.Embed(title="New Warrant", description=f"Warrant To Be Filed Against {utils.normalUsername(target)}", color=0x000000)
         embed.add_field(name="Sentence Length", value=utils.seconds_to_time_long(sentence) if sentence > 0 else "Permanent / Indefinite", inline=False)
         embed.add_field(name="Reason", value=reason, inline=False)
-        embed.set_author(name=utils.normalUsername(ctx.author), icon_url=utils.author_images["normal"])
+        embed.set_author(name=utils.normalUsername(target), icon_url=utils.author_images["normal"])
 
         msg = await ctx.respond(embed=embed, ephemeral=True)
 
@@ -238,8 +238,7 @@ class Prison(commands.Cog):
             await ctx.respond(f"Warrant {warrant} not found.", ephemeral=True)
             return
         prisoner = warden.getPrisonerByWarrantID(warrant._id)
-        prisoner.warrants.remove(warrant)
-        await prisoner.Tick()
+        await warden.voidWarrantByID(warrant._id)
         log("justice", "warrant", f"Warrant voided by {utils.normalUsername(ctx.author)}: {utils.normalUsername(prisoner.prisoner())} ({warrant._id})")
         await ctx.respond(f"Voided warrant {warrant._id}", ephemeral=True)
 
@@ -253,11 +252,22 @@ class Prison(commands.Cog):
         if not prisoner:
             await ctx.respond(f"{utils.normalUsername(user)} is not a prisoner.", ephemeral=True)
             return
-        for warrant in prisoner.warrants:
-            prisoner.warrants.remove(warrant)
-            log("justice", "warrant", f"Warrant voided by {utils.normalUsername(ctx.author)}: {utils.normalUsername(prisoner.prisoner())} ({warrant._id})")
+        count = len(prisoner.warrants)
+
+        prisoner.warrants = []
+
+        log("justice", "warrant", f"All warrants voided by {utils.normalUsername(ctx.author)}: {utils.normalUsername(prisoner.prisoner())} ({count})")
+        embed = discord.Embed(title="Warrants Voided", description=f"All ({count}) warrants for {utils.normalUsername(user)} have been voided.", color=0x000000)
+        embed.add_field(name="Voided By", value=utils.normalUsername(ctx.author), inline=False)
+        embed.add_field(name="Voided At", value=discord_dynamic_timestamp(datetime.datetime.utcnow()), inline=False)
+        embed.add_field(name="Initially Committed At", value=discord_dynamic_timestamp(prisoner.committed), inline=False)
+        embed.add_field(name="Total Time Served", value=utils.seconds_to_time_long(prisoner.total_time_served()), inline=False)
+        embed.add_field(name="Total Time Remaining", value=utils.seconds_to_time_long(prisoner.total_time_remaining()), inline=False)
+        embed.set_author(name=utils.normalUsername(prisoner.prisoner()), icon_url=utils.author_images["ticket"])
+        await prisoner.communicate(embed=embed)
+
         await prisoner.Tick()
-        await ctx.respond(f"Voided all warrants for {utils.normalUsername(user)}", ephemeral=True)
+        await ctx.respond(embed=embed, ephemeral=True)
 
     @admin.command(name='tick', description='Create a warrant tick event.')
     async def tick_warrants(self, ctx: discord.ApplicationContext):

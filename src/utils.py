@@ -117,4 +117,6 @@ author_images = {
     "memo":   "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4dd.png",  # 📝
     "penlock":"https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f50f.png",  # 🔏
     "unlock": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f513.png",  # 🔓️
+    "build":  "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f3db.png",  # 🏛
+    "ticket": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f3ab.png",  # 🎫
 }

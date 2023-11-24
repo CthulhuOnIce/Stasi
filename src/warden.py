@@ -30,7 +30,7 @@ prisoner = {
 - [ ] Void warrants by prisoner
 """
 
-PRISONERS: List["Warrant"] = []
+PRISONERS: List["Prisoner"] = []
 
 class Warrant:
     def __init__(self):
@@ -131,6 +131,18 @@ class Prisoner:
 
     def prisoner(self) -> Optional[discord.Member]:
         return self.guild.get_member(self._id)
+    
+    def total_time_served(self) -> int:
+        if not self.committed:
+            return 0
+        return (datetime.datetime.now(datetime.timezone.utc) - self.committed).total_seconds()
+
+    def total_time_remaining(self) -> int:
+        if not self.committed:
+            return 0
+        full_warrants = sum([warrant.len_seconds for warrant in self.warrants if not warrant.expires])
+        until_expires = sum([(warrant.expires - datetime.datetime.now(datetime.timezone.utc)).total_seconds() for warrant in self.warrants if warrant.expires])
+        return full_warrants + until_expires
 
     async def book(self):  # takes their roles, memorizes time committed, and gives them the prisoner role
         if self.roles:
@@ -260,11 +272,21 @@ async def populatePrisoners(guild: discord.Guild):
         p.loadFromDict(prisoner)
         PRISONERS.append(p)
 
-def voidWarrantByID(warrant_id: str):
+async def voidWarrantByID(warrant_id: str):
     for prisoner in PRISONERS:
         for warrant in prisoner.warrants:
             if warrant._id == warrant_id:
                 prisoner.warrants.remove(warrant)
+                embed = discord.Embed(title="Warrant Voided", description=f"Warrant `{warrant._id}` has been voided.", color=discord.Color.red())
+                if warrant.expires:
+                    embed.add_field(name="Expires", value=discord_dynamic_timestamp(warrant.expires, "F"), inline=False)
+                    embed.add_field(name="Expires (R)", value=discord_dynamic_timestamp(warrant.expires, "R"), inline=False)
+                    time_left_seconds = (warrant.expires - datetime.datetime.now(datetime.timezone.utc)).total_seconds()
+                    embed.add_field(name="Expires (S)", value=utils.seconds_to_time_long(time_left_seconds), inline=False)
+                else:
+                    embed.add_field(name="Sentence Length", value=utils.seconds_to_time_long(warrant.len_seconds) if warrant.len_seconds > 0 else "Indefinite", inline=False)
+                embed.add_field(name="Description", value=warrant.description, inline=False)
+                await prisoner.communicate(embed=embed)
                 log("justice", "warrant", f"Warrant voided: {utils.normalUsername(prisoner.prisoner())} ({warrant._id})")
                 return
 
@@ -289,8 +311,8 @@ async def newWarrant(target: discord.Member, category: str, description: str, au
     warrant = Warrant().New(category, description, author, len_seconds)
 
     embed = discord.Embed(title="Warrant Issued", description=f"Warrant `{warrant._id}` has been issued.", color=discord.Color.red())
-    embed.add_field(name="Description", value=warrant.description)
-    embed.add_field(name="Sentence Length", value=utils.seconds_to_time_long(warrant.len_seconds) if warrant.len_seconds > 0 else "Indefinite")
+    embed.add_field(name="Sentence Length", value=utils.seconds_to_time_long(warrant.len_seconds) if warrant.len_seconds > 0 else "Indefinite", inline=False)
+    embed.add_field(name="Description", value=warrant.description, inline=False)
     embed.set_author(name=utils.normalUsername(target), icon_url=utils.author_images["penlock"])
 
     author_member = target.guild.get_member(author)
