@@ -57,6 +57,11 @@ class Prison(commands.Cog):
                 super().__init__(*args, **kwargs)
                 self.value = modal.value
                 self.embed = generateEmbed(modal.value)
+                self.timed_out = False
+
+            async def on_timeout(self) -> None:
+                self.timed_out = True
+                return await super().on_timeout()
 
             @discord.ui.button(label="Accept", style=discord.ButtonStyle.green, emoji="✅")
             async def yes_click(self, button, interaction: discord.Interaction):
@@ -73,7 +78,6 @@ class Prison(commands.Cog):
                 await interaction.response.send_modal(modal)
                 await modal.wait()
                 self.value = modal.value
-                log("Justice", "CaseManager", f"Modal value: {modal.value}")
                 await modal.interaction.response.defer()
                 await msg.edit(embed=generateEmbed(modal.value))
 
@@ -85,6 +89,9 @@ class Prison(commands.Cog):
         view = confirmView()
         await msg.edit(embed=view.embed, view=view)
         await view.wait()
+        if view.timed_out:
+            await ctx.respond("Timed out. Run the command again to re-file", ephemeral=True)
+            return
         reason = view.value
 
         sentence = 60*60*24  # 1 day
@@ -107,6 +114,11 @@ class Prison(commands.Cog):
                 super().__init__(*args, **kwargs)
                 self.value = sentence
                 self.embed = lenToEmbed(sentence)
+                self.timed_out = False
+
+            async def on_timeout(self) -> None:
+                self.timed_out = True
+                return await super().on_timeout()
 
             @discord.ui.button(label="Proceed", style=discord.ButtonStyle.green, emoji="✅")
             async def yes_click(self, button, interaction: discord.Interaction):
@@ -143,8 +155,56 @@ class Prison(commands.Cog):
         view = lengthView()
         await msg.edit(view=view)
         await view.wait()
+        if view.timed_out:
+            await ctx.respond("Timed out. Run the command again to re-file", ephemeral=True)
+            return
         sentence = view.value
 
+        embed = discord.Embed(title="New Warrant", description=f"Warrant To Be Filed Against {utils.normalUsername(target)}", color=0x000000)
+        embed.add_field(name="Sentence Length", value=utils.seconds_to_time_long(sentence) if sentence > 0 else "Permanent / Indefinite", inline=False)
+        embed.add_field(name="Reason", value=reason, inline=False)
+        embed.set_author(name=utils.normalUsername(ctx.author), icon_url=utils.author_images["normal"])
+
+        msg = await ctx.respond(embed=embed, ephemeral=True)
+
+        class FinalConfirmation(discord.ui.View):
+                
+                def __init__(self, *args, **kwargs) -> None:
+                    super().__init__(*args, **kwargs)
+                    self.decision = False
+                    self.timed_out = False
+    
+                async def on_timeout(self) -> None:
+                    self.timed_out = True
+                    return await super().on_timeout()
+    
+                @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green, emoji="✅")
+                async def yes_click(self, button, interaction: discord.Interaction):
+                    for child in self.children:
+                        child.disabled = True
+                    self.decision = True
+                    await msg.edit(view=self)
+                    await interaction.response.defer()
+                    self.stop()
+    
+                @discord.ui.button(label="Cancel", style=discord.ButtonStyle.grey, emoji="🚫")
+                async def no_click(self, button, interaction: discord.Interaction):
+                    for child in self.children:
+                        child.disabled = True
+                    await msg.edit(view=self)
+                    await interaction.response.defer()
+                    self.stop()
+
+        view = FinalConfirmation()
+        await msg.edit(view=view)
+        await view.wait()
+        if view.timed_out:
+            await ctx.respond("Timed out. Run the command again to re-file.", ephemeral=True)
+            return
+        if not view.decision:
+            await ctx.respond("Cancelled. Run the command again to re-file.", ephemeral=True)
+            return
+        
         warrant = await warden.newWarrant(target, "admin", reason, ctx.author.id, sentence)
         await ctx.respond(f"Created warrant `{warrant._id}`", ephemeral=True)
 

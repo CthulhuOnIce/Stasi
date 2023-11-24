@@ -104,7 +104,6 @@ class Justice(commands.Cog):
                 await interaction.response.send_modal(modal)
                 await modal.wait()
                 self.value = modal.value
-                log("Justice", "CaseManager", f"Modal value: {modal.value}")
                 await modal.interaction.response.defer()
                 await msg.edit(embed=generateEmbed(modal.value))
         
