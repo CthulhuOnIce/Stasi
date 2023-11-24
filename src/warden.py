@@ -131,6 +131,8 @@ class Prisoner:
     def canArchive(self):
         if self.warrants:
             return False
+        if self.roles:
+            return False
         return True
 
     def loadFromDict(self, data):
@@ -174,6 +176,9 @@ class Prisoner:
         else:
             log("justice", "prisoner", f"Booking prisoner: {utils.normalUsername(self.prisoner())} ({self._id})")
             await self.book()
+
+        if self.canArchive():
+            await self.Archive()
 
 async def populatePrisoners(guild: discord.Guild):
     db_ = await db.create_connection("Warden")
