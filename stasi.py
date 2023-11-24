@@ -28,7 +28,7 @@ COGS = [prison, vetting, administration, social, errortracking, justice]
 for cog in COGS:
     i += 1
     cog.setup(bot)
-    logging.log("main", "setup", f"Cog {i}/{len(COGS)} loaded")
+    logging.log("main", "setup", f"Cog {i}/{len(COGS)} loaded ({cog.__name__}))")
 
 
 logging.log("main", "setup", f"Finished setting up {i} cogs")
