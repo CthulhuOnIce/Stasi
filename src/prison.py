@@ -164,10 +164,15 @@ class Prison(commands.Cog):
             else:
                 embed.add_field(name=f"{warrant.category} ({warrant._id})", value=f"Status: {warrant.status()}\nDescription: {warrant.description}\nAuthor: {utils.normalUsername(ctx.guild.get_member(warrant.author))}\nCreated: {discord_dynamic_timestamp(warrant.created)}", inline=False)
         await ctx.respond(embed=embed, ephemeral=True)
+    
+    admin = warrant.create_subgroup(name='admin', description='Admin warrant commands.')
 
-    @warrant.command(name='void', description='Void a warrant.')
+    @admin.command(name='void', description='Void a warrant.')
     @option(name='warrant', description='The warrant to void.', type=str, required=True)
     async def void_warrant(self, ctx: discord.ApplicationContext, warrant: str):
+        if not ctx.author.guild_permissions.manage_roles:
+            await ctx.respond("You do not have permission to void warrants.", ephemeral=True)
+            return
         warrant = warden.getWarrantByID(warrant)
         if not warrant:
             await ctx.respond(f"Warrant {warrant} not found.", ephemeral=True)
@@ -178,8 +183,27 @@ class Prison(commands.Cog):
         log("justice", "warrant", f"Warrant voided by {utils.normalUsername(ctx.author)}: {utils.normalUsername(prisoner.prisoner())} ({warrant._id})")
         await ctx.respond(f"Voided warrant {warrant._id}", ephemeral=True)
 
-    @warrant.command(name='tick', description='Create a warrant tick event.')
+    @admin.command(name='voiduser', description='Void all warrants for a user.')
+    @option(name='user', description='The user to void warrants for.', type=discord.Member, required=True)
+    async def void_user(self, ctx: discord.ApplicationContext, user: discord.Member):
+        if not ctx.author.guild_permissions.manage_roles:
+            await ctx.respond("You do not have permission to void warrants.", ephemeral=True)
+            return
+        prisoner = warden.getPrisonerByID(user.id)
+        if not prisoner:
+            await ctx.respond(f"{utils.normalUsername(user)} is not a prisoner.", ephemeral=True)
+            return
+        for warrant in prisoner.warrants:
+            prisoner.warrants.remove(warrant)
+            log("justice", "warrant", f"Warrant voided by {utils.normalUsername(ctx.author)}: {utils.normalUsername(prisoner.prisoner())} ({warrant._id})")
+        await prisoner.Tick()
+        await ctx.respond(f"Voided all warrants for {utils.normalUsername(user)}", ephemeral=True)
+
+    @admin.command(name='tick', description='Create a warrant tick event.')
     async def tick_warrants(self, ctx: discord.ApplicationContext):
+        if not ctx.author.guild_permissions.administrator:
+            await ctx.respond("You do not have permission to tick warrants.", ephemeral=True)
+            return
         for prisoner in warden.PRISONERS:
             await prisoner.Tick()
         await ctx.respond("Done", ephemeral=True)
