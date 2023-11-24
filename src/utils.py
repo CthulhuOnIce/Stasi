@@ -97,3 +97,24 @@ def normalUsername(user):
     else:
         return f"{user}"
 
+# https://twemoji-cheatsheet.vercel.app/
+author_images = {
+    "normal": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9fe.png",  # 🧾
+    "ballot": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f5f3.png",  # 🗳️
+    "outbox": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4e4.png",  # 📤
+    "inbox":  "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4e5.png",  # 📥
+    "sign":   "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1faa7.png",  # 🪧
+    "lock":   "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f510.png",  # 🔐
+    "label":  "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f3f7.png",  # 🏷
+    "scroll": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4dc.png",  # 📜  
+    "opencab":"https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f5c3.png",  # 🗃
+    "scale":  "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2696.png",   # ⚖
+    "sentenv":"https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4e8.png",  # 📨
+    "pager":  "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4df.png",  # 📟
+    "chain":  "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/26d3.png",   # ⛓
+    "aclock": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/23f0.png",   # ⏰
+    "swatch": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/23f1.png",   # ⏱
+    "memo":   "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4dd.png",  # 📝
+    "penlock":"https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f50f.png",  # 🔏
+    "unlock": "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f513.png",  # 🔓️
+}

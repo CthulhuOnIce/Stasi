@@ -41,6 +41,7 @@ class Prison(commands.Cog):
 
         def generateEmbed(reason: str) -> discord.Embed:
             embed = discord.Embed(title="Prison Reason", description=reason, color=0x000000)
+            embed.set_author(name=utils.normalUsername(target), icon_url=utils.author_images["memo"])
             return embed
 
         modal = ReasonModal(title="Reason for Prison Sentence")
@@ -57,7 +58,7 @@ class Prison(commands.Cog):
                 self.value = modal.value
                 self.embed = generateEmbed(modal.value)
 
-            @discord.ui.button(label="Yes", style=discord.ButtonStyle.green, emoji="✅")
+            @discord.ui.button(label="Accept", style=discord.ButtonStyle.green, emoji="✅")
             async def yes_click(self, button, interaction: discord.Interaction):
                 for child in self.children:
                     child.disabled = True
@@ -66,7 +67,7 @@ class Prison(commands.Cog):
                 await interaction.response.defer()
                 self.stop()
 
-            @discord.ui.button(label="No", style=discord.ButtonStyle.red, emoji="❎")
+            @discord.ui.button(label="Edit", style=discord.ButtonStyle.red, emoji="📝")
             async def no_click(self, button, interaction: discord.Interaction):
                 modal = ReasonModal(title="Reason for Prison Sentece")
                 await interaction.response.send_modal(modal)
@@ -78,6 +79,7 @@ class Prison(commands.Cog):
 
         def lenToEmbed(length: int) -> discord.Embed:
             embed = discord.Embed(title="Prison Sentence", description= utils.seconds_to_time_long(length) if length > 0 else "Permanent", color=0x000000)
+            embed.set_author(name=utils.normalUsername(target), icon_url=utils.author_images["swatch"])
             return embed
 
         view = confirmView()
@@ -143,10 +145,8 @@ class Prison(commands.Cog):
         await view.wait()
         sentence = view.value
 
-        await ctx.respond(sentence, ephemeral=True)
-
         warrant = await warden.newWarrant(target, "admin", reason, ctx.author.id, sentence)
-        await ctx.respond(f"Created warrant {warrant._id}", ephemeral=True)
+        await ctx.respond(f"Created warrant `{warrant._id}`", ephemeral=True)
 
     @warrant.command(name='prisoner', description='View a prisoner\'s warrants.')
     @option(name='prisoner', description='The prisoner to view.', type=discord.Member, required=False)

@@ -4,7 +4,7 @@ from typing import *
 import datetime
 import random
 from . import config
-from .stasilogging import log
+from .stasilogging import *
 from . import utils
 
 """
@@ -88,12 +88,21 @@ class Warrant:
         self.category = data["category"]
         self.description = data["description"]
         self.author = data["author"]
+
         self.created = data["created"]
+        if self.created:
+            self.created = self.created.replace(tzinfo=datetime.timezone.utc)
+
         self.started = data["started"]
+        if self.started:
+            self.started = self.started.replace(tzinfo=datetime.timezone.utc)
+
         self.len_seconds = data["len_seconds"]
+        
         self.expires = data["expires"]
         if self.expires:
             self.expires = self.expires.replace(tzinfo=datetime.timezone.utc)
+       
         self.frozen = data["frozen"]
         self.no_enforce = data["no_enforce"]
         return self
@@ -112,6 +121,14 @@ class Prisoner:
         log("justice", "prisoner", f"New prisoner: {utils.normalUsername(user)} ({user.id})")
         return self
 
+    async def communicate(self, content: str = None, embed: discord.Embed = None):
+        try:
+            await self.prisoner().send(content=content, embed=embed)
+        except discord.Forbidden:
+            pass
+        channel = self.guild.get_channel(config.C["log_channel"])
+        await channel.send(content=content, embed=embed)
+
     def prisoner(self) -> Optional[discord.Member]:
         return self.guild.get_member(self._id)
 
@@ -120,6 +137,7 @@ class Prisoner:
             return
 
         log("justice", "prisoner", f"Booking prisoner: {utils.normalUsername(self.prisoner())} ({self._id})")
+
         prisoner_role = self.guild.get_role(config.C["prison_role"])
         user = self.prisoner()
         if prisoner_role in user.roles:
@@ -132,6 +150,15 @@ class Prisoner:
         if not self.roles:
             return
         log("justice", "prisoner", f"Releasing prisoner: {utils.normalUsername(self.prisoner())} ({self._id})")
+
+        embed = discord.Embed(title="Prisoner Released", description=f"You have been released from prison and can now access channels normally.", color=discord.Color.green())
+        embed.add_field(name="Time Served", value=utils.seconds_to_time_long((datetime.datetime.now(datetime.timezone.utc) - self.committed).total_seconds()))
+        embed.add_field(name="Committed", value=discord_dynamic_timestamp(self.committed, "F"), inline=False)
+        embed.add_field(name="Released", value=discord_dynamic_timestamp(datetime.datetime.now(datetime.timezone.utc), "F"), inline=False)
+        embed.add_field(name="Committed (R)", value=discord_dynamic_timestamp(self.committed, "R"), inline=False)
+        embed.set_author(name=utils.normalUsername(self.prisoner()), icon_url=utils.author_images["unlock"])
+        await self.communicate(embed=embed)
+
         user = self.prisoner()
         await user.edit(roles=[self.guild.get_role(role_id) for role_id in self.roles])
         self.roles = []
@@ -164,6 +191,8 @@ class Prisoner:
         self._id = data["_id"]
         self.roles = data["roles"]
         self.committed = data["committed"]
+        if self.committed:
+            self.committed = self.committed.replace(tzinfo=datetime.timezone.utc)
         self.warrants = [Warrant().loadFromDict(warrant) for warrant in data["warrants"]]
         log("justice", "prisoner", f"Loaded prisoner: {utils.normalUsername(self.prisoner())} ({self._id})")
         return
@@ -191,10 +220,28 @@ class Prisoner:
         for warrant in self.warrants:
             if warrant.expires and datetime.datetime.now(datetime.timezone.utc) > warrant.expires:
                 self.warrants.remove(warrant)
+
+                embed = discord.Embed(title="Warrant Expired", description=f"Warrant {warrant._id} has expired.", color=discord.Color.red())
+                embed.set_author(name=utils.normalUsername(self.prisoner()), icon_url=utils.author_images["chain"])
+                await self.communicate(embed=embed)
+
                 log("justice", "warrant", f"Warrant expired: {utils.normalUsername(self.prisoner())} ({warrant._id})")
         
         if nxt := self.getNextWarrant():
             nxt.activate()
+
+            embed = discord.Embed(title="Warrant Activated", description=f"Warrant `{nxt._id}` has been activated, you are now serving your sentence for this warrant specifically.", color=discord.Color.red())
+            embed.add_field(name="Description", value=nxt.description)
+            embed.add_field(name="Started", value=discord_dynamic_timestamp(nxt.started, "F"), inline=False)
+            embed.add_field(name="Expires", value=discord_dynamic_timestamp(nxt.expires, "F"), inline=False)
+            embed.add_field(name="Expires (R)", value=discord_dynamic_timestamp(nxt.expires, "R"), inline=False)
+            # expires - started 
+            sentence_seconds = (nxt.expires - nxt.started).total_seconds()
+            embed.add_field(name="Expires (S)", value=utils.seconds_to_time_long(sentence_seconds), inline=False)
+            embed.set_author(name=utils.normalUsername(self.prisoner()), icon_url=utils.author_images["chain"])
+
+            await self.communicate(embed=embed)
+
             log("justice", "warrant", f"Warrant activated: {utils.normalUsername(self.prisoner())} ({nxt._id})")
         
         if self.canFree():
@@ -240,13 +287,28 @@ def getPrisonerByID(user_id: int) -> Optional[Prisoner]:
 
 async def newWarrant(target: discord.Member, category: str, description: str, author: int, len_seconds: int) -> Warrant:
     warrant = Warrant().New(category, description, author, len_seconds)
+
+    embed = discord.Embed(title="Warrant Issued", description=f"Warrant `{warrant._id}` has been issued.", color=discord.Color.red())
+    embed.add_field(name="Description", value=warrant.description)
+    embed.add_field(name="Sentence Length", value=utils.seconds_to_time_long(warrant.len_seconds) if warrant.len_seconds > 0 else "Indefinite")
+    embed.set_author(name=utils.normalUsername(target), icon_url=utils.author_images["penlock"])
+
+    author_member = target.guild.get_member(author)
+    await db.add_note(
+        target.id, 
+        f"Warrant Issued: {warrant._id}", 
+        f"**Category**: {warrant.category}\n**Description**: {warrant.description}\n**Sentence Length**: {utils.seconds_to_time_long(warrant.len_seconds) if warrant.len_seconds > 0 else 'Indefinite'}\n**Author**: {utils.normalUsername(author_member)} ({author})"
+    )
+
     if prisoner := getPrisonerByID(target.id):
         prisoner.warrants.append(warrant)
+        await prisoner.communicate(embed=embed)
         await prisoner.Tick()
         return warrant
     else:
         prisoner = Prisoner(target.guild).New(target)
         prisoner.warrants.append(warrant)
         PRISONERS.append(prisoner)
+        await prisoner.communicate(embed=embed)
         await prisoner.Tick()
         return warrant
