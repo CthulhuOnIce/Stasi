@@ -80,13 +80,12 @@ class Warrant:
         self.author = author
         self.created = datetime.datetime.now(datetime.timezone.utc)
         self.len_seconds = len_seconds
-        log("justice", "warrant", f"New warrant: {self.category} ({self._id})")
+        log("justice", "warrant", f"New warrant: ({self._id})")
         return self
     
     def loadFromDict(self, data):
         self._id = data["_id"]
         self.category = data["category"]
-        self.status = data["status"]
         self.description = data["description"]
         self.author = data["author"]
         self.created = data["created"]
@@ -144,6 +143,8 @@ class Prisoner:
             if not warrant.expires:
                 if not warrant.frozen and warrant.len_seconds != -1:  # stayed warrants are still served, they're just served out of prison
                     return warrant
+            else:
+                return None
 
     def canFree(self):  # whether or not the prisoner can have their roles back
         if not self.warrants:
@@ -191,11 +192,11 @@ class Prisoner:
         for warrant in self.warrants:
             if warrant.expires and datetime.datetime.now(datetime.timezone.utc) > warrant.expires:
                 self.warrants.remove(warrant)
-                log("justice", "warrant", f"Warrant expired: {warrant.category} ({warrant._id})")
+                log("justice", "warrant", f"Warrant expired: {utils.normalUsername(self.prisoner())} ({warrant._id})")
         
         if nxt := self.getNextWarrant():
             nxt.activate()
-            log("justice", "warrant", f"Warrant activated: {nxt.category} ({nxt._id})")
+            log("justice", "warrant", f"Warrant activated: {utils.normalUsername(self.prisoner())} ({nxt._id})")
         
         if self.canFree():
             await self.release()
@@ -218,8 +219,20 @@ def voidWarrantByID(warrant_id: str):
         for warrant in prisoner.warrants:
             if warrant._id == warrant_id:
                 prisoner.warrants.remove(warrant)
-                log("justice", "warrant", f"Warrant voided: {warrant.category} ({warrant._id})")
+                log("justice", "warrant", f"Warrant voided: {utils.normalUsername(prisoner.prisoner())} ({warrant._id})")
                 return
+
+def getWarrantByID(warrant_id: str) -> Optional[Warrant]:
+    for prisoner in PRISONERS:
+        for warrant in prisoner.warrants:
+            if warrant._id == warrant_id:
+                return warrant
+
+def getPrisonerByWarrantID(warrant_id: str) -> Optional[Prisoner]:
+    for prisoner in PRISONERS:
+        for warrant in prisoner.warrants:
+            if warrant._id == warrant_id:
+                return prisoner
 
 def getPrisonerByID(user_id: int) -> Optional[Prisoner]:
     for prisoner in PRISONERS:
