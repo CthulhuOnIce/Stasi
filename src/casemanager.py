@@ -1,6 +1,5 @@
 from __future__ import annotations
 from typing import *
-import pyperclip
 
 # this file is for testing Case classes, Motion classes, and implementations of such
 # PORTED IMPORTS

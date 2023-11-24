@@ -8,3 +8,4 @@ cyberkevdb.db
 bin/*
 lib/*
 logs/*
+.venv/*
