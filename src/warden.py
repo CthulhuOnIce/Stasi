@@ -52,18 +52,23 @@ class Warrant:
         self.deactivate()
         self.frozen = True
 
+    def generateNewID(self):
+        return f"{random.randint(1000,9999)}-{random.choice(utils.elements).title()}-{random.choice(utils.elements).title()}-{random.choice(utils.elements).title()}"
+
     def New(self, category: str, description: str, author: int, len_seconds: int) -> "Warrant":
-        self._id = random.randint(0, 999999999)
+        self._id = self.generateNewID()
         self.category = category
         self.description = description
         self.author = author
         self.created = datetime.datetime.now(datetime.timezone.utc)
         self.len_seconds = len_seconds
+        log("justice", "warrant", f"New warrant: {self.category} ({self._id})")
         return self
     
     def loadFromDict(self, data):
         self._id = data["_id"]
         self.category = data["category"]
+        self.status = data["status"]
         self.description = data["description"]
         self.author = data["author"]
         self.created = data["created"]
@@ -87,7 +92,7 @@ class Prisoner:
 
     def New(self, user: discord.Member) -> "Prisoner":
         self._id = user.id
-        log("justice", "prisoner", f"New prisoner: {utils.normalUsername({user})} ({user.id})")
+        log("justice", "prisoner", f"New prisoner: {utils.normalUsername(user)} ({user.id})")
         return self
 
     def prisoner(self) -> Optional[discord.Member]:
@@ -97,6 +102,7 @@ class Prisoner:
         if self.roles:
             return
 
+        log("justice", "prisoner", f"Booking prisoner: {utils.normalUsername(self.prisoner())} ({self._id})")
         prisoner_role = self.guild.get_role(config.C["prison_role"])
         user = self.prisoner()
         if prisoner_role in user.roles:
@@ -108,7 +114,7 @@ class Prisoner:
     async def release(self):  # gives them roles back and nothing more
         if not self.roles:
             return
-
+        log("justice", "prisoner", f"Releasing prisoner: {utils.normalUsername(self.prisoner())} ({self._id})")
         user = self.prisoner()
         await user.edit(roles=[self.guild.get_role(role_id) for role_id in self.roles])
         self.roles = []
@@ -174,10 +180,8 @@ class Prisoner:
             log("justice", "warrant", f"Warrant activated: {nxt.category} ({nxt._id})")
         
         if self.canFree():
-            log("justice", "prisoner", f"Releasing prisoner: {utils.normalUsername(self.prisoner())} ({self._id})")
             await self.release()
         else:
-            log("justice", "prisoner", f"Booking prisoner: {utils.normalUsername(self.prisoner())} ({self._id})")
             await self.book()
 
         if self.canArchive():
@@ -190,6 +194,14 @@ async def populatePrisoners(guild: discord.Guild):
         p = Prisoner(guild)
         p.loadFromDict(prisoner)
         PRISONERS.append(p)
+
+def voidWarrantByID(warrant_id: str):
+    for prisoner in PRISONERS:
+        for warrant in prisoner.warrants:
+            if warrant._id == warrant_id:
+                prisoner.warrants.remove(warrant)
+                log("justice", "warrant", f"Warrant voided: {warrant.category} ({warrant._id})")
+                return
 
 def getPrisonerByID(user_id: int) -> Optional[Prisoner]:
     for prisoner in PRISONERS:

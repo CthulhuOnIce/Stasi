@@ -3,6 +3,7 @@ import base64
 
 nouns = open("wordlists/nouns.txt", "r").read().splitlines()
 adjectives = open("wordlists/adjectives.txt", "r").read().splitlines()
+elements = open("wordlists/elements.txt", "r").read().splitlines()
 
 # Function to receive time in the form of "100d10h10m10s" and return the time in seconds
 def time_to_seconds(time: str):
