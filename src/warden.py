@@ -45,6 +45,17 @@ class Warrant:
         self.frozen = None
         self.no_enforce = None
 
+    def status(self) -> str:
+        if self.expires:
+            time_left_seconds = (self.expires - datetime.datetime.now(datetime.timezone.utc)).total_seconds()
+            return f"Active ({utils.seconds_to_time_long(time_left_seconds)} remaining)"
+        elif self.len_seconds == -1:
+            return "Active (indefinite)"
+        elif self.len_seconds > 0:
+            return f"Pending Sentence ({utils.seconds_to_time_long(self.len_seconds)})"
+        elif self.frozen:
+            return f"Frozen ({utils.seconds_to_time_long(self.len_seconds)} remaining)"
+
     def activate(self):
         self.started = datetime.datetime.now(datetime.timezone.utc)
         self.expires = self.started + datetime.timedelta(seconds=self.len_seconds)

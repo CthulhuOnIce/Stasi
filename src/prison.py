@@ -24,12 +24,93 @@ class Prison(commands.Cog):
     warrant = discord.SlashCommandGroup("warrant", "Warrant management commands.")
 
     @warrant.command(name='new', description='Create a new warrant.')
-    async def new_warrant(self, ctx: discord.ApplicationContext):
-        user = ctx.guild.get_member(413374859930894336)
-        await warden.newWarrant(user, "test", "test", ctx.author.id, 60)
+    @option(name='target', description='The target of the warrant.', type=discord.Member, required=True)
+    async def new_warrant(self, ctx: discord.ApplicationContext, target: discord.Member):
+        if not ctx.author.guild_permissions.manage_roles:
+            await ctx.respond("You do not have permission to create warrants.", ephemeral=True)
+            return
+        
+        def lenToEmbed(length: int) -> discord.Embed:
+            embed = discord.Embed(title="Prison Sentence", description= utils.seconds_to_time_long(length) if length > 0 else "Permanent", color=0x000000)
+            return embed
+
+        sentence = 60*60*24  # 1 day
+        msg: discord.interactions.Interaction = await ctx.respond(embed=lenToEmbed(sentence), ephemeral=True)
+
+        class LengthModal(discord.ui.Modal):
+            def __init__(self, *args, **kwargs) -> None:
+                super().__init__(*args, **kwargs)
+
+                self.add_item(discord.ui.InputText(label="Length (ex. 1d1h1m1s)", style=discord.InputTextStyle.short))
+
+            async def callback(self, interaction: discord.Interaction):
+                self.value = self.children[0].value
+                self.interaction = interaction
+    
+        class lengthView(discord.ui.View):
+            
+            def __init__(self, *args, **kwargs) -> None:
+                super().__init__(*args, **kwargs)
+                self.value = sentence
+                self.embed = lenToEmbed(sentence)
+
+            @discord.ui.button(label="Proceed", style=discord.ButtonStyle.green, emoji="✅")
+            async def yes_click(self, button, interaction: discord.Interaction):
+                for child in self.children:
+                    child.disabled = True
+                await msg.edit_original_response(view=self)
+                await interaction.response.defer()
+                self.stop()
+
+            @discord.ui.button(label="Permanent", style=discord.ButtonStyle.blurple, emoji="🔒")
+            async def permanent_click(self, button, interaction: discord.Interaction):
+                global sentence
+                sentence = -1
+                self.value = sentence
+                self.embed = lenToEmbed(sentence)
+                await msg.edit_original_response(embed=self.embed, view=self)
+                await interaction.response.defer()
+
+            @discord.ui.button(label="Edit Sentence", style=discord.ButtonStyle.red, emoji="📝")
+            async def edit_click(self, button, interaction: discord.Interaction):
+                modal = LengthModal(title="Length of Prison Sentence")
+                await interaction.response.send_modal(modal)
+                await modal.wait()
+                await modal.interaction.response.defer()
+                try:
+                    sentence = utils.time_to_seconds(modal.value)
+                    self.value = sentence
+                    self.embed = lenToEmbed(sentence)
+                    await msg.edit_original_response(embed=self.embed, view=self)
+                except:
+                    await interaction.response.send_message("Invalid length.", ephemeral=True)
+                    return
+        
+        view = lengthView()
+        await msg.edit_original_response(view=view)
+        await view.wait()
+        sentence = view.value
+
+        await ctx.respond(sentence, ephemeral=True)
+
+        # await warden.newWarrant(user, "test", "test", ctx.author.id, 60)
+
+    @warrant.command(name='prisoner', description='View a prisoner\'s warrants.')
+    @option(name='prisoner', description='The prisoner to view.', type=discord.Member, required=False)
+    async def view_prisoner(self, ctx: discord.ApplicationContext, prisoner: discord.Member = None):
+        if not prisoner:
+            prisoner = ctx.author
+        prisoner = warden.getPrisoner(prisoner)
+        if not prisoner:
+            await ctx.respond(f"{utils.normalUsername(prisoner)} is not a prisoner.", ephemeral=True)
+            return
+        embed = discord.Embed(title=f"{utils.normalUsername(prisoner.prisoner())}'s Warrants", color=0x000000)
+        for warrant in prisoner.warrants:
+            embed.add_field(name=f"{warrant.category} ({warrant._id})", value=f"Status: {warrant.status}\nDescription: {warrant.description}\nAuthor: {utils.normalUsername(ctx.guild.get_member(warrant.author))}\nCreated: {discord_dynamic_timestamp(warrant.created)}\nExpires: {discord_dynamic_timestamp(warrant.expires)}", inline=False)
+        await ctx.respond(embed=embed, ephemeral=True)
 
     @warrant.command(name='tick', description='Create a warrant tick event.')
-    async def new_warrant(self, ctx: discord.ApplicationContext):
+    async def tick_warrants(self, ctx: discord.ApplicationContext):
         for prisoner in warden.PRISONERS:
             await prisoner.Tick()
         await ctx.respond("Done", ephemeral=True)
