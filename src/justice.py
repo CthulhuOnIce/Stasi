@@ -124,7 +124,8 @@ class Justice(commands.Cog):
         case = getActiveCase(ctx.author)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
-        # TODO: check if user is actually involved in case before allowing them to make a statement
+        if not case.canSubmitMotions(ctx.author):
+            return await ctx.respond("You cannot make a statement in this case.", ephemeral=True)
         await case.personalStatement(ctx.author, statement)
         await ctx.respond("Statement added.", ephemeral=True)
 

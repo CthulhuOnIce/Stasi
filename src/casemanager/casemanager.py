@@ -348,7 +348,18 @@ class Case:
             self.anonymization[user.id] = anonymousname
 
     def nameUserByID(self, userid: int, title: bool = True):
-        # TODO: Docstring
+        """Users can have pseudonyms or change their name throughout the course of a case.
+        For consistency, we store the user's name at the time of their involvement in the case, and their pseudonym if they have one.
+        This function looks up the user's name in the case, and if it can't find it, looks them up in the guild and registers them to the case.
+        Though, this should never happen, as users should be registered to cases before this function is called.
+
+        Args:
+            userid (int): User ID to look up
+            title (bool, optional): Whether or not to append their position to the case. So @cthulhuonice might be listed as @cthulhuonice (Defense). Defaults to True.
+
+        Returns:
+            str: The user's name in the case
+        """        
         userid = int(userid)
         if userid in self.anonymization:
             res = self.anonymization[userid]
@@ -366,8 +377,7 @@ class Case:
         elif self.guild:
             user = self.guild.get_member(userid)
             if user:
-                # TODO: change to log
-                print(f"nameUserByID for {self} ({self.id}) just had to look up an unregistered user {user} ({user.id}), make sure you're registering users to cases properly")
+                log("case", "nameUserByID", f"nameUserByID for {self} ({self.id}) just had to look up an unregistered user {user} ({user.id}), make sure you're registering users to cases properly")
                 self.registerUser(user)
                 res = utils.normalUsername(user)
 
@@ -386,8 +396,7 @@ class Case:
         if res:
             return res
         else:
-            # TODO: change to log
-            print(f"nameUserByID for {self.case} ({self.case.id}) Could not look up {userid}. This should never happen.")
+            log("case", "nameUserByID", f"nameUserByID for {self.case} ({self.case.id}) Could not look up {userid}. This should never happen.")
             return f"Unknown User #{utils.int_to_base64(userid)}"
         
     def canVote(self, user: discord.Member):
@@ -758,8 +767,6 @@ class Case:
                 "motion_queue": [motion.toDict() for motion in self.motion_queue],
 
                 # jury stuff
-                # TODO: turn jury_pool (list[member]) into jury_pool_ids (list[int]), and use jury_pool() method to resolve jury pool as members instead
-                # TODO: do a similar thing with plaintiff and defense 
                 "jury_pool_ids": self.jury_pool_ids,
                 "jury_invites": self.jury_invites,  # people who have been invited to the jury but are yet to accept
 

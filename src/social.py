@@ -275,9 +275,10 @@ class Social(commands.Cog):
         await db.add_message(message.author.id)
 
     @tasks.loop(minutes=1)
-    async def bump_reminder(self):
+    async def bump_reminder(self):  # actually do the bump ping
         if self.last_bump and self.last_bump_channel:
             if (datetime.datetime.now(datetime.timezone.utc) - self.last_bump).total_seconds() > 7200:
+                # TODO: make this a config option or a command or something
                 await self.last_bump_channel.send("It's been 2 hours since the last bump! Time to bump again! <@&863539767249338368>")
                 self.last_bump_channel = None
                 self.last_bump = None

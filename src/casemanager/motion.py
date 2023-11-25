@@ -382,7 +382,6 @@ class AdjustPenaltyMotion(Motion):
     
         new_penalties_str = self.Case.describePenalties(new_penalties)
 
-        # TODO: write a function which describes a penalty in natural language ("7 days prison sentence")
         self.Case.event_log.append(await self.Case.newEvent(
             "propose_new_penalty",
             f"Motion {self.MotionID} has been filed to adjust the Penalty if found guilty.",
