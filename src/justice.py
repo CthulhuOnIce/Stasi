@@ -197,7 +197,7 @@ class Justice(commands.Cog):
         await msg.edit(content=f"Uploading file {file.filename}...", embed=None)
 
         evidence = await case.newEvidence(ctx.author, file.filename, file_bytes)
-        await msg.edit(f"Uploaded evidence **{evidence.filename}** (`{evidence.id}`) to case **{case}** (`{case.id}`)", ephemeral=True)
+        await msg.edit(f"Uploaded evidence **{evidence.filename}** (`{evidence.id}`) to case **{case}** (`{case.id}`)")
 
     async def evidence_options(ctx: discord.AutocompleteContext):
         case = getActiveCase(ctx.interaction.user)
@@ -210,7 +210,7 @@ class Justice(commands.Cog):
             pool.sort(key=lambda e: e.created, reverse=True)
             return [f"{evidence.filename}: {evidence.id}" for evidence in pool]
         else:
-            return [f"{evidence.filename}: {evidence.id}" for evidence in case.evidence]
+            return [f"{evidence.filename}: {evidence.id}" for evidence in sorted(case.evidence, lambda e: e.created, reverse=True)]
 
     @evidence.command(name="view", description="View a piece of evidence in your active case.")
     @option("evidence_id", str, description="The ID of the evidence to view.", autocomplete=discord.utils.basic_autocomplete(evidence_options))

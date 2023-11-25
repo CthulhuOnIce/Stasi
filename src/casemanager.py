@@ -239,7 +239,7 @@ def eventToEmbed(event: Event, case_name: str) -> discord.Embed:
     elif event["event_id"] == "motion_up":
         icon_url = utils.twemojiPNG.ballot
     elif event["event_id"] == "personal_statement":
-        icon_url = utils.twemojiPNG.speechleft
+        icon_url = utils.twemojiPNG.leftchat
 
     if event["event_id"] == "evidence_submit":
         icon_url = utils.twemojiPNG.folder

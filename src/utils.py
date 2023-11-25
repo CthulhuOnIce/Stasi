@@ -120,3 +120,5 @@ class twemojiPNG:
     build=  "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f3db.png"  # 🏛
     ticket= "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f3ab.png"  # 🎫
     folder= "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4c1.png"  # 📁
+    leftchat = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f5e8.png"  # 🗨
+    eyechat = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f441-200d-1f5e8.png"
