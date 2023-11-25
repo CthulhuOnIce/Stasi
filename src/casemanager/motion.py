@@ -100,7 +100,9 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
         if self.Case.motion_in_consideration == self:
             self.Case.motion_in_consideration = None
 
-    def LoadDict(self, DBDocument: dict):
+    def fromDict(self, DBDocument: dict):
+        for key in DBDocument:
+            setattr(self, key, DBDocument[key])
         return self
     
     async def New(self, author) -> Motion:  # the event log entry should be updated by the subtype's New() function
@@ -162,8 +164,8 @@ class StatementMotion(Motion):
         ))
         return self
 
-    def LoadDict(self, DBDocument: dict):
-        super().LoadDict()
+    def fromDict(self, DBDocument: dict):
+        super().fromDict(DBDocument)
         return
 
 class OrderMotion(Motion):
@@ -409,3 +411,9 @@ class AdjustPenaltyMotion(Motion):
             old_penalties = old_penalties,
             new_penalties = [penalty.save() for penalty in self.new_penalties]
         ))
+
+    
+def loadMotionFromDict(case, motion_dict):
+    for subtype in Motion.__subclasses__():
+        if motion_dict["type"] == subtype.__name__:
+            return subtype(case).fromDict(motion_dict)
