@@ -23,6 +23,69 @@ elements = open("wordlists/elements.txt", "r").read().split("\n")
 
 # --- END DEBUG CLASSES AND FUNCTIONS - EVERYTHING BELOW MUST BE PORTED TO THE BOT ---
 
+"""
+This library is for managing cases, motions, and other court-related things.
+Court cases are basically just a collection of metadata, a list of motions, and a list of events.
+They are designed to allow for more public participation in server moderation, and to get "public" interest up.
+
+Cases are stored in a database, and are loaded into memory when the bot starts up.
+Cases are also saved to the database when they are updated, and when the bot shuts down.
+Cases are not saved to the database when they are closed, as they are archived and removed from memory.
+When this happens, they are saved to a zip file and sent to relevant discord channels. 
+
+Cases are created by the plaintiff, and the defendant is notified.
+The plaintiff can also offer a plea deal at any time, including before jury selection, and the defendant can accept or decline.
+The bot is meant to handle most communication in case-related matters, to allow for greater archival capacity, and the 
+ability to anonymize jurors.
+
+Cases are created with a title, description, and a list of penalties.
+Penalties are o_summary_bjects which are executed when a case is closed, and can be warnings, bans, or prison sentences.
+Penalties are also used in plea deals, and can be modified by the plaintiff and defendant at any time.
+Penalties are also used in motions, and can be modified by the plaintiff and defendant at any time.
+
+Feature Complete:
+- [ ] Penalty Drafting UI
+- [ ] Implement All Motion
+- [ ] Evidence Management
+- [ ] Juror Chat
+- [ ] Remove jurors from juries if they leave the server
+- [ ] Remove jurors from juries if case is officially filed against them
+- [ ] Make Case selection dict persistent
+
+Commands:
+- [ ] /case view status
+- [ ] /case view motionqueue
+- [ ] /case view eventlog [reverse=True]
+- [ ] /case view discovery
+- [ ] /case view evidence [evidenceid]
+
+
+Tutorial:
+- [ ] /case help
+
+
+- [ ] /case move statement - To file a motion to have the court make an official statement 
+- [ ] /case move adjustpenalty - Move to adjust the penalty of a guilty conviction
+- [ ] /case move order - File a motion to procure a court order
+- [ ] /case move censure - File a motion to prevent a specific party in the case from doing a specific thing for a limited time
+
+- [ ] /case move expedite - File a motion to expedite another motion
+- [ ] /case move batch - File a motion to batch dismiss or pass other motions
+
+- [ ] /case evidence strike - File a motion to strike evidence from the case, or if you submitted it, strike it from the case immediately.
+- [ ] /case evidence interview - Interview a user through Stasi and admit it as evidence
+- [ ] /case evidence statement - Ask a user for a single statement through Stasi and admit that as evidence.
+- [ ] /case evidence message - Submit a message link to have it archived as evidence
+- [ ] /case evidence upload - Upload a file as evidence
+
+- [ ] /case motion withdraw - To withdraw a motion
+
+All in one suite for managing plea deals.
+When ran by the plaintiff, allows them to offer a plea deal and check on it, or withdraw/modifiy it.
+When ran by the defense, allows them to accept or decline a plea deal.
+- [ ] /case plea offer
+"""
+
 ACTIVECASES: List[Case] = []
 
 def getCaseByID(case_id: str) -> Case:
@@ -58,6 +121,43 @@ def getCasesByJuror(member: discord.Member) -> List[Case]:
         if member in case.jury_pool_ids:
             cases.append(case)
     return cases
+
+class Evidence:
+    def __init__(self, _id: str):
+        self._id = _id
+        self.file_id = None
+
+    async def New(self, filename: str, file: io.BytesIO, author: int, **kwargs):
+        self.filename = filename
+
+        self.file = file
+        self.timestamp = datetime.datetime.now(datetime.timezone.utc)
+        self.author = author
+        for kw in kwargs:
+            self.__dict__[kw] = kwargs[kw]
+        # TODO: Save to database
+        return
+
+    async def Archive(self):
+        # TODO: delete file from database
+        return self.file
+
+    async def fromDict(self, d: dict):
+        self._id = d["_id"]
+        self.filename = d["filename"]
+        self.file = d["file"]
+        self.timestamp = d["timestamp"]
+        self.author = d["author"]
+        return self
+    
+    def toDict(self):
+        return {
+            "_id": self._id,
+            "filename": self.filename,
+            "file": self.file,
+            "timestamp": self.timestamp,
+            "author": self.author
+        }
 
 # makes intellisense work for event dictionaries
 class Event(TypedDict):
@@ -652,6 +752,7 @@ class Case:
         self.juror_chat_log = []
         self.motion_in_consideration: Motion = None
         self.motion_number = 101  # motion IDs start as {caseid}-101, {caseid}-102, etc. 
+        self.evidence_number = 101 # evidence IDs start as {caseid}-101, {caseid}-102, etc.
 
         # if this is set to true, Tick() won't do anything, good for completely freezing the case 
         self.no_tick: bool = False
@@ -661,6 +762,33 @@ class Case:
 
         ACTIVECASES.append(self)
         return self
+
+    async def newEvidence(self, author: discord.Member, filename: str, file: io.BytesIO, **kwargs) -> Evidence:
+
+        await self.registerUser(author)  
+
+        evidence_tag = "N"
+        if author.id == self.plaintiff_id:
+            evidence_tag = "P"
+        elif author.id == self.defense_id:
+            evidence_tag = "D"
+        elif author.id in self.jury_pool_ids:
+            evidence_tag = "J"
+
+        evidence_id = f"{self.id}-{evidence_tag}{self.evidence_number}"
+        evidence = Evidence(evidence_id)
+        evidence.New(filename, file, author.id, **kwargs)
+
+        self.evidence.append(evidence)
+        self.event_log.append(await self.newEvent(
+            "evidence_submit",
+            f"{self.nameUserByID(author.id)} has submitted evidence.",
+            f"{self.nameUserByID(author.id)} has submitted evidence:\n{filename}",
+            evidence = evidence.toDict()
+        ))
+
+        self.evidence_number += 1
+        return evidence
 
     def LoadFromID(self, case_id, guild):
         self.guild = guild
@@ -710,6 +838,7 @@ class Case:
                 "motion_in_consideration": self.motion_in_consideration.MotionID if self.motion_in_consideration else None,
 
                 "locks": self.locks,
+                "evidence": [evidence.toDict() for evidence in self.evidence],
                 
                 "penalties": [penalty.save() for penalty in self.penalties],
                 "plea_deal_penalties": [penalty.save() for penalty in self.plea_deal_penalties],

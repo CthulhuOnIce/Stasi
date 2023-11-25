@@ -8,26 +8,29 @@ from .stasilogging import *
 from . import utils
 
 """
-This manages mutes.
-When a "prisoner" is muted, their roles are saved, removed, and replaced with a "Prisoner" role.
-A "warrant" is a separate order to mute the prisoner. They can be stacked on top of each other.
+This module manages the "Prison" system within the server.
+Whether or not a user is in prison is determined by the presence and status of Warrants.
+Warrants are issued by moderators or other cogs and are stored in the database.
+Warrants are stored under a "Prisoner" object which includes information like their role list and time committed.
+This is so that warrants can be individually managed and issued.
 
-prisoner = {
-    "_id": user.id,
-    "roles": [role_id1, role_id2, role_id3],
-    "committed": datetime,
-    "warrants": {
-        "_id": "asd9339dj",
-        "category": "admin",
-    }
-}
+Warrants with a sentence are served one after the other, in the order they are issued.
+Warrants with no sentence are served indefinitely, until they are voided, frozen, or stayed.
+Timed warrants and indefinite warrants can be served at the same time, but no two timed warrants can be served at the same time.
 
-- [ ] Handling when user leaves server, or warrants issued against people not currently in the server
-- [x] Void warrants by ID
--  [x] Fail gracefully if warrant doesn't exist
-- [ ] Void warrants by category
-- [ ] Void warrants by author
-- [ ] Void warrants by prisoner (implemented in prison.py)
+Voided warrants are removed entirely.
+Stayed warrants are not served, but are not removed until they expire, time spent stayed is counted towards the sentence.
+Frozen warrants are not served, but are saved until they are unfrozen. Time spent frozen is not counted towards the sentence.
+
+Generally, when filing a new warrant. newWarrant() should be used, which will automatically create a new prisoner if one does not exist.
+
+When voiding a warrant from another cog, use the in-built warrant voiding functions as they are designed to fail gracefully if the warrant does not exist for having been voided already.
+
+Completion Guide
+- [ ] Handle warrants correctly if user has left the server. (db.set_roles())
+- [ ] Function which voids all warrants under a certain Prisoner's name.
+- [ ] Function which voids all warrants under a certain category for a certain Prisoner.
+- [ ] Jumping back and forth in the warrant activation queue based on freeze status etc.
 """
 
 PRISONERS: List["Prisoner"] = []
