@@ -122,3 +122,8 @@ class twemojiPNG:
     folder= "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4c1.png"  # 📁
     leftchat = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f5e8.png"  # 🗨
     eyechat = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f441-200d-1f5e8.png"
+
+def randomKey(length: int):
+    # remove similar looking characters
+    chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    return "".join(random.choice(chars) for _ in range(length))
