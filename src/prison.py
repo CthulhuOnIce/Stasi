@@ -41,7 +41,7 @@ class Prison(commands.Cog):
 
         def generateEmbed(reason: str) -> discord.Embed:
             embed = discord.Embed(title="Prison Reason", description=reason, color=0x000000)
-            embed.set_author(name=utils.normalUsername(target), icon_url=utils.author_images["memo"])
+            embed.set_author(name=utils.normalUsername(target), icon_url=utils.twemojiPNG.memo)
             return embed
 
         modal = ReasonModal(title="Reason for Prison Sentence")
@@ -83,7 +83,7 @@ class Prison(commands.Cog):
 
         def lenToEmbed(length: int) -> discord.Embed:
             embed = discord.Embed(title="Prison Sentence", description= utils.seconds_to_time_long(length) if length > 0 else "Permanent", color=0x000000)
-            embed.set_author(name=utils.normalUsername(target), icon_url=utils.author_images["swatch"])
+            embed.set_author(name=utils.normalUsername(target), icon_url=utils.twemojiPNG.swatch)
             return embed
 
         view = confirmView()
@@ -163,7 +163,7 @@ class Prison(commands.Cog):
         embed = discord.Embed(title="New Warrant", description=f"Warrant To Be Filed Against {utils.normalUsername(target)}", color=0x000000)
         embed.add_field(name="Sentence Length", value=utils.seconds_to_time_long(sentence) if sentence > 0 else "Permanent / Indefinite", inline=False)
         embed.add_field(name="Reason", value=reason, inline=False)
-        embed.set_author(name=utils.normalUsername(target), icon_url=utils.author_images["normal"])
+        embed.set_author(name=utils.normalUsername(target), icon_url=utils.twemojiPNG.normal)
 
         msg = await ctx.respond(embed=embed, ephemeral=True)
 
@@ -263,7 +263,7 @@ class Prison(commands.Cog):
         embed.add_field(name="Initially Committed At", value=discord_dynamic_timestamp(prisoner.committed), inline=False)
         embed.add_field(name="Total Time Served", value=utils.seconds_to_time_long(prisoner.total_time_served()), inline=False)
         embed.add_field(name="Total Time Remaining", value=utils.seconds_to_time_long(prisoner.total_time_remaining()), inline=False)
-        embed.set_author(name=utils.normalUsername(prisoner.prisoner()), icon_url=utils.author_images["ticket"])
+        embed.set_author(name=utils.normalUsername(prisoner.prisoner()), icon_url=utils.twemojiPNG.ticket)
         await prisoner.communicate(embed=embed)
 
         await prisoner.Tick()

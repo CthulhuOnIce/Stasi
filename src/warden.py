@@ -171,7 +171,7 @@ class Prisoner:
         embed.add_field(name="Committed", value=discord_dynamic_timestamp(self.committed, "F"), inline=False)
         embed.add_field(name="Released", value=discord_dynamic_timestamp(datetime.datetime.now(datetime.timezone.utc), "F"), inline=False)
         embed.add_field(name="Committed (R)", value=discord_dynamic_timestamp(self.committed, "R"), inline=False)
-        embed.set_author(name=utils.normalUsername(self.prisoner()), icon_url=utils.author_images["unlock"])
+        embed.set_author(name=utils.normalUsername(self.prisoner()), icon_url=utils.twemojiPNG.unlock)
         await self.communicate(embed=embed)
 
         user = self.prisoner()
@@ -237,7 +237,7 @@ class Prisoner:
                 self.warrants.remove(warrant)
 
                 embed = discord.Embed(title="Warrant Expired", description=f"Warrant {warrant._id} has expired.", color=discord.Color.red())
-                embed.set_author(name=utils.normalUsername(self.prisoner()), icon_url=utils.author_images["chain"])
+                embed.set_author(name=utils.normalUsername(self.prisoner()), icon_url=utils.twemojiPNG.chain)
                 await self.communicate(embed=embed)
 
                 log("justice", "warrant", f"Warrant expired: {utils.normalUsername(self.prisoner())} ({warrant._id})")
@@ -253,7 +253,7 @@ class Prisoner:
             # expires - started 
             sentence_seconds = (nxt.expires - nxt.started).total_seconds()
             embed.add_field(name="Expires (S)", value=utils.seconds_to_time_long(sentence_seconds), inline=False)
-            embed.set_author(name=utils.normalUsername(self.prisoner()), icon_url=utils.author_images["chain"])
+            embed.set_author(name=utils.normalUsername(self.prisoner()), icon_url=utils.twemojiPNG.chain)
 
             await self.communicate(embed=embed)
 
@@ -291,7 +291,7 @@ async def voidWarrantByID(warrant_id: str, reason: str = None):
                 embed.add_field(name="Description", value=warrant.description, inline=False)
                 if reason:
                     embed.add_field(name="Reason For Voiding", value=reason, inline=False)
-                embed.set_author(name=utils.normalUsername(prisoner.prisoner()), icon_url=utils.author_images["ticket"])
+                embed.set_author(name=utils.normalUsername(prisoner.prisoner()), icon_url=utils.twemojiPNG.ticket)
                 await prisoner.communicate(embed=embed)
                 log("justice", "warrant", f"Warrant voided: {utils.normalUsername(prisoner.prisoner())} ({warrant._id})")
                 return
@@ -319,7 +319,7 @@ async def newWarrant(target: discord.Member, category: str, description: str, au
     embed = discord.Embed(title="Warrant Issued", description=f"Warrant `{warrant._id}` has been issued.", color=discord.Color.red())
     embed.add_field(name="Sentence Length", value=utils.seconds_to_time_long(warrant.len_seconds) if warrant.len_seconds > 0 else "Indefinite", inline=False)
     embed.add_field(name="Description", value=warrant.description, inline=False)
-    embed.set_author(name=utils.normalUsername(target), icon_url=utils.author_images["penlock"])
+    embed.set_author(name=utils.normalUsername(target), icon_url=utils.twemojiPNG.penlock)
 
     author_member = target.guild.get_member(author)
     await db.add_note(

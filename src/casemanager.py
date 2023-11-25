@@ -262,18 +262,20 @@ def penaltyFromDict(case, d: dict) -> Penalty:
 def eventToEmbed(event: Event, case_name: str) -> discord.Embed:
     embed = discord.Embed(title=event["name"], description=event["desc"], timestamp=event["timestamp"])
     embed.set_footer(text=f"Event ID: {event['event_id']}")
-    icon_url = utils.author_images["normal"]
+    icon_url = utils.twemojiPNG.normal
     
     if event["event_id"] == "case_filed":
-        icon_url = utils.author_images["opencab"]
+        icon_url = utils.twemojiPNG.opencab
     elif event["event_id"] == "status_update":
-        icon_url = utils.author_images["label"]
+        icon_url = utils.twemojiPNG.label
     elif event["event_id"] == "juror_join":
-        icon_url = utils.author_images["scale"]
+        icon_url = utils.twemojiPNG.scale
     elif event["event_id"] == "juror_leave":
-        icon_url = utils.author_images["scale"]
+        icon_url = utils.twemojiPNG.scale
     elif event["event_id"] == "motion_up":
-        icon_url = utils.author_images["ballot"]
+        icon_url = utils.twemojiPNG.ballot
+    elif event["event_id"] == "personal_statement":
+        icon_url = utils.twemojiPNG.speechleft
 
     embed.set_author(name=case_name, icon_url=icon_url)
     return embed
