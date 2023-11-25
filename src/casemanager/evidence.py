@@ -35,6 +35,7 @@ class Evidence:
         self.file_id = None
         self.id = id
         self.created = None
+        self.certified = False
         self.seals: List[Seal] = []  # key -> desc
 
     def fromDict(self, data):
@@ -44,6 +45,7 @@ class Evidence:
         self.id = data["id"]
         self.seals = [Seal().fromDict(seal) for seal in data["seals"]]
         self.created = data["created"].replace(tzinfo=datetime.timezone.utc)
+        self.certified = data["certified"]
         return self
     
     def toDict(self):
@@ -53,7 +55,8 @@ class Evidence:
             "author": self.author,
             "id": self.id,
             "seals": [seal.toDict() for seal in self.sealed],
-            "created": self.created
+            "created": self.created,
+            "certified": self.certified
         }
     
     def addSeal(self, desc, author_id: int):
