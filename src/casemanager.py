@@ -69,6 +69,7 @@ Tutorial:
 - [ ] /case move adjustpenalty - Move to adjust the penalty of a guilty conviction
 - [ ] /case move order - File a motion to procure a court order
 - [ ] /case move censure - File a motion to prevent a specific party in the case from doing a specific thing for a limited time
+- [ ] /case move prison - Prison the defendant for a set time, or until the case is resolved
 
 - [ ] /case move expedite - File a motion to expedite another motion
 - [ ] /case move batch - File a motion to batch dismiss or pass other motions
@@ -77,9 +78,17 @@ Tutorial:
 - [ ] /case evidence interview - Interview a user through Stasi and admit it as evidence
 - [ ] /case evidence statement - Ask a user for a single statement through Stasi and admit that as evidence.
 - [ ] /case evidence message - Submit a message link to have it archived as evidence
-- [ ] /case evidence upload - Upload a file as evidence
+- [x] /case evidence upload - Upload a file as evidence
 
 - [ ] /case motion withdraw - To withdraw a motion
+
+Bugs:
+- [ ]
+
+Optimizations:
+- [ ] Communication with discord is slow af when working with files on evidence upload and view
+- [ ] Break this file up into multiple files, or even a submodule
+- [ ] Make sure security checks are good on debug and all new commands
 
 All in one suite for managing plea deals.
 When ran by the plaintiff, allows them to offer a plea deal and check on it, or withdraw/modifiy it.
