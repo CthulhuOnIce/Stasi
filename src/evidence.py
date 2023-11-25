@@ -16,13 +16,13 @@ class Evidence:
         self.file_id = data["file_id"]
         self.author = data["author"]
         self.id = data["id"]
-        self.created = data["created"]
+        self.created = data["created"].replace(tzinfo=datetime.timezone.utc)
         return self
 
     async def New(self, filename, bytes_io, author_id: int):
         if isinstance(author_id, discord.Member):
             author_id = author_id.id
-            
+
         self.filename = filename
         self.created = datetime.datetime.now(datetime.timezone.utc)
         self.author = author_id

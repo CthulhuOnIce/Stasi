@@ -659,6 +659,13 @@ class Case:
             if motion.MotionID.lower() == motionid:
                 return motion
         return None
+    
+    def getEvidenceByID(self, evidenceid: str) -> evidence.Evidence:
+        evidenceid = evidenceid.lower()
+        for evidence in self.evidence:
+            if evidence.id.lower() == evidenceid:
+                return evidence
+        return None
 
     def getUser(self, userid: int) -> discord.Member:
         if isinstance(userid, str):

@@ -19,6 +19,14 @@ from . import report as rm
 from . import quickask as qa
 
 
+case_selection = {}
+
+def setActiveCase(member: discord.Member, case: cm.Case):
+    case_selection[member.id] = case
+
+def getActiveCase(member: discord.Member) -> cm.Case:
+    return case_selection[member.id] if member.id in case_selection else None
+
 class Justice(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -28,15 +36,6 @@ class Justice(commands.Cog):
     async def on_ready(self):
         await cm.populateActiveCases(self.bot, self.bot.get_guild(config.C["guild_id"]))
         log("Case", "CaseManager", "Justice module ready.")
-
-    
-    case_selection = {}
-    
-    def setActiveCase(self, member: discord.Member, case: cm.Case):
-        self.case_selection[member.id] = case
-
-    def getActiveCase(self, member: discord.Member) -> cm.Case:
-        return self.case_selection[member.id] if member.id in self.case_selection else None
 
     async def active_case_options(ctx: discord.AutocompleteContext):
         return [f"{case}: {case.id}" for case in cm.ACTIVECASES]
@@ -48,7 +47,7 @@ class Justice(commands.Cog):
         if case is None:
             return await ctx.respond("Invalid case ID.", ephemeral=True)
         
-        self.setActiveCase(ctx.author, case)
+        setActiveCase(ctx.author, case)
         return await ctx.respond(f"Selected case **{case}** (`{case.id}`) as your active case.", ephemeral=True)
 
     @case.command(name='file', description='File a case against a user.')
@@ -117,13 +116,13 @@ class Justice(commands.Cog):
 
         guild = self.bot.get_guild(config.C["guild_id"])
         case = await cm.Case(self.bot, guild).New(ctx.author, member, cm.WarningPenalty(cm.Case).New("This is a test warning"), reason)
-        self.setActiveCase(ctx.author, case)
-        self.setActiveCase(member, case)
+        setActiveCase(ctx.author, case)
+        setActiveCase(member, case)
 
     # TODO: Confirmation message
     @case.command(name="statement", description="Make a statement in your active case.")
     async def statement(self, ctx: discord.ApplicationContext, statement: str):
-        case = self.getActiveCase(ctx.author)
+        case = getActiveCase(ctx.author)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
         # TODO: check if user is actually involved in case before allowing them to make a statement
@@ -132,7 +131,7 @@ class Justice(commands.Cog):
 
     @case.command(name="info", description="Get information about a case.")
     async def case_info(self, ctx: discord.ApplicationContext, ephemeral: bool = True):
-        case = self.getActiveCase(ctx.author)
+        case = getActiveCase(ctx.author)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
 
@@ -168,7 +167,7 @@ class Justice(commands.Cog):
 
     @evidence.command(name="upload", description="Upload a file as evidence to your active case.")
     async def evidence_upload(self, ctx: discord.ApplicationContext):
-        case = self.getActiveCase(ctx.author)
+        case = getActiveCase(ctx.author)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
         if not case.canSubmitMotions(ctx.author):
@@ -179,7 +178,7 @@ class Justice(commands.Cog):
             file_message: discord.Message = await self.bot.wait_for("message", check=lambda m: m.author.id == ctx.author.id and m.channel.id == ctx.channel.id, timeout=300)
         except asyncio.TimeoutError:
             return await ctx.respond("You took too long to upload the file.", ephemeral=True)
-        
+
         if len(file_message.attachments) == 0:
             return await ctx.respond("You must upload a file.", ephemeral=True)
         if len(file_message.attachments) > 1:
@@ -189,10 +188,48 @@ class Justice(commands.Cog):
         if file.size > 8388608*4:
             return await ctx.respond("File size must be less than 32MB.", ephemeral=True)
         
+        # give upload progress regularly 
+        
+        msg = await ctx.respond(f"Processing file {file.filename}...", ephemeral=True)
+
         file_bytes = await file.read()
+
+        await msg.edit(content=f"Uploading file {file.filename}...", embed=None)
+
         evidence = await case.newEvidence(ctx.author, file.filename, file_bytes)
         await ctx.respond(f"Uploaded evidence **{evidence.filename}** (`{evidence.id}`) to case **{case}** (`{case.id}`)", ephemeral=True)
+
+    async def evidence_options(ctx: discord.AutocompleteContext):
+        case = getActiveCase(ctx.interaction.user)
+        if case is None:
+            return []
+        return [f"{evidence.filename}: {evidence.id}" for evidence in case.evidence]
+
+    @evidence.command(name="view", description="View a piece of evidence in your active case.")
+    @option("evidence_id", str, description="The ID of the evidence to view.", autocomplete=discord.utils.basic_autocomplete(evidence_options))
+    @option("ephemeral", bool, description="Whether to send the evidence privately.", default=True)
+    async def evidence_view(self, ctx: discord.ApplicationContext, evidence_id: str, ephemeral: bool = True):
+        case = getActiveCase(ctx.author)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        if ":" in evidence_id:
+            evidence_id = evidence_id.split(" ")[-1]
         
+        file = case.getEvidenceByID(evidence_id)
+        if file is None:
+            return await ctx.respond("Invalid evidence ID.", ephemeral=True)
+        
+        await ctx.respond(f"Loading evidence...", ephemeral=True)
+    
+        file_name, file_bytes = await file.getRawFile()
+        embed = discord.Embed(title=f"Viewing Evidence: {file_name}", description=f"**{case}** (`{case.id}`)")
+        embed.add_field(name="Evidence ID", value=file.id, inline=False)
+        embed.add_field(name="Evidence Filename", value=file.filename, inline=False)
+        embed.add_field(name="Filed By", value=case.nameUserByID(file.author), inline=False)
+        embed.add_field(name="Filed On", value=discord_dynamic_timestamp(file.created, 'F'), inline=False)
+        embed.add_field(name="Filed Relative", value=discord_dynamic_timestamp(file.created, 'R'), inline=False)
+
+        await ctx.respond(embed=embed, file=discord.File(file_bytes, file_name), ephemeral=ephemeral)
 
     jury = discord.SlashCommandGroup("jury", "Jury commands")
     
@@ -207,14 +244,14 @@ class Justice(commands.Cog):
         if ctx.author.id not in case.jury_invites:
             return await ctx.respond("You have not been invited to this case.", ephemeral=True)
         
-        self.setActiveCase(ctx.author, case)
+        setActiveCase(ctx.author, case)
         await case.addJuror(ctx.author)
 
         return await ctx.respond(f"Joined case **{case}** (`{case.id}`) as a juror.", ephemeral=True)
     
     @jury.command(name="say", description="Say something privately to the other jurors.")
     async def jury_say(self, ctx: discord.ApplicationContext, message: str):
-        case = self.getActiveCase(ctx.author)
+        case = getActiveCase(ctx.author)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
         if ctx.author.id not in case.jury_pool_ids:
@@ -241,7 +278,7 @@ class Justice(commands.Cog):
     # TODO: remove when done debugging
     @dbg.command(name="tickone", description="DEBUG: trigger a tick event on your active case.")
     async def tick_case(self, ctx: discord.ApplicationContext):
-        case = self.getActiveCase(ctx.author)
+        case = getActiveCase(ctx.author)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
         await case.Tick()
@@ -253,15 +290,15 @@ class Justice(commands.Cog):
         penalty = cm.WarningPenalty(cm.Case).New("Test warning for test case.")
         case = await cm.Case(self.bot, ctx.guild).New(ctx.author, member, penalty, "Test case for debugging the Case system")
         
-        self.setActiveCase(ctx.author, case)
-        self.setActiveCase(member, case)
+        setActiveCase(ctx.author, case)
+        setActiveCase(member, case)
         await ctx.respond(f"Filed test case **{case}** (`{case.id}`) It has automatically been set as your active case.", ephemeral=True)
 
     @dbg.command(name='appointjuror', description='Appoint a juror to a case.')
     @option("member", discord.Member, description="The member to appoint as a juror.")
     @option("pseudonym", str, description="The pseudonym to use for the juror.", optional=True)
     async def appoint_juror(self, ctx: discord.ApplicationContext, member: discord.Member, pseudonym: Optional[str] = None):
-        case = self.getActiveCase(ctx.author)
+        case = getActiveCase(ctx.author)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
         if case.stage != 0:
