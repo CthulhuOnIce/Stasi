@@ -201,9 +201,16 @@ class Justice(commands.Cog):
 
     async def evidence_options(ctx: discord.AutocompleteContext):
         case = getActiveCase(ctx.interaction.user)
-        if case is None:
-            return []
-        return [f"{evidence.filename}: {evidence.id}" for evidence in case.evidence]
+ 
+        if case is None:     
+            pool = []   
+            for case in cm.ACTIVECASES:
+                pool.extend(case.evidence)
+            # sort based on 'created' attribute
+            pool.sort(key=lambda e: e.created, reverse=True)
+            return [f"{evidence.filename}: {evidence.id}" for evidence in pool]
+        else:
+            return [f"{evidence.filename}: {evidence.id}" for evidence in case.evidence]
 
     @evidence.command(name="view", description="View a piece of evidence in your active case.")
     @option("evidence_id", str, description="The ID of the evidence to view.", autocomplete=discord.utils.basic_autocomplete(evidence_options))
