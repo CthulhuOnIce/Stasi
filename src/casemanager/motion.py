@@ -28,7 +28,7 @@ class Motion:
             f"The motion {self.MotionID} has been put up to be considered for a vote by {self.Case.nameUserByID(self.Author.id)}.",
             f"""The motion {self.MotionID} has been put up to be considered for a vote by {self.Case.nameUserByID(self.Author.id)}. 
 Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(self.Expiry, 'F')}.""",
-            motion = self.Dict()
+            motion = self.toDict()
         ))
     
     async def CancelVoting(self, reason:str = None):
@@ -45,7 +45,7 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
             "motion_cancel_vote",
             f"Voting for motion {self.MotionID} has been cancelled.",
             explan,
-            motion = self.Dict()
+            motion = self.toDict()
         ))
 
     async def VoteFailed(self):
@@ -55,7 +55,7 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
             "motion_failed",
             f"The motion {self.MotionID} has failed its vote.",
             f"The motion {self.MotionID} has failed its jury vote ({len(self.Votes['Yes'])}/{len(self.Votes['No'])}).\n\nIn Support: {yes}\n\nIn Opposition: {no}",
-            motion = self.Dict()
+            motion = self.toDict()
         ))
         return
 
@@ -66,7 +66,7 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
             "motion_passed",
             f"The motion {self.MotionID} has passed its vote.",
             f"The motion {self.MotionID} has passed its jury vote ({len(self.Votes['Yes'])}/{len(self.Votes['No'])}).\n\nIn Support: {yes}\n\nIn Opposition: {no}",
-            motion = self.Dict()
+            motion = self.toDict()
         ))
         return
     
@@ -132,7 +132,7 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
     def __repr__(self):
         return self.MotionID
 
-    def Dict(self):  # like Motion.Save() but doesn't save the dictionary, just returns it instead. Motions are saved when their 
+    def toDict(self):  # like Motion.Save() but doesn't save the dictionary, just returns it instead. Motions are saved when their 
         save = self.__dict__
         save["type"] = self.__class__.__name__
         return save
@@ -148,7 +148,7 @@ class StatementMotion(Motion):
             "jury_statement",
             f"The jury has made an official statement.",
             f"Pursuant to motion {self.MotionID}, the Jury makes the following statement:\n{self.statement_content}",
-            motion = self.Dict()
+            motion = self.toDict()
         ))
     
     async def New(self, author, statement_content: str):
@@ -158,7 +158,7 @@ class StatementMotion(Motion):
             "propose_statement",
             f"Motion {self.MotionID} has been filed to make a statement.",
             f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to have the jury make a statement.\nStatement: {statement_content}",
-            motion = self.Dict()
+            motion = self.toDict()
         ))
         return self
 
@@ -178,7 +178,7 @@ class OrderMotion(Motion):
             "jury_order",
             f"The jury has given a binding order.",
             f"Pursuant to motion {self.MotionID}, the Jury compels the following entity:\n{self.target}\n\nTo comply with the following order:\n{self.order_content}.\nNot following this order can result in penalties.",
-            motion = self.Dict()
+            motion = self.toDict()
         ))
 
     async def New(self, author, target: str, order_content: str):
@@ -189,7 +189,7 @@ class OrderMotion(Motion):
             "propose_order",
             f"Motion {self.MotionID} has been filed to give a binding order.",
             f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to compel the following entity: {target}\nTo comply with the following order:\n{order_content}.",
-            motion = self.Dict()
+            motion = self.toDict()
         ))
         return self
 
@@ -223,8 +223,8 @@ class RushMotion(Motion):
             "propose_rush_motion",
             f"Motion {self.MotionID} has been filed to rush {self.rushed_motion().MotionID}.",
             f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to rush motion {self.rushed_motion().MotionID} for an immediate floor vote.\nReason: {explanation}",
-            motion = self.Dict(),
-            rushed_motion = self.rushed_motion().Dict()
+            motion = self.toDict(),
+            rushed_motion = self.rushed_motion().toDict()
         ))
         for motion in self.Case.motion_queue:
             await motion.CancelVoting(reason=f"Motion {self.MotionID} to rush motion {self.rushed_motion().MotionID} has been filed.")
@@ -240,8 +240,8 @@ class RushMotion(Motion):
             "rush_motion",
             f"A motion {self.rushed_motion().MotionID} has been rushed to the front of the queue.",
             f"Pursuant to motion {self.MotionID}, {self.rushed_motion().MotionID} has been rushed to the front of the queue and will now face an immediate vote.",
-            motion = self.Dict(),
-            rushed_motion = self.rushed_motion().Dict()
+            motion = self.toDict(),
+            rushed_motion = self.rushed_motion().toDict()
         ))
         rushed = self.rushed_motion()
         self.Case.motion_queue.remove(rushed)
@@ -300,7 +300,7 @@ class BatchVoteMotion(Motion):
             "propose_summary_motion",
             f"Motion {self.MotionID} has been filed to pass or deny motions.",
             f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)}.\n{execute_str}\nReason: {reason}",
-            motion = self.Dict()
+            motion = self.toDict()
         ))
 
         # add to queue in front of first motion referenced
@@ -350,7 +350,7 @@ class BatchVoteMotion(Motion):
             "batch_motion",
             f"Execution on Batch Vote Motion {self.MotionID} has finished.",
             f"Pursuant to motion {self.MotionID}, the following has been executed:\n{executed_str}",
-            motion = self.Dict(),
+            motion = self.toDict(),
             not_found = not_found,
             passed = passed,
             failed = failed
@@ -385,9 +385,9 @@ class AdjustPenaltyMotion(Motion):
             "propose_new_penalty",
             f"Motion {self.MotionID} has been filed to adjust the Penalty if found guilty.",
             f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to adjust the penalty of a guilty verdict From:\n{old_penalty_str}\n\nTo:\n{new_penalties_str}\nReason: {reason}",
-            motion = self.Dict(),
-            old_penalties = [penalty.save() for penalty in self.Case.penalties],
-            new_penalties = [penalty.save() for penalty in new_penalties]
+            motion = self.toDict(),
+            old_penalties = [penalty.toDict() for penalty in self.Case.penalties],
+            new_penalties = [penalty.toDict() for penalty in new_penalties]
         ))
         return self
     
@@ -397,7 +397,7 @@ class AdjustPenaltyMotion(Motion):
     
         new_penalties_str = self.Case.describePenalties(self.new_penalties)
     
-        old_penalties = [penalty.save() for penalty in self.Case.penalties]
+        old_penalties = [penalty.toDict() for penalty in self.Case.penalties]
         
         self.Case.penalties = self.new_penalties
 
@@ -405,7 +405,7 @@ class AdjustPenaltyMotion(Motion):
             "new_penalty",
             f"The Penalty of the Case has been adjusted.",
             f"Pursuant to motion {self.MotionID}, the guilty penalty has been adjusted From:\n{old_penalty_str}\n\nTo:\n{new_penalties_str}",
-            motion = self.Dict(),
+            motion = self.toDict(),
             old_penalties = old_penalties,
             new_penalties = [penalty.save() for penalty in self.new_penalties]
         ))

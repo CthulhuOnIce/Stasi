@@ -743,8 +743,8 @@ class Case:
 
                 "locks": self.locks,
                 
-                "penalties": [penalty.save() for penalty in self.penalties],
-                "plea_deal_penalties": [penalty.save() for penalty in self.plea_deal_penalties],
+                "penalties": [penalty.toDict() for penalty in self.penalties],
+                "plea_deal_penalties": [penalty.toDict() for penalty in self.plea_deal_penalties],
                 "plea_deal_expiration": self.plea_deal_expiration,
                 
                 # processing stuff
@@ -752,10 +752,10 @@ class Case:
                 "guilty": None,
                 
                 "evidence_number": self.evidence_number,
-                "evidence": [evidence.__dict__ for evidence in self.evidence],
+                "evidence": [evidence.toDict() for evidence in self.evidence],
 
                 "motion_number": self.motion_number,
-                "motion_queue": [motion.Dict() for motion in self.motion_queue],
+                "motion_queue": [motion.toDict() for motion in self.motion_queue],
 
                 # jury stuff
                 # TODO: turn jury_pool (list[member]) into jury_pool_ids (list[int]), and use jury_pool() method to resolve jury pool as members instead

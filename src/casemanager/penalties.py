@@ -23,7 +23,7 @@ class Penalty:
     def describe(self):
         return "Blank Penalty"
     
-    def save(self):
+    def toDict(self):
         s = self.__dict__
         s["type"] = self.__class__.__name__
         if "case" in s:
