@@ -309,13 +309,6 @@ class Prison(commands.Cog):
         await db.add_note(user.id, entry.user.id, f"User Kicked: `{entry.reason if entry.reason else 'No reason given'}`")
         log("admin", "kick", f"{log_user(entry.user)} kicked {log_user(user)} (reason: {entry.reason if entry.reason else 'No reason given'})")
 
-
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.author.bot:
-            return
-        await db.add_message(message.author.id)
-
     @commands.Cog.listener()
     async def on_ready(self):
         await warden.populatePrisoners(self.bot.get_guild(config.C["guild_id"]))

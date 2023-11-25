@@ -1,13 +1,15 @@
+import datetime
 from typing import Optional
 
 import discord
 from discord import option, slash_command
-from discord.ext import commands, tasks, pages
+from discord.ext import commands, pages, tasks
 
-from . import database as db
-from . import config
 from . import artificalint as ai
+from . import config
+from . import database as db
 from .stasilogging import discord_dynamic_timestamp, log, log_user
+
 
 class Social(commands.Cog):
     def __init__(self, bot):
@@ -253,6 +255,32 @@ class Social(commands.Cog):
 
         await ctx.respond(embed=embed, ephemeral=True)
 
+    last_bump = None
+    last_bump_channel = None
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if message.author.id == 302050872383242240:  # for bump ping
+            if message.embeds and "bump done" in message.embeds[0].description.lower() and message.interaction:
+
+                bumper = message.interaction.user
+
+                await message.channel.send(f"Thanks for bumping, {bumper.mention}! A reminder will be sent in 2 hours.")
+
+                self.last_bump = datetime.datetime.now(datetime.timezone.utc)
+                self.last_bump_channel = message.channel
+
+        if message.author.bot:
+            return
+        await db.add_message(message.author.id)
+
+    @tasks.loop(minutes=1)
+    async def bump_reminder(self):
+        if self.last_bump and self.last_bump_channel:
+            if (datetime.datetime.now(datetime.timezone.utc) - self.last_bump).total_seconds() > 7200:
+                await self.last_bump_channel.send("It's been 2 hours since the last bump! Time to bump again! <@&863539767249338368>")
+                self.last_bump_channel = None
+                self.last_bump = None
     
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
