@@ -16,6 +16,7 @@ from . import database as db
 import time
 from . import config
 from . import warden
+from . import evidence
 
 nouns = open("wordlists/nouns.txt", "r").read().split("\n")
 adjectives = open("wordlists/adjectives.txt", "r").read().split("\n")
@@ -121,43 +122,6 @@ def getCasesByJuror(member: discord.Member) -> List[Case]:
         if member in case.jury_pool_ids:
             cases.append(case)
     return cases
-
-class Evidence:
-    def __init__(self, _id: str):
-        self._id = _id
-        self.file_id = None
-
-    async def New(self, filename: str, file: io.BytesIO, author: int, **kwargs):
-        self.filename = filename
-
-        self.file = file
-        self.timestamp = datetime.datetime.now(datetime.timezone.utc)
-        self.author = author
-        for kw in kwargs:
-            self.__dict__[kw] = kwargs[kw]
-        # TODO: Save to database
-        return
-
-    async def Archive(self):
-        # TODO: delete file from database
-        return self.file
-
-    async def fromDict(self, d: dict):
-        self._id = d["_id"]
-        self.filename = d["filename"]
-        self.file = d["file"]
-        self.timestamp = d["timestamp"]
-        self.author = d["author"]
-        return self
-    
-    def toDict(self):
-        return {
-            "_id": self._id,
-            "filename": self.filename,
-            "file": self.file,
-            "timestamp": self.timestamp,
-            "author": self.author
-        }
 
 # makes intellisense work for event dictionaries
 class Event(TypedDict):
@@ -276,6 +240,13 @@ def eventToEmbed(event: Event, case_name: str) -> discord.Embed:
         icon_url = utils.twemojiPNG.ballot
     elif event["event_id"] == "personal_statement":
         icon_url = utils.twemojiPNG.speechleft
+
+    if event["event_id"] == "evidence_submit":
+        icon_url = utils.twemojiPNG.folder
+        if "evidence" in event:
+            embed.description = f"New Evidence Submitted "
+            embed.add_field(name="File Name", value=f"{event['evidence']['filename']}", inline=False)
+            embed.add_field(name="Evidence ID", value=f"{event['evidence']['id']}", inline=False)
 
     embed.set_author(name=case_name, icon_url=icon_url)
     return embed
@@ -405,12 +376,15 @@ class Case:
     
     # doesn't log or document the case closing, or act on punishments, which should all be done by 
     # preceding functions
-    def closeCase(self):
+    async def closeCase(self):
         self.no_tick = True 
         self.stage = 3
         ACTIVECASES.remove(self)
-        # TODO: unprison prisoned users
-        # TODO: remove case from database and archive it
+        for evidence in self.evidence:
+            await evidence.delete()
+        db_ = await db.create_connection("cases")
+        await db_.delete_one({"_id": self.id})
+        log("Case", "close_case", f"Case {self} ({self.id}) closed.")
         return
 
     def generateNewID(self):
@@ -720,6 +694,8 @@ class Case:
         self.status = "Jury Selection"
         self.id = self.generateNewID()
         self.created = datetime.datetime.now(datetime.timezone.utc)
+        self.evidence: List[evidence.Evidence] = []
+        self.evidence_number = 101
 
         self.plaintiff_id = plaintiff.id
         self.defense_id = defense.id
@@ -765,9 +741,9 @@ class Case:
         ACTIVECASES.append(self)
         return self
 
-    async def newEvidence(self, author: discord.Member, filename: str, file: io.BytesIO, **kwargs) -> Evidence:
+    async def newEvidence(self, author: discord.Member, filename: str, file: io.BytesIO) -> evidence.Evidence:
 
-        await self.registerUser(author)  
+        self.registerUser(author)  
 
         evidence_tag = "N"
         if author.id == self.plaintiff_id:
@@ -778,19 +754,20 @@ class Case:
             evidence_tag = "J"
 
         evidence_id = f"{self.id}-{evidence_tag}{self.evidence_number}"
-        evidence = Evidence(evidence_id)
-        evidence.New(filename, file, author.id, **kwargs)
+        new_evidence = evidence.Evidence(evidence_id)
+        await new_evidence.New(filename, file, author.id)
 
-        self.evidence.append(evidence)
+        self.evidence.append(new_evidence)
         self.event_log.append(await self.newEvent(
             "evidence_submit",
             f"{self.nameUserByID(author.id)} has submitted evidence.",
-            f"{self.nameUserByID(author.id)} has submitted evidence:\n{filename}",
-            evidence = evidence.toDict()
+            f"{self.nameUserByID(author.id)} has submitted evidence:\n{filename} ({evidence_id})",
+            evidence = new_evidence.__dict__
         ))
 
         self.evidence_number += 1
-        return evidence
+        await self.Save()
+        return new_evidence
 
     def LoadFromID(self, case_id, guild):
         self.guild = guild
@@ -840,7 +817,6 @@ class Case:
                 "motion_in_consideration": self.motion_in_consideration.MotionID if self.motion_in_consideration else None,
 
                 "locks": self.locks,
-                "evidence": [evidence.toDict() for evidence in self.evidence],
                 
                 "penalties": [penalty.save() for penalty in self.penalties],
                 "plea_deal_penalties": [penalty.save() for penalty in self.plea_deal_penalties],
@@ -850,6 +826,9 @@ class Case:
                 "stage": self.stage,  # 0 - done (archived), 1 - jury selection, 2 - argumentation / body, 3 - ready to close, awaiting archive 
                 "guilty": None,
                 
+                "evidence_number": self.evidence_number,
+                "evidence": [evidence.__dict__ for evidence in self.evidence],
+
                 "motion_number": self.motion_number,
                 "motion_queue": [motion.Dict() for motion in self.motion_queue],
 
@@ -899,6 +878,9 @@ class Case:
 
         self.stage = d["stage"]
         self.guilty = d["guilty"]
+
+        self.evidence_number = d["evidence_number"]
+        self.evidence = [evidence.Evidence(e["id"]).fromDict(e) for e in d["evidence"]]
 
         self.motion_number = d["motion_number"]
         self.motion_queue = [self.loadMotionFromDict(motion) for motion in d["motion_queue"]]

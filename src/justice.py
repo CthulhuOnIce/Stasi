@@ -4,6 +4,7 @@ import motor  # doing this locally instead of in database.py for greater modular
 import datetime
 import random
 import time
+import asyncio
 
 import discord
 from discord import option, slash_command
@@ -163,6 +164,36 @@ class Justice(commands.Cog):
             
         await ctx.respond(embed=front_page, view=caseinfoview(), ephemeral=ephemeral)
 
+    evidence = case.create_subgroup(name="evidence", description="Commands for managing evidence in your active case.")
+
+    @evidence.command(name="upload", description="Upload a file as evidence to your active case.")
+    async def evidence_upload(self, ctx: discord.ApplicationContext):
+        case = self.getActiveCase(ctx.author)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        if not case.canSubmitMotions(ctx.author):
+            return await ctx.respond("You cannot submit evidence to this case.", ephemeral=True)
+    
+        await ctx.respond("Upload the file here. You have 5 minutes.", ephemeral=True)
+        try:
+            file_message: discord.Message = await self.bot.wait_for("message", check=lambda m: m.author.id == ctx.author.id and m.channel.id == ctx.channel.id, timeout=300)
+        except asyncio.TimeoutError:
+            return await ctx.respond("You took too long to upload the file.", ephemeral=True)
+        
+        if len(file_message.attachments) == 0:
+            return await ctx.respond("You must upload a file.", ephemeral=True)
+        if len(file_message.attachments) > 1:
+            return await ctx.respond("You can only upload one file.", ephemeral=True)
+        
+        file = file_message.attachments[0]
+        if file.size > 8388608*4:
+            return await ctx.respond("File size must be less than 32MB.", ephemeral=True)
+        
+        file_bytes = await file.read()
+        evidence = await case.newEvidence(ctx.author, file.filename, file_bytes)
+        await ctx.respond(f"Uploaded evidence **{evidence.filename}** (`{evidence.id}`) to case **{case}** (`{case.id}`)", ephemeral=True)
+        
+
     jury = discord.SlashCommandGroup("jury", "Jury commands")
     
     async def juror_case_options(ctx: discord.AutocompleteContext):
@@ -196,9 +227,8 @@ class Justice(commands.Cog):
 
     @dbg.command(name='wipecases', description='Wipe all cases from the database.')
     async def wipe_cases(self, ctx: discord.ApplicationContext):
-        cm.ACTIVECASES = []
-        db_ = await db.create_connection("cases")
-        await db_.delete_many({})
+        for c in cm.ACTIVECASES:
+            await c.closeCase()
         await ctx.respond("Cases wiped.", ephemeral=True)
 
     @dbg.command(name='tick', description='Trigger a tick event on all active cases.')
