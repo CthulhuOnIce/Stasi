@@ -5,6 +5,7 @@ from typing import *
 if TYPE_CHECKING:
     from .casemanager import Case
 
+from .. import database as db
 from .. import utils, warden
 from ..stasilogging import *
 
@@ -90,6 +91,21 @@ class PrisonPenalty(Penalty):
         
     async def Execute(self):
         await warden.newWarrant(self.case.defense(), "case", f"Case {self.case.id} Verdict", self.case.plaintiff_id, self.prison_length_seconds)
+
+class JuryBanPenalty(Penalty):
+    def __init__(self, case):
+        super().__init__(case)
+        return
+
+    def New(self):
+        return self
+    
+    def describe(self):
+        return f"Jury Ban: Permanent / Indefinite"
+        
+    async def Execute(self):
+        db_ = await db.create_connection("users")
+        await db_.update_one({"_id": self.case.defense_id}, {"$set": {"jury_banned": True}}, upsert=True)
 
 def penaltyFromDict(case, d: dict) -> Penalty:
     # dynamically locate the class and instantiate it
