@@ -419,8 +419,10 @@ class Case:
         user = user if isinstance(user, int) else user.id  # we don't actually care about the member object, just the id
 
         desc = f"{self.nameUserByID(user)} has left the jury."
+
         if reason:
             desc += f"\n\nReason: {reason}"
+        
         if user in self.jury_pool_ids:
             self.jury_pool_ids.remove(user)
             self.event_log.append(await self.newEvent(
@@ -429,6 +431,9 @@ class Case:
                 desc,
                 juror = user
             ))
+            
+            log("Case", "removeJuror", f"Removed juror {self.nameUserByID(user)} ({user}) from case {self} ({self.id}) for reason {reason}")
+
             await self.Tick()  # immediately tick to check if we need to re-select jurors
             return True
         else:
@@ -617,6 +622,34 @@ class Case:
     def jury_pool(self):
         return [self.fetchUser(user) for user in self.jury_pool_ids]
 
+    async def newEvidence(self, author: discord.Member, filename: str, file: io.BytesIO) -> evidence.Evidence:
+
+        self.registerUser(author)  
+
+        evidence_tag = "N"
+        if author.id == self.plaintiff_id:
+            evidence_tag = "P"
+        elif author.id == self.defense_id:
+            evidence_tag = "D"
+        elif author.id in self.jury_pool_ids:
+            evidence_tag = "J"
+
+        evidence_id = f"{self.id}-{evidence_tag}{self.evidence_number}"
+        new_evidence = evidence.Evidence(evidence_id)
+        await new_evidence.New(filename, file, author.id)
+
+        self.evidence.append(new_evidence)
+        self.event_log.append(await self.newEvent(
+            "evidence_submit",
+            f"{self.nameUserByID(author.id)} has submitted evidence.",
+            f"{self.nameUserByID(author.id)} has submitted evidence:\n{filename} ({evidence_id})",
+            evidence = new_evidence.__dict__
+        ))
+
+        self.evidence_number += 1
+        await self.Save()
+        return new_evidence
+
     async def New(self, plaintiff: discord.Member, defense: discord.Member, penalties: List[Penalty], description: str) -> Case:
 
         if isinstance(penalties, Penalty):
@@ -670,64 +703,17 @@ class Case:
         self.no_tick: bool = False
 
         log("Case", "New", f"Created new case {self.id} with title {self.title}")
+
+        await removeJurorFromCases(defense, f"Case {self} ({self.id}) Filed Against Juror")
+
         await self.Save()
 
         ACTIVECASES.append(self)
+
         return self
-
-    async def newEvidence(self, author: discord.Member, filename: str, file: io.BytesIO) -> evidence.Evidence:
-
-        self.registerUser(author)  
-
-        evidence_tag = "N"
-        if author.id == self.plaintiff_id:
-            evidence_tag = "P"
-        elif author.id == self.defense_id:
-            evidence_tag = "D"
-        elif author.id in self.jury_pool_ids:
-            evidence_tag = "J"
-
-        evidence_id = f"{self.id}-{evidence_tag}{self.evidence_number}"
-        new_evidence = evidence.Evidence(evidence_id)
-        await new_evidence.New(filename, file, author.id)
-
-        self.evidence.append(new_evidence)
-        self.event_log.append(await self.newEvent(
-            "evidence_submit",
-            f"{self.nameUserByID(author.id)} has submitted evidence.",
-            f"{self.nameUserByID(author.id)} has submitted evidence:\n{filename} ({evidence_id})",
-            evidence = new_evidence.__dict__
-        ))
-
-        self.evidence_number += 1
-        await self.Save()
-        return new_evidence
-
-    def LoadFromID(self, case_id, guild):
-        self.guild = guild
-
-        ACTIVECASES.append(self)
-
-        return 
     
-    def __del__(self):
-        log("Case", "CaseDelete", f"Case {self} ({self.id}) has been deleted")
-
-    def __str__(self):
-        return self.title
-    
-    def __repr__(self):
-        return self.title
-    
-    async def updateStatus(self, new_status: str):
-        old_status = self.status
-        self.status = new_status
-        self.event_log.append(await self.newEvent(
-            "case_status_update",
-            f"The status of the case has been updated.",
-            f"Case {self.id} has been updated.\nStatus: {old_status} -> {new_status}"
-        ))
-        return
+    # TODO: rewrite Save() and loadFromDict() to automatically save/load all attributes
+    # instead of having to manually add them to the functions
 
     async def Save(self):
         
@@ -783,12 +769,10 @@ class Case:
         db_ = await db.create_connection("cases")
         await db_.update_one({"_id": self.id}, {"$set": case_dict}, upsert=True)
 
-
-
         log("Case", "Save", f"Saved case {self.id} to database in {round(time.time() - t, 5)} seconds")
 
         return case_dict
-    
+
     def loadFromDict(self, d: dict):
         t = time.time()
 
@@ -833,6 +817,25 @@ class Case:
         log("Case", "Load", f"Loaded saved case {self.id} with title {self.title} in {round(time.time() - t, 5)} seconds")
 
         return self
+    
+    def __del__(self):
+        log("Case", "CaseDelete", f"Case {self} ({self.id}) has been deleted")
+
+    def __str__(self):
+        return self.title
+    
+    def __repr__(self):
+        return self.title
+    
+    async def updateStatus(self, new_status: str):
+        old_status = self.status
+        self.status = new_status
+        self.event_log.append(await self.newEvent(
+            "case_status_update",
+            f"The status of the case has been updated.",
+            f"Case {self.id} has been updated.\nStatus: {old_status} -> {new_status}"
+        ))
+        return
 
     def safedump(self, d: dict):
         def default(o):
@@ -892,12 +895,9 @@ def getEvidenceByIDGlobal(evidenceid: str) -> evidence.Evidence:
                 return case, evidence
     return None, None
 
-
-MOTION_TYPES = {
-    "statement": StatementMotion,
-    "rush": RushMotion,
-    "order": OrderMotion,
-    "batch": BatchVoteMotion,
-    "penaltyadjust": AdjustPenaltyMotion
-
-}
+def removeJurorFromCases(juror_id: int, reason: str):
+    if isinstance(juror_id, discord.Member):
+        juror_id = juror_id.id
+    for case in ACTIVECASES:
+        if juror_id in case.jury_pool_ids:
+            case.removeJuror(juror_id, reason)
