@@ -197,7 +197,7 @@ class Justice(commands.Cog):
         await msg.edit(content=f"Uploading file {file.filename}...", embed=None)
 
         evidence = await case.newEvidence(ctx.author, file.filename, file_bytes)
-        await ctx.respond(f"Uploaded evidence **{evidence.filename}** (`{evidence.id}`) to case **{case}** (`{case.id}`)", ephemeral=True)
+        await msg.edit(f"Uploaded evidence **{evidence.filename}** (`{evidence.id}`) to case **{case}** (`{case.id}`)", ephemeral=True)
 
     async def evidence_options(ctx: discord.AutocompleteContext):
         case = getActiveCase(ctx.interaction.user)
@@ -209,17 +209,14 @@ class Justice(commands.Cog):
     @option("evidence_id", str, description="The ID of the evidence to view.", autocomplete=discord.utils.basic_autocomplete(evidence_options))
     @option("ephemeral", bool, description="Whether to send the evidence privately.", default=True)
     async def evidence_view(self, ctx: discord.ApplicationContext, evidence_id: str, ephemeral: bool = True):
-        case = getActiveCase(ctx.author)
-        if case is None:
-            return await ctx.respond("You do not have an active case.", ephemeral=True)
         if ":" in evidence_id:
             evidence_id = evidence_id.split(" ")[-1]
         
-        file = case.getEvidenceByID(evidence_id)
+        case, file = cm.getEvidenceByIDGlobal(evidence_id)
         if file is None:
             return await ctx.respond("Invalid evidence ID.", ephemeral=True)
         
-        await ctx.respond(f"Loading evidence...", ephemeral=True)
+        response = await ctx.respond(f"Loading evidence...", ephemeral=ephemeral)
     
         file_name, file_bytes = await file.getRawFile()
         embed = discord.Embed(title=f"Viewing Evidence: {file_name}", description=f"**{case}** (`{case.id}`)")
@@ -229,7 +226,7 @@ class Justice(commands.Cog):
         embed.add_field(name="Filed On", value=discord_dynamic_timestamp(file.created, 'F'), inline=False)
         embed.add_field(name="Filed Relative", value=discord_dynamic_timestamp(file.created, 'R'), inline=False)
 
-        await ctx.respond(embed=embed, file=discord.File(file_bytes, file_name), ephemeral=ephemeral)
+        await ctx.interaction.edit_original_response(content=None, embed=embed, file=discord.File(file_bytes, file_name))
 
     jury = discord.SlashCommandGroup("jury", "Jury commands")
     

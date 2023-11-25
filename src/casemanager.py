@@ -1357,7 +1357,14 @@ class AdjustPenaltyMotion(Motion):
             old_penalties = old_penalties,
             new_penalties = [penalty.save() for penalty in self.new_penalties]
         ))
-    
+
+def getEvidenceByIDGlobal(evidenceid: str) -> evidence.Evidence:
+    evidenceid = evidenceid.lower()
+    for case in ACTIVECASES:
+        for evidence in case.evidence:
+            if evidence.id.lower() == evidenceid:
+                return case, evidence
+    return None, None
 
 
 MOTION_TYPES = {
