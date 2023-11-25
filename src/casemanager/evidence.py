@@ -1,4 +1,4 @@
-from . import gridfs
+from .. import gridfs
 import datetime
 import discord
 

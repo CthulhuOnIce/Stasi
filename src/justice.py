@@ -18,7 +18,6 @@ from . import casemanager as cm
 from . import report as rm
 from . import quickask as qa
 
-
 case_selection = {}
 
 def setActiveCase(member: discord.Member, case: cm.Case):
@@ -196,8 +195,8 @@ class Justice(commands.Cog):
 
         await msg.edit(content=f"Uploading file {file.filename}...", embed=None)
 
-        evidence = await case.newEvidence(ctx.author, file.filename, file_bytes)
-        await msg.edit(f"Uploaded evidence **{evidence.filename}** (`{evidence.id}`) to case **{case}** (`{case.id}`)")
+        new_evidence = await case.newEvidence(ctx.author, file.filename, file_bytes)
+        await msg.edit(f"Uploaded evidence **{new_evidence.filename}** (`{new_evidence.id}`) to case **{case}** (`{case.id}`)")
 
     async def evidence_options(ctx: discord.AutocompleteContext):
         case = getActiveCase(ctx.interaction.user)
