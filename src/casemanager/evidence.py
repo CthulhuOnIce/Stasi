@@ -1,7 +1,11 @@
-from .. import gridfs, utils
 import datetime
-import discord
 from typing import *
+
+import discord
+
+from .. import gridfs, utils
+from ..stasilogging import *
+
 
 class Seal:
 
