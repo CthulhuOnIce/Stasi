@@ -845,7 +845,7 @@ class Case:
         self.event_log.append(await self.newEvent(
             "case_status_update",
             f"The status of the case has been updated.",
-            f"Case {self.id} has been updated.\nStatus: {old_status} -> {new_status}"
+            f"Case {self.id} has been updated:\n**{old_status}** → **{new_status}**"
         ))
         return
 
