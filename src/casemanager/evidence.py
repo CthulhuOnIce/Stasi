@@ -58,7 +58,7 @@ class Evidence:
             "file_id": self.file_id,
             "author": self.author,
             "id": self.id,
-            "seals": [seal.toDict() for seal in self.sealed],
+            "seals": [seal.toDict() for seal in self.seals],
             "created": self.created,
             "certified": self.certified
         }

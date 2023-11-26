@@ -895,7 +895,7 @@ def getEvidenceByIDGlobal(evidenceid: str) -> evidence.Evidence:
                 return case, evidence
     return None, None
 
-def removeJurorFromCases(juror_id: int, reason: str):
+async def removeJurorFromCases(juror_id: int, reason: str):
     if isinstance(juror_id, discord.Member):
         juror_id = juror_id.id
     for case in ACTIVECASES:

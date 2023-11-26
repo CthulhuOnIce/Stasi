@@ -168,9 +168,8 @@ class Prisoner:
 
         embed = discord.Embed(title="Prisoner Released", description=f"You have been released from prison and can now access channels normally.", color=discord.Color.green())
         embed.add_field(name="Time Served", value=utils.seconds_to_time_long((datetime.datetime.now(datetime.timezone.utc) - self.committed).total_seconds()))
-        embed.add_field(name="Committed", value=discord_dynamic_timestamp(self.committed, "F"), inline=False)
+        embed.add_field(name="Committed", value=discord_dynamic_timestamp(self.committed, "FR"), inline=False)
         embed.add_field(name="Released", value=discord_dynamic_timestamp(datetime.datetime.now(datetime.timezone.utc), "F"), inline=False)
-        embed.add_field(name="Committed (R)", value=discord_dynamic_timestamp(self.committed, "R"), inline=False)
         embed.set_author(name=utils.normalUsername(self.prisoner()), icon_url=utils.twemojiPNG.unlock)
         await self.communicate(embed=embed)
 
@@ -248,8 +247,7 @@ class Prisoner:
             embed = discord.Embed(title="Warrant Activated", description=f"Warrant `{nxt._id}` has been activated, you are now serving your sentence for this warrant specifically.", color=discord.Color.red())
             embed.add_field(name="Description", value=nxt.description)
             embed.add_field(name="Started", value=discord_dynamic_timestamp(nxt.started, "F"), inline=False)
-            embed.add_field(name="Expires", value=discord_dynamic_timestamp(nxt.expires, "F"), inline=False)
-            embed.add_field(name="Expires (R)", value=discord_dynamic_timestamp(nxt.expires, "R"), inline=False)
+            embed.add_field(name="Expires", value=discord_dynamic_timestamp(nxt.expires, "FR"), inline=False)
             # expires - started 
             sentence_seconds = (nxt.expires - nxt.started).total_seconds()
             embed.add_field(name="Expires (S)", value=utils.seconds_to_time_long(sentence_seconds), inline=False)
@@ -282,8 +280,7 @@ async def voidWarrantByID(warrant_id: str, reason: str = None):
                 prisoner.warrants.remove(warrant)
                 embed = discord.Embed(title="Warrant Voided", description=f"Warrant `{warrant._id}` has been voided.", color=discord.Color.red())
                 if warrant.expires:
-                    embed.add_field(name="Expires", value=discord_dynamic_timestamp(warrant.expires, "F"), inline=False)
-                    embed.add_field(name="Expires (R)", value=discord_dynamic_timestamp(warrant.expires, "R"), inline=False)
+                    embed.add_field(name="Expires", value=discord_dynamic_timestamp(warrant.expires, "FR"), inline=False)
                     time_left_seconds = (warrant.expires - datetime.datetime.now(datetime.timezone.utc)).total_seconds()
                     embed.add_field(name="Expires (S)", value=utils.seconds_to_time_long(time_left_seconds), inline=False)
                 else:

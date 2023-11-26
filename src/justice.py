@@ -210,7 +210,7 @@ class Justice(commands.Cog):
             pool.sort(key=lambda e: e.created, reverse=True)
             return [f"{evidence.filename}: {evidence.id}" for evidence in pool]
         else:
-            return [f"{evidence.filename}: {evidence.id}" for evidence in sorted(case.evidence, lambda e: e.created, reverse=True)]
+            return [f"{evidence.filename}: {evidence.id}" for evidence in sorted(case.evidence, key = lambda e: e.created, reverse=True)]
 
     @evidence.command(name="view", description="View a piece of evidence in your active case.")
     @option("evidence_id", str, description="The ID of the evidence to view.", autocomplete=discord.utils.basic_autocomplete(evidence_options))
@@ -230,8 +230,7 @@ class Justice(commands.Cog):
         embed.add_field(name="Evidence ID", value=file.id, inline=False)
         embed.add_field(name="Evidence Filename", value=file.filename, inline=False)
         embed.add_field(name="Filed By", value=case.nameUserByID(file.author), inline=False)
-        embed.add_field(name="Filed On", value=discord_dynamic_timestamp(file.created, 'F'), inline=False)
-        embed.add_field(name="Filed Relative", value=discord_dynamic_timestamp(file.created, 'R'), inline=False)
+        embed.add_field(name="Filed On", value=discord_dynamic_timestamp(file.created, 'FR'), inline=False)
 
         await ctx.interaction.edit_original_response(content=None, embed=embed, file=discord.File(file_bytes, file_name))
 
