@@ -269,7 +269,7 @@ class Social(commands.Cog):
 
                 bumper = message.interaction.user
 
-                await message.channel.send(f"Thanks for bumping, {bumper.mention}! A reminder will be sent in 2 hours.")
+                await message.channel.send(f"Thanks for bumping, {bumper.mention}! A reminder will be sent in 2 hours to bump again.")
 
                 self.last_bump = datetime.datetime.now(datetime.timezone.utc)
                 self.last_bump_channel = message.channel
