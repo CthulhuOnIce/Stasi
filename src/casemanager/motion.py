@@ -102,6 +102,8 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
 
     def fromDict(self, DBDocument: dict):
         for key in DBDocument:
+            if key == "Case":
+                continue
             setattr(self, key, DBDocument[key])
         return self
     
@@ -123,8 +125,6 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
         return 
 
     def __del__(self):
-        # DEBUG CODE REMOVE LATER
-
         print(f"DEL CALLED FOR {self}")
         return
     
@@ -165,10 +165,6 @@ class StatementMotion(Motion):
         ))
         await self.Case.Save()
         return self
-
-    def fromDict(self, DBDocument: dict):
-        super().fromDict(DBDocument)
-        return
 
 class OrderMotion(Motion):
     

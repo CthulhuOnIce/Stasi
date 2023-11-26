@@ -742,8 +742,8 @@ class Case:
 
                 "locks": self.locks,
                 
-                "penalties": [penalty.toDict() for penalty in self.penalties],
-                "plea_deal_penalties": [penalty.toDict() for penalty in self.plea_deal_penalties],
+                "penalties": [penalty.toDict() for penalty in self.penalties if penalty],
+                "plea_deal_penalties": [penalty.toDict() for penalty in self.plea_deal_penalties if penalty],
                 "plea_deal_expiration": self.plea_deal_expiration,
                 
                 # processing stuff
@@ -751,10 +751,10 @@ class Case:
                 "guilty": None,
                 
                 "evidence_number": self.evidence_number,
-                "evidence": [evidence.toDict() for evidence in self.evidence],
+                "evidence": [evidence.toDict() for evidence in self.evidence if evidence],
 
                 "motion_number": self.motion_number,
-                "motion_queue": [motion.toDict() for motion in self.motion_queue],
+                "motion_queue": [motion.toDict() for motion in self.motion_queue if motion],
 
                 # jury stuff
                 "jury_pool_ids": self.jury_pool_ids,

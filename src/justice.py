@@ -167,29 +167,15 @@ class Justice(commands.Cog):
     move = case.create_subgroup("move", "Commands for basic case motions and management.")
 
     @move.command(name="statement", description="Move to have the court issue an official statement.")
-    async def move_motion(self, ctx: discord.ApplicationContext):
+    async def statement_motion(self, ctx: discord.ApplicationContext):
         case = getActiveCase(ctx.author)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
         if not case.canSubmitMotions(ctx.author):
             return await ctx.respond("You cannot submit a motion in this case.", ephemeral=True)
-        
-        class StatementModal(discord.ui.Modal):
-            def __init__(self, *args, **kwargs) -> None:
-                super().__init__(*args, **kwargs)
-                self.value = None
-                self.add_item(discord.ui.InputText(label="Enter Statement Content", style=discord.InputTextStyle.long, min_length=40, max_length=1024))
 
-            async def callback(self, interaction: discord.Interaction):
-                self.value = self.children[0].value
-                self.interaction = interaction
-                await interaction.response.defer()
-        
-        modal = StatementModal(title="Statement")
-        await ctx.send_modal(modal)
-        await modal.wait()
-
-        statement = modal.value
+        statement = await cmui.universalModal(ctx.interaction, "Statement", [discord.ui.InputText(label="Enter Statement", style=discord.InputTextStyle.long, min_length=40, max_length=1024)])
+        statement = statement[0].value
 
         if statement is None:
             return await ctx.respond("You must provide a statement.", ephemeral=True)
@@ -198,7 +184,7 @@ class Justice(commands.Cog):
         embed.add_field(name="Statement", value=statement)
         msg = await ctx.respond(embed=embed, ephemeral=True)
         
-        choice = cmui.confirmView(msg)
+        choice = await cmui.confirmView(msg)
 
         if choice is None or choice is False:
             return await ctx.respond("Cancelled", ephemeral=True)
@@ -214,30 +200,13 @@ class Justice(commands.Cog):
             return await ctx.respond("You do not have an active case.", ephemeral=True)
         if not case.canSubmitMotions(ctx.author):
             return await ctx.respond("You cannot submit a motion in this case.", ephemeral=True)
-        
-        class StatementModal(discord.ui.Modal):
-            def __init__(self, *args, **kwargs) -> None:
-                super().__init__(*args, **kwargs)
-                self.value = None
-                self.add_item(discord.ui.InputText(label="Name of Order Target", style=discord.InputTextStyle.short))
-                self.add_item(discord.ui.InputText(label="Enter Order Content", style=discord.InputTextStyle.long, min_length=40, max_length=1024))
 
-            async def callback(self, interaction: discord.Interaction):
-                self.target = self.children[0].value
-                self.content = self.children[1].value
-                self.interaction = interaction
-                await interaction.response.defer()
-        
-        modal = StatementModal(title="Court Order")
-        await ctx.send_modal(modal)
-        await modal.wait()
-
-        if modal.target is None or modal.content is None:
-            return await ctx.respond("You must fill in both items.", ephemeral=True)
+        new_options = await cmui.universalModal(ctx.interaction, "Court Order", [discord.ui.InputText(label="Name of Order Target", style=discord.InputTextStyle.short),
+                   discord.ui.InputText(label="Enter Order Content", style=discord.InputTextStyle.long, min_length=40, max_length=1024)])
         
         embed = discord.Embed(title="Confirm Order", description=f"Is this the statement you wish to submit?")
-        embed.add_field(name="The Court Orders: ", value=modal.target, inline=False)
-        embed.add_field(name="To Comply With The Following Order: ", value=modal.content, inline=False)
+        embed.add_field(name="The Court Orders: ", value=new_options[0].value, inline=False)
+        embed.add_field(name="To Comply With The Following Order: ", value=new_options[1].value, inline=False)
         msg = await ctx.respond(embed=embed, ephemeral=True)
         
         choice = await cmui.confirmView(msg)
@@ -245,7 +214,7 @@ class Justice(commands.Cog):
         if choice is None or choice is False:
             return await ctx.respond("Cancelled", ephemeral=True)
         
-        motion = await cm.OrderMotion(case).New(ctx.author, modal.target, modal.content)
+        motion = await cm.OrderMotion(case).New(ctx.author, new_options[0].value, new_options[1].value)
 
         await ctx.respond(f"Motion `{motion.id}` Submitted.", ephemeral=True)
 
