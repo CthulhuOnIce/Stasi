@@ -302,8 +302,8 @@ class Justice(commands.Cog):
         return [f"{case}: {case.id}" for case in cm.ACTIVECASES if case.stage == 1 and ctx.interaction.user.id in case.jury_pool_ids]
 
     @jury.command(name="join", description="Join an active case as a juror.")
-    async def jury_join(self, ctx: discord.ApplicationContext, case: discord.Option(str, autocomplete=discord.utils.basic_autocomplete(juror_case_options))):
-        case = cm.getCaseByID(case.split(" ")[-1])
+    async def jury_join(self, ctx: discord.ApplicationContext, case_id: discord.Option(str, autocomplete=discord.utils.basic_autocomplete(juror_case_options))):
+        case = cm.getCaseByID(case_id.split(" ")[-1])
         if case is None:
             return await ctx.respond("Invalid case ID.", ephemeral=True)
         if ctx.author.id not in case.jury_invites:
