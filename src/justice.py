@@ -21,10 +21,10 @@ from . import quickask as qa
 case_selection = {}
 
 def setActiveCase(member: discord.Member, case: cm.Case):
-    case_selection[member.id] = case
+    case_selection[member.id] = case.id
 
 def getActiveCase(member: discord.Member) -> cm.Case:
-    return case_selection[member.id] if member.id in case_selection else None
+    return cm.getCaseByID(case_selection.get(member.id, None))
 
 class Justice(commands.Cog):
     def __init__(self, bot):
@@ -221,6 +221,7 @@ class Justice(commands.Cog):
         
         case: cm.Case
         file: cm.Evidence
+
         case, file = cm.getEvidenceByIDGlobal(evidence_id)
         if file is None:
             return await ctx.respond("Invalid evidence ID.", ephemeral=True)
