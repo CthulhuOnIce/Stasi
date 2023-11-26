@@ -19,53 +19,53 @@ class Motion:
     Case: Case = None
 
     async def startVoting(self):
-        self.Expiry = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=self.expiry_hours)
-        self.Votes["Yes"] = []
-        self.Votes["No"] = []
+        self.expiry = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=self.expiry_hours)
+        self.votes["Yes"] = []
+        self.votes["No"] = []
         self.Case.motion_in_consideration = self
         self.Case.event_log.append(await self.Case.newEvent(
             "motion_up",
-            f"The motion {self.MotionID} has been put up to be considered for a vote by {self.Case.nameUserByID(self.Author.id)}.",
-            f"""The motion {self.MotionID} has been put up to be considered for a vote by {self.Case.nameUserByID(self.Author.id)}. 
-Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(self.Expiry, 'F')}.""",
+            f"The motion {self.id} has been put up to be considered for a vote by {self.Case.nameUserByID(self.author_id)}.",
+            f"""The motion {self.id} has been put up to be considered for a vote by {self.Case.nameUserByID(self.author_id)}. 
+Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(self.expiry, 'F')}.""",
             motion = self.toDict()
         ))
     
     async def CancelVoting(self, reason:str = None):
-        if not self.Expiry and self.Case.motion_in_consideration != self:
+        if not self.expiry and self.Case.motion_in_consideration != self:
             return
-        self.Expiry = None
+        self.expiry = None
         self.Case.motion_in_consideration = None
-        self.Votes["Yes"] = []
-        self.Votes["No"] = []
-        explan = f"Voting for motion {self.MotionID} has been cancelled."
+        self.votes["Yes"] = []
+        self.votes["No"] = []
+        explan = f"Voting for motion {self.id} has been cancelled."
         if reason:
             explan += f"\nReason: {reason}"
         self.Case.event_log.append(await self.Case.newEvent(
             "motion_cancel_vote",
-            f"Voting for motion {self.MotionID} has been cancelled.",
+            f"Voting for motion {self.id} has been cancelled.",
             explan,
             motion = self.toDict()
         ))
 
     async def VoteFailed(self):
-        yes = ', '.join([self.Case.nameUserByID(user) for user in self.Votes["Yes"]])
-        no = ', '.join([self.Case.nameUserByID(user) for user in self.Votes["No"]])
+        yes = ', '.join([self.Case.nameUserByID(user) for user in self.votes["Yes"]])
+        no = ', '.join([self.Case.nameUserByID(user) for user in self.votes["No"]])
         self.Case.event_log.append(await self.Case.newEvent(
             "motion_failed",
-            f"The motion {self.MotionID} has failed its vote.",
-            f"The motion {self.MotionID} has failed its jury vote ({len(self.Votes['Yes'])}/{len(self.Votes['No'])}).\n\nIn Support: {yes}\n\nIn Opposition: {no}",
+            f"The motion {self.id} has failed its vote.",
+            f"The motion {self.id} has failed its jury vote ({len(self.votes['Yes'])}/{len(self.votes['No'])}).\n\nIn Support: {yes}\n\nIn Opposition: {no}",
             motion = self.toDict()
         ))
         return
 
     async def VotePassed(self):
-        yes = ', '.join([self.Case.nameUserByID(user) for user in self.Votes["Yes"]])
-        no = ', '.join([self.Case.nameUserByID(user) for user in self.Votes["No"]])
+        yes = ', '.join([self.Case.nameUserByID(user) for user in self.votes["Yes"]])
+        no = ', '.join([self.Case.nameUserByID(user) for user in self.votes["No"]])
         self.Case.event_log.append(await self.Case.newEvent(
             "motion_passed",
-            f"The motion {self.MotionID} has passed its vote.",
-            f"The motion {self.MotionID} has passed its jury vote ({len(self.Votes['Yes'])}/{len(self.Votes['No'])}).\n\nIn Support: {yes}\n\nIn Opposition: {no}",
+            f"The motion {self.id} has passed its vote.",
+            f"The motion {self.id} has passed its jury vote ({len(self.votes['Yes'])}/{len(self.votes['No'])}).\n\nIn Support: {yes}\n\nIn Opposition: {no}",
             motion = self.toDict()
         ))
         return
@@ -73,18 +73,18 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
     async def Execute(self):
         return
     
-    def ReadyToClose(self) -> bool:
-        if len(self.Votes["Yes"]) + len(self.Votes["No"]) >= len(self.Case.jury_pool_ids):
+    def readyToClose(self) -> bool:
+        if len(self.votes["Yes"]) + len(self.votes["No"]) >= len(self.Case.jury_pool_ids):
             return True
-        if datetime.datetime.now(datetime.timezone.utc) > self.Expiry:
+        if datetime.datetime.now(datetime.timezone.utc) > self.expiry:
             return True
         return False
 
-    async def Close(self, delete: bool = True):
+    async def close(self, delete: bool = True):
         # DEBUG CODE REMOVE LATER
 
         print(f"Closing motion {self}")
-        if len(self.Votes["No"]) >= len(self.Votes["Yes"]):
+        if len(self.votes["No"]) >= len(self.votes["Yes"]):
             await self.VoteFailed()
         else:
             await self.VotePassed()
@@ -106,20 +106,20 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
         return self
     
     async def New(self, author) -> Motion:  # the event log entry should be updated by the subtype's New() function
-        self.Created = datetime.datetime.now(datetime.timezone.utc)
-        self.Author = author
-        self.MotionID = f"{self.Case.id}-M{self.Case.motion_number}"  # 11042023-M001 for example
+        self.created = datetime.datetime.now(datetime.timezone.utc)
+        self.author_id = author.id
+        self.id = f"{self.Case.id}-M{self.Case.motion_number}"  # 11042023-M001 for example
         self.Case.motion_number += 1
         self.Case.motion_queue.append(self)
         return self
 
     def __init__(self, Case: Case):
         self.Case = Case
-        self.Expiry = None  # this is set by the motion manageer based on when it appears on the floors
-        self.Votes = {}
-        self.Votes["Yes"] = []
-        self.Votes["No"] = []
-        self.MotionID = "#NO-ID-ERR"
+        self.expiry = None  # this is set by the motion manageer based on when it appears on the floors
+        self.votes = {}
+        self.votes["Yes"] = []
+        self.votes["No"] = []
+        self.id = "#NO-ID-ERR"
         return 
 
     def __del__(self):
@@ -129,14 +129,15 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
         return
     
     def __str__(self):
-        return self.MotionID
+        return self.id
 
     def __repr__(self):
-        return self.MotionID
+        return self.id
 
     def toDict(self):  # like Motion.Save() but doesn't save the dictionary, just returns it instead. Motions are saved when their 
-        save = self.__dict__
+        save = self.__dict__.copy()
         save["type"] = self.__class__.__name__
+        save["Case"] = self.Case.id
         return save
 
 class StatementMotion(Motion):
@@ -149,7 +150,7 @@ class StatementMotion(Motion):
         self.Case.event_log.append(await self.Case.newEvent(
             "jury_statement",
             f"The jury has made an official statement.",
-            f"Pursuant to motion {self.MotionID}, the Jury makes the following statement:\n{self.statement_content}",
+            f"Pursuant to motion {self.id}, the Jury makes the following statement:\n{self.statement_content}",
             motion = self.toDict()
         ))
     
@@ -158,10 +159,11 @@ class StatementMotion(Motion):
         self.statement_content = statement_content
         self.Case.event_log.append(await self.Case.newEvent(
             "propose_statement",
-            f"Motion {self.MotionID} has been filed to make a statement.",
-            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to have the jury make a statement.\nStatement: {statement_content}",
+            f"Motion {self.id} has been filed to make a statement.",
+            f"Motion {self.id} has been filed by {self.Case.nameUserByID(self.author_id)} to have the jury make a statement:\n\n{statement_content}",
             motion = self.toDict()
         ))
+        await self.Case.Save()
         return self
 
     def fromDict(self, DBDocument: dict):
@@ -179,7 +181,7 @@ class OrderMotion(Motion):
         self.Case.event_log.append(await self.Case.newEvent(
             "jury_order",
             f"The jury has given a binding order.",
-            f"Pursuant to motion {self.MotionID}, the Jury compels the following entity:\n{self.target}\n\nTo comply with the following order:\n{self.order_content}.\nNot following this order can result in penalties.",
+            f"Pursuant to motion {self.id}, the Jury compels the following entity:\n{self.target}\n\nTo comply with the following order:\n{self.order_content}.\nNot following this order can result in penalties.",
             motion = self.toDict()
         ))
 
@@ -189,8 +191,8 @@ class OrderMotion(Motion):
         self.order_content = order_content
         self.Case.event_log.append(await self.Case.newEvent(
             "propose_order",
-            f"Motion {self.MotionID} has been filed to give a binding order.",
-            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to compel the following entity: {target}\nTo comply with the following order:\n{order_content}.",
+            f"Motion {self.id} has been filed to give a binding order.",
+            f"Motion {self.id} has been filed by {self.Case.nameUserByID(self.author_id)} to compel the following entity:\n\n{target}\n\n\nTo comply with the following order:\n\n{order_content}.",
             motion = self.toDict()
         ))
         return self
@@ -209,7 +211,7 @@ class RushMotion(Motion):
     async def New(self, author, rushed_motion_id: str, explanation: str):
         # ported from the old code
         self.Created = datetime.datetime.now(datetime.timezone.utc)
-        self.Author = author
+        self.Author = author.id
         self.MotionID = f"{self.Case.id}-M{self.Case.motion_number}"  # 11042023-M001 for example
         self.Case.motion_number += 1
 
@@ -219,17 +221,17 @@ class RushMotion(Motion):
         else:
             motion = self.Case.getMotionByID(rushed_motion_id)
 
-        self.rushed_motion_id = motion.MotionID
+        self.rushed_motion_id = motion.id
         self.explanation = explanation
         self.Case.event_log.append(await self.Case.newEvent(
             "propose_rush_motion",
-            f"Motion {self.MotionID} has been filed to rush {self.rushed_motion().MotionID}.",
-            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to rush motion {self.rushed_motion().MotionID} for an immediate floor vote.\nReason: {explanation}",
+            f"Motion {self.MotionID} has been filed to rush {self.rushed_motion().id}.",
+            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author)} to rush motion {self.rushed_motion().id} for an immediate floor vote.\nReason: {explanation}",
             motion = self.toDict(),
             rushed_motion = self.rushed_motion().toDict()
         ))
         for motion in self.Case.motion_queue:
-            await motion.CancelVoting(reason=f"Motion {self.MotionID} to rush motion {self.rushed_motion().MotionID} has been filed.")
+            await motion.CancelVoting(reason=f"Motion {self.MotionID} to rush motion {self.rushed_motion().id} has been filed.")
         
         self.Case.motion_queue = [self] + self.Case.motion_queue
         return self
@@ -240,8 +242,8 @@ class RushMotion(Motion):
     async def Execute(self):
         self.Case.event_log.append(await self.Case.newEvent(
             "rush_motion",
-            f"A motion {self.rushed_motion().MotionID} has been rushed to the front of the queue.",
-            f"Pursuant to motion {self.MotionID}, {self.rushed_motion().MotionID} has been rushed to the front of the queue and will now face an immediate vote.",
+            f"A motion {self.rushed_motion().id} has been rushed to the front of the queue.",
+            f"Pursuant to motion {self.MotionID}, {self.rushed_motion().id} has been rushed to the front of the queue and will now face an immediate vote.",
             motion = self.toDict(),
             rushed_motion = self.rushed_motion().toDict()
         ))
@@ -250,7 +252,7 @@ class RushMotion(Motion):
         for motion in self.Case.motion_queue:
             if motion == self:
                 continue
-            await motion.CancelVoting(reason=f"Motion {rushed.MotionID} has been rushed to a vote.")
+            await motion.CancelVoting(reason=f"Motion {rushed.id} has been rushed to a vote.")
         self.Case.motion_queue = [rushed] + self.Case.motion_queue
         self.rushed_motion().startVoting()
         
@@ -266,7 +268,7 @@ class BatchVoteMotion(Motion):
     
     async def New(self, author, pass_motion_ids: List[str], deny_motion_ids: List[str], reason: str):
         self.Created = datetime.datetime.now(datetime.timezone.utc)
-        self.Author = author
+        self.Author = author.id
         self.MotionID = f"{self.Case.id}-M{self.Case.motion_number}"  # 11042023-M001 for example
         self.Case.motion_number += 1
 
@@ -301,13 +303,13 @@ class BatchVoteMotion(Motion):
         self.Case.event_log.append(await self.Case.newEvent(
             "propose_summary_motion",
             f"Motion {self.MotionID} has been filed to pass or deny motions.",
-            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)}.\n{execute_str}\nReason: {reason}",
+            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author)}.\n{execute_str}\nReason: {reason}",
             motion = self.toDict()
         ))
 
         # add to queue in front of first motion referenced
         for motion in self.Case.motion_queue:
-            if motion.MotionID in aggregate:
+            if motion.id in aggregate:
                 index = self.Case.motion_queue.index(motion)
                 if index == 0:
                     self.Case.motion_in_consideration.CancelVoting(reason=f"Motion {self.MotionID} has been filed to pass or deny a set of motions.")
@@ -384,8 +386,8 @@ class AdjustPenaltyMotion(Motion):
 
         self.Case.event_log.append(await self.Case.newEvent(
             "propose_new_penalty",
-            f"Motion {self.MotionID} has been filed to adjust the Penalty if found guilty.",
-            f"Motion {self.MotionID} has been filed by {self.Case.nameUserByID(self.Author.id)} to adjust the penalty of a guilty verdict From:\n{old_penalty_str}\n\nTo:\n{new_penalties_str}\nReason: {reason}",
+            f"Motion {self.id} has been filed to adjust the Penalty if found guilty.",
+            f"Motion {self.id} has been filed by {self.Case.nameUserByID(self.author_id)} to adjust the penalty of a guilty verdict From:\n{old_penalty_str}\n\nTo:\n{new_penalties_str}\nReason: {reason}",
             motion = self.toDict(),
             old_penalties = [penalty.toDict() for penalty in self.Case.penalties],
             new_penalties = [penalty.toDict() for penalty in new_penalties]
@@ -405,7 +407,7 @@ class AdjustPenaltyMotion(Motion):
         self.Case.event_log.append(await self.Case.newEvent(
             "new_penalty",
             f"The Penalty of the Case has been adjusted.",
-            f"Pursuant to motion {self.MotionID}, the guilty penalty has been adjusted From:\n{old_penalty_str}\n\nTo:\n{new_penalties_str}",
+            f"Pursuant to motion {self.id}, the guilty penalty has been adjusted From:\n{old_penalty_str}\n\nTo:\n{new_penalties_str}",
             motion = self.toDict(),
             old_penalties = old_penalties,
             new_penalties = [penalty.save() for penalty in self.new_penalties]

@@ -1,22 +1,22 @@
-from typing import Optional
-
-import motor  # doing this locally instead of in database.py for greater modularity
+import asyncio
 import datetime
 import random
 import time
-import asyncio
+from typing import Optional
 
 import discord
+import motor  # doing this locally instead of in database.py for greater modularity
 from discord import option, slash_command
 from discord.ext import commands, tasks
 
-from . import database as db
+from . import casemanager as cm
+from . import casemanagerui as cmui
 from . import config
+from . import database as db
+from . import quickask as qa
+from . import report as rm
 from . import utils
 from .stasilogging import *
-from . import casemanager as cm
-from . import report as rm
-from . import quickask as qa
 
 case_selection = {}
 
@@ -143,7 +143,7 @@ class Justice(commands.Cog):
         front_page.add_field(name="Filed Against", value=case.nameUserByID(case.defense_id), inline=True)
         if case.motion_in_consideration is not None:
             front_page.add_field(name="Motion in Consideration", value=case.motion_in_consideration, inline=False)
-            front_page.add_field(name="Voting Ends", value=discord_dynamic_timestamp(case.motion_in_consideration.Expiry, 'R'), inline=False)
+            front_page.add_field(name="Voting Ends", value=discord_dynamic_timestamp(case.motion_in_consideration.expiry, 'RT'), inline=False)
         front_page.add_field(name="Guilty Penalty", value=case.describePenalties(case.penalties), inline=False)
 
         event_page = discord.Embed(title=str(case), description=str(case.id))
@@ -162,6 +162,92 @@ class Justice(commands.Cog):
                 await interaction.response.edit_message(embed=event_page)
             
         await ctx.respond(embed=front_page, view=caseinfoview(), ephemeral=ephemeral)
+
+
+    move = case.create_subgroup("move", "Commands for basic case motions and management.")
+
+    @move.command(name="statement", description="Move to have the court issue an official statement.")
+    async def move_motion(self, ctx: discord.ApplicationContext):
+        case = getActiveCase(ctx.author)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        if not case.canSubmitMotions(ctx.author):
+            return await ctx.respond("You cannot submit a motion in this case.", ephemeral=True)
+        
+        class StatementModal(discord.ui.Modal):
+            def __init__(self, *args, **kwargs) -> None:
+                super().__init__(*args, **kwargs)
+                self.value = None
+                self.add_item(discord.ui.InputText(label="Enter Statement Content", style=discord.InputTextStyle.long, min_length=40, max_length=1024))
+
+            async def callback(self, interaction: discord.Interaction):
+                self.value = self.children[0].value
+                self.interaction = interaction
+                await interaction.response.defer()
+        
+        modal = StatementModal(title="Statement")
+        await ctx.send_modal(modal)
+        await modal.wait()
+
+        statement = modal.value
+
+        if statement is None:
+            return await ctx.respond("You must provide a statement.", ephemeral=True)
+        
+        embed = discord.Embed(title="Confirm Statement", description=f"Is this the statement you wish to submit?")
+        embed.add_field(name="Statement", value=statement)
+        msg = await ctx.respond(embed=embed, ephemeral=True)
+        
+        choice = cmui.confirmView(msg)
+
+        if choice is None or choice is False:
+            return await ctx.respond("Cancelled", ephemeral=True)
+        
+        motion = await cm.StatementMotion(case).New(ctx.author, statement)
+
+        await ctx.respond(f"Motion `{motion.id}` Submitted.", ephemeral=True)
+
+    @move.command(name="order", description="Move to have the court issue a binding order.")
+    async def order_motion(self, ctx: discord.ApplicationContext):
+        case = getActiveCase(ctx.author)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        if not case.canSubmitMotions(ctx.author):
+            return await ctx.respond("You cannot submit a motion in this case.", ephemeral=True)
+        
+        class StatementModal(discord.ui.Modal):
+            def __init__(self, *args, **kwargs) -> None:
+                super().__init__(*args, **kwargs)
+                self.value = None
+                self.add_item(discord.ui.InputText(label="Name of Order Target", style=discord.InputTextStyle.short))
+                self.add_item(discord.ui.InputText(label="Enter Order Content", style=discord.InputTextStyle.long, min_length=40, max_length=1024))
+
+            async def callback(self, interaction: discord.Interaction):
+                self.target = self.children[0].value
+                self.content = self.children[1].value
+                self.interaction = interaction
+                await interaction.response.defer()
+        
+        modal = StatementModal(title="Court Order")
+        await ctx.send_modal(modal)
+        await modal.wait()
+
+        if modal.target is None or modal.content is None:
+            return await ctx.respond("You must fill in both items.", ephemeral=True)
+        
+        embed = discord.Embed(title="Confirm Order", description=f"Is this the statement you wish to submit?")
+        embed.add_field(name="The Court Orders: ", value=modal.target, inline=False)
+        embed.add_field(name="To Comply With The Following Order: ", value=modal.content, inline=False)
+        msg = await ctx.respond(embed=embed, ephemeral=True)
+        
+        choice = await cmui.confirmView(msg)
+
+        if choice is None or choice is False:
+            return await ctx.respond("Cancelled", ephemeral=True)
+        
+        motion = await cm.OrderMotion(case).New(ctx.author, modal.target, modal.content)
+
+        await ctx.respond(f"Motion `{motion.id}` Submitted.", ephemeral=True)
 
     evidence = case.create_subgroup(name="evidence", description="Commands for managing evidence in your active case.")
 

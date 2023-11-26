@@ -25,7 +25,7 @@ class Penalty:
         return "Blank Penalty"
     
     def toDict(self):
-        s = self.__dict__
+        s = self.__dict__.copy()
         s["type"] = self.__class__.__name__
         if "case" in s:
             del s["case"]

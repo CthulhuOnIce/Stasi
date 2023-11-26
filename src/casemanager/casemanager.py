@@ -100,10 +100,14 @@ When ran by the defense, allows them to accept or decline a plea deal.
 ACTIVECASES: List[Case] = []
 
 def getCaseByID(case_id: str) -> Case:
+    
+    if not case_id:  return None
+
     case_id = case_id.lower()  # just in case
     for case in ACTIVECASES:
         if case.id == case_id:
             return case
+
     return None
 
 async def populateActiveCases(bot, guild: discord.Guild) -> List[Case]:
@@ -574,8 +578,8 @@ class Case:
             if self.motion_in_consideration != self.motion_queue[0]:  # putting up a new motion to vote
                 await self.motion_queue[0].startVoting()
 
-            elif self.motion_in_consideration.ReadyToClose():  # everybody's voted, doesn't need to expire, or has expired
-                await self.motion_in_consideration.Close()
+            elif self.motion_in_consideration.readyToClose():  # everybody's voted, doesn't need to expire, or has expired
+                await self.motion_in_consideration.close()
                 if len(self.motion_queue):  # if there's another motion in the queue, start voting on it
                     await self.motion_queue[0].startVoting()
             
@@ -588,7 +592,7 @@ class Case:
     def getMotionByID(self, motionid: str) -> "Motion":
         motionid = motionid.lower()
         for motion in self.motion_queue:
-            if motion.MotionID.lower() == motionid:
+            if motion.id.lower() == motionid:
                 return motion
         return None
     
@@ -734,7 +738,7 @@ class Case:
                 "defense_id": self.defense_id,
 
                 "personal_statements": self.personal_statements,
-                "motion_in_consideration": self.motion_in_consideration.MotionID if self.motion_in_consideration else None,
+                "motion_in_consideration": self.motion_in_consideration.id if self.motion_in_consideration else None,
 
                 "locks": self.locks,
                 
@@ -799,7 +803,7 @@ class Case:
         self.evidence = [evidence.Evidence(e["id"]).fromDict(e) for e in d["evidence"]]
 
         self.motion_number = d["motion_number"]
-        self.motion_queue = [self.loadMotionFromDict(motion) for motion in d["motion_queue"]]
+        self.motion_queue = [loadMotionFromDict(self, motion) for motion in d["motion_queue"]]
         self.motion_in_consideration = self.getMotionByID(d["motion_in_consideration"]) if d["motion_in_consideration"] else None
 
         self.jury_pool_ids = d["jury_pool_ids"]
