@@ -170,6 +170,7 @@ def eventToEmbed(event: Event, case_name: str) -> discord.Embed:
             embed.description = f"New Evidence Submitted "
             embed.add_field(name="File Name", value=f"{event['evidence']['filename']}", inline=False)
             embed.add_field(name="Evidence ID", value=f"{event['evidence']['id']}", inline=False)
+            embed.add_field(name="Run This Command To View", value=f"/case evidence view {event['evidence']['id']}", inline=False)
 
     embed.set_author(name=case_name, icon_url=icon_url)
     return embed
