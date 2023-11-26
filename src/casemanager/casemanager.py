@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import datetime
 import io
 import random
@@ -333,14 +334,20 @@ class Case:
         if news_wire:
             recipients.append(self.guild.get_channel(863539768306171928))
 
+        jobs = []
+
         for recipient in recipients:
+            await asyncio.sleep(0.1)
             try:
                 if content:
-                    await recipient.send(content)
+                    jobs.append(recipient.send(content))
                 if embed:
-                    await recipient.send(content, embed=embed)
-            except:
+                    jobs.append(recipient.send(content, embed=embed))
+            except Exception as e:
+                log("Case", "Announce", f"Failed to send announcement to {recipient} ({recipient.id}) for case {self} ({self.id}): {e}")
                 pass
+        
+        asyncio.gather(*jobs)
 
     def registerUser(self, user, anonymousname: str = None):
         # TODO: decide whether known_users is mapped to int or str and remove these double cases
@@ -563,7 +570,7 @@ class Case:
                 try:
                     log("Case", "InviteSent", f"Sending jury invite to {utils.normalUsername(invitee)} ({invitee.id}) for case {self} {self.id}")
                     self.jury_invites.append(invitee.id)
-                    await invitee.send(f"You have been invited to be a juror for {self.title} (`{self.id}`).\nTo accept, use `/jury join {self.id}`.")
+                    # await invitee.send(f"You have been invited to be a juror for {self.title} (`{self.id}`).\nTo accept, use `/jury join {self.id}`.")
                 except:
                     pass  # already removed from eligible jurors
             return

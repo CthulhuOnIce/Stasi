@@ -137,8 +137,6 @@ class Justice(commands.Cog):
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
     
-        await ctx.interaction.response.defer(ephemeral=True)
-
         front_page = discord.Embed(title=str(case), description=str(case.id))
         front_page.add_field(name="Current Status", value=case.status, inline=False)
         front_page.add_field(name="Filed Datetime", value=discord_dynamic_timestamp(case.created, 'F'), inline=True)
@@ -314,6 +312,7 @@ class Justice(commands.Cog):
             return await ctx.respond("You have not been invited to this case.", ephemeral=True)
         
         await ctx.interaction.response.defer(ephemeral=True)
+
         setActiveCase(ctx.author, case)
         await case.addJuror(ctx.author)
 
