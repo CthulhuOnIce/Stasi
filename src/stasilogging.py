@@ -1,6 +1,7 @@
 import os
 import datetime
 import base64
+import sys
 
 def discord_dynamic_timestamp(timestamp: datetime.datetime, format_style: str = 'f') -> str:
     """
@@ -42,6 +43,10 @@ def discord_dynamic_timestamp(timestamp: datetime.datetime, format_style: str = 
         return f'<t:{epoch}:{format_style}>'
 
 def log(category_broad, category_fine, message, print_message=True, preserve_newlines=False):
+    
+    if "--debug" in sys.argv or "--verbose" in sys.argv:
+        print_message = True
+        
     # create timestamp like JAN 6 2021 12:00:00
     os.makedirs("logs", exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%b %d %Y %H:%M:%S")
