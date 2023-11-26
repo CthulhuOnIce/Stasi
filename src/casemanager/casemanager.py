@@ -887,7 +887,7 @@ class Case:
         self.id = random.randint(100000000000000000, 999999999999999999)
         return
 
-def getEvidenceByIDGlobal(evidenceid: str) -> evidence.Evidence:
+def getEvidenceByIDGlobal(evidenceid: str) -> (Case, evidence.Evidence):
     evidenceid = evidenceid.lower()
     for case in ACTIVECASES:
         for evidence in case.evidence:

@@ -219,9 +219,15 @@ class Justice(commands.Cog):
         if ":" in evidence_id:
             evidence_id = evidence_id.split(" ")[-1]
         
+        case: cm.Case
+        file: cm.Evidence
         case, file = cm.getEvidenceByIDGlobal(evidence_id)
         if file is None:
             return await ctx.respond("Invalid evidence ID.", ephemeral=True)
+        
+        if file.isSealed() and not case.canSubmitMotions(ctx.author):
+            # TODO: file.describeSealsEmbed() or something
+            return await ctx.respond("You cannot view this evidence, as it has been placed under seal.", ephemeral=True)
         
         response = await ctx.respond(f"Loading evidence...", ephemeral=ephemeral)
     
