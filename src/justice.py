@@ -356,7 +356,7 @@ class Justice(commands.Cog):
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
-        if case.stage != 0:
+        if case.stage != 1:
             return await ctx.respond("This case is not in the jury selection stage.", ephemeral=True)
         if member.id in case.jury_pool_ids:
             return await ctx.respond("This member is already a juror in this case.", ephemeral=True)
