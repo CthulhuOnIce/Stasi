@@ -254,7 +254,7 @@ class Case:
         content: str
         timestamp: datetime.datetime
     
-    def juror_say(self, user, content):
+    async def juror_say(self, user, content):
         jsay: jsay = {
             "user_id": user.id,
             "content": content,
@@ -263,8 +263,15 @@ class Case:
 
         self.juror_chat_log.append(jsay)
 
+        tasks = []
         for juror in self.jury_pool():
-            juror.send(f"**JSAY: {self.nameUserByID(user.id)}:** {content}")
+            asyncio.sleep(0.1)
+            try:
+                tasks.append(juror.send(f"**JSAY: {self.nameUserByID(user.id)}:** {content}"))
+            except Exception as e:
+                log("Case", "juror_say", f"Failed to send JSAY to {juror} ({juror.id}) for case {self} ({self.id}): {e}")
+        
+        asyncio.gather(*tasks)
 
         log("Case", "JSAY", f"{self.nameUserByID(user.id)} ({user.id}): {self.id}: {content}")
         
