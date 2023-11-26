@@ -19,7 +19,7 @@ class Social(commands.Cog):
     @slash_command(name='profile', description='Get info about a user.')
     @option('user', discord.User, description='The user to get info about')
     @option('ephemeral', bool, description='Whether to send the message as an ephemeral message')
-    async def profile(self, ctx: discord.ApplicationContext, user:discord.User, ephemeral:bool=False):
+    async def profile(self, ctx: discord.ApplicationContext, user:discord.User, ephemeral:bool=True):
         embed = discord.Embed(title="User Info", description=f"Info about {user.display_name}", color=0x00ff00)
         embed.set_author(name=str(user), icon_url=user.avatar.url if user.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
         if user.avatar:
