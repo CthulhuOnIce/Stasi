@@ -563,7 +563,7 @@ class Case:
                 try:
                     log("Case", "InviteSent", f"Sending jury invite to {utils.normalUsername(invitee)} ({invitee.id}) for case {self} {self.id}")
                     self.jury_invites.append(invitee.id)
-                    # await invitee.send(f"You have been invited to be a juror for {self.title} (`{self.id}`).\nTo accept, use `/jury join {self.id}`.")
+                    await invitee.send(f"You have been invited to be a juror for {self.title} (`{self.id}`).\nTo accept, use `/jury join {self.id}`.")
                 except:
                     pass  # already removed from eligible jurors
             return

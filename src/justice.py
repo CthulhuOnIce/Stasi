@@ -329,41 +329,31 @@ class Justice(commands.Cog):
 
     @dbg.command(name='wipecases', description='Wipe all cases from the database.')
     async def wipe_cases(self, ctx: discord.ApplicationContext):
+        if not ctx.author.guild_permissions.administrator:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        
         for c in cm.ACTIVECASES:
             await c.closeCase()
         await ctx.respond("Cases wiped.", ephemeral=True)
 
-    @dbg.command(name='tick', description='Trigger a tick event on all active cases.')
-    async def tick(self, ctx: discord.ApplicationContext):
-        t = time.time()
-        for case in cm.ACTIVECASES:
-            await case.Tick()
-        await ctx.respond(f"Tick triggered in {time.time() - t} seconds.", ephemeral=True)
-
     # TODO: remove when done debugging
     @dbg.command(name="tickone", description="DEBUG: trigger a tick event on your active case.")
     async def tick_case(self, ctx: discord.ApplicationContext):
+        if not ctx.author.guild_permissions.administrator:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         case = getActiveCase(ctx.author)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
         await case.Tick()
         await ctx.respond("Tick triggered.", ephemeral=True)
 
-    @dbg.command(name='filetestcase', description='File a test case.')
-    @option("member", discord.Member, description="The member to file a case against.")
-    async def test_case(self, ctx: discord.ApplicationContext, member: discord.Member):
-        penalty = cm.WarningPenalty(cm.Case).New("Test warning for test case.")
-        case = await cm.Case(self.bot, ctx.guild).New(ctx.author, member, penalty, "Test case for debugging the Case system")
-        
-        setActiveCase(ctx.author, case)
-        setActiveCase(member, case)
-        await ctx.respond(f"Filed test case **{case}** (`{case.id}`) It has automatically been set as your active case.", ephemeral=True)
-
     @dbg.command(name='appointjuror', description='Appoint a juror to a case.')
     @option("member", discord.Member, description="The member to appoint as a juror.")
     @option("pseudonym", str, description="The pseudonym to use for the juror.", optional=True)
     async def appoint_juror(self, ctx: discord.ApplicationContext, member: discord.Member, pseudonym: Optional[str] = None):
         case = getActiveCase(ctx.author)
+        if not ctx.author.guild_permissions.administrator:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
         if case.stage != 0:
@@ -373,12 +363,6 @@ class Justice(commands.Cog):
 
         await case.addJuror(member, pseudonym)
         await ctx.respond(f"Appointed {utils.normalUsername(member)} as a juror in this case.", ephemeral=True)
-
-    @dbg.command(name="viewtest", description="Test whichever view is being worked on.")
-    async def paginate_test(self, ctx: discord.ApplicationContext):
-        answer = await qa.bool_choice(ctx, "Hit one", cancel_option=True)
-        await ctx.interaction.edit_original_response(content=answer, embed=None, view=None)
-
 
     reports = {}
 
@@ -424,9 +408,10 @@ class Justice(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
-        for case in cm.getCasesByJuror(member):  # doesn't run if list is empty
-            log("Case", "CaseManager", f"Removing {utils.normalUsername(member)} from case {case.id} as they left the server.")
-            await case.removeJuror(member)
+        for case in cm.ACTIVECASES:
+            if member.id in case.jury_pool_ids:
+                log("Case", "CaseManager", f"Removing Juror {utils.normalUsername(member)} from case {case.id} as they left the server.")
+                await case.removeJuror(member, "Juror left the server.")
         # for case in cm.ACTIVECASES:
             # if member.id == case.defense_id:
             #     await case.defendantLeave()
