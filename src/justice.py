@@ -126,14 +126,18 @@ class Justice(commands.Cog):
             return await ctx.respond("You do not have an active case.", ephemeral=True)
         if not case.canSubmitMotions(ctx.author):
             return await ctx.respond("You cannot make a statement in this case.", ephemeral=True)
+        
+        await ctx.interaction.response.defer(ephemeral=True)
         await case.personalStatement(ctx.author, statement)
         await ctx.respond("Statement added.", ephemeral=True)
 
     @case.command(name="info", description="Get information about a case.")
-    async def case_info(self, ctx: discord.ApplicationContext, ephemeral: bool = True):
+    async def case_info(self, ctx: discord.ApplicationContext):
         case = getActiveCase(ctx.author)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
+    
+        await ctx.interaction.response.defer(ephemeral=True)
 
         front_page = discord.Embed(title=str(case), description=str(case.id))
         front_page.add_field(name="Current Status", value=case.status, inline=False)
@@ -161,7 +165,7 @@ class Justice(commands.Cog):
             async def event_log(self, button, interaction: discord.Interaction):
                 await interaction.response.edit_message(embed=event_page)
             
-        await ctx.respond(embed=front_page, view=caseinfoview(), ephemeral=ephemeral)
+        await ctx.respond(embed=front_page, view=caseinfoview(), ephemeral=True)
 
 
     move = case.create_subgroup("move", "Commands for basic case motions and management.")
@@ -309,6 +313,7 @@ class Justice(commands.Cog):
         if ctx.author.id not in case.jury_invites:
             return await ctx.respond("You have not been invited to this case.", ephemeral=True)
         
+        await ctx.interaction.response.defer(ephemeral=True)
         setActiveCase(ctx.author, case)
         await case.addJuror(ctx.author)
 
@@ -322,6 +327,7 @@ class Justice(commands.Cog):
         if ctx.author.id not in case.jury_pool_ids:
             return await ctx.respond("You are not a juror in this case.", ephemeral=True)
         
+        await ctx.interaction.response.defer(ephemeral=True)
         await case.juror_say(ctx.author, message)
         await ctx.respond("Message sent.", ephemeral=True)
 
@@ -361,6 +367,7 @@ class Justice(commands.Cog):
         if member.id in case.jury_pool_ids:
             return await ctx.respond("This member is already a juror in this case.", ephemeral=True)
 
+        await ctx.interaction.response.defer(ephemeral=True)
         await case.addJuror(member, pseudonym)
         await ctx.respond(f"Appointed {utils.normalUsername(member)} as a juror in this case.", ephemeral=True)
 
