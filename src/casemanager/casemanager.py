@@ -561,7 +561,7 @@ class Case:
             # juror left the case, but it was already in the body stage
             # when this happens, the case basically has to revert to the recruitment stage
             if self.stage > 1:  
-                self.updateStatus("Jury Re-Selection to Fill Vacancy")
+                await self.updateStatus("Jury Re-Selection to Fill Vacancy")
                 for motion in self.motion_queue:
                     await motion.CancelVoting(reason=f"Jury cannot act on motions until 5 jurors are present.")
                 self.stage = 1  # back in the recruitment stage
@@ -577,7 +577,7 @@ class Case:
             return
         
         elif self.stage == 1:  # we have jurors selected, so move the case to the next stage
-            self.updateStatus("Argumentation and Case Body")
+            await self.updateStatus("Argumentation and Case Body")
             self.stage = 2
         
         # switching from stage 1 to 2 should be done by the function which assigns a juror to the case
