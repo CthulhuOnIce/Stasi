@@ -8,6 +8,7 @@ from discord.ext import commands, pages, tasks
 from . import artificalint as ai
 from . import config
 from . import database as db
+from . import utils
 from .stasilogging import discord_dynamic_timestamp, log, log_user
 
 
@@ -23,18 +24,22 @@ class Social(commands.Cog):
         embed.set_author(name=str(user), icon_url=user.avatar.url if user.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
         if user.avatar:
             embed.set_thumbnail(url=user.avatar.url)
-        embed.add_field(name="Joined Discord", value=user.created_at.strftime("%m/%d/%Y %H:%M:%S"), inline=False)
+
+        joined_str = f"{discord_dynamic_timestamp(user.created_at, 'F')} ({discord_dynamic_timestamp(user.created_at, 'R')})"
+        embed.add_field(name="Joined Discord", value=joined_str, inline=False)
 
         if user in ctx.guild.members:
             member = ctx.guild.get_member(user.id)
-            embed.add_field(name="Joined Server", value=member.joined_at.strftime("%m/%d/%Y %H:%M:%S"), inline=False)
+            joined_str = f"{discord_dynamic_timestamp(member.joined_at, 'F')} ({discord_dynamic_timestamp(member.joined_at, 'R')})"
+            embed.add_field(name="Joined Server", value=joined_str, inline=False)
         
         db_user = await db.get_user(user.id)
         if db_user:
             if "messages" in db_user:
                 embed.add_field(name="Total Messages", value=db_user["messages"], inline=False)
             if "last_seen" in db_user:
-                embed.add_field(name="Last Seen", value=discord_dynamic_timestamp(db_user["last_seen"]), inline=False)
+                last_seen_str = f"{discord_dynamic_timestamp(db_user['last_seen'], 'F')} ({discord_dynamic_timestamp(db_user['last_seen'], 'R')})"
+                embed.add_field(name="Last Seen", value=last_seen_str, inline=False)
             if "reactions" in db_user:
                 react_list = [{"reaction": reaction, "count": db_user["reactions"][reaction]} for reaction in db_user["reactions"]]
 
@@ -52,7 +57,6 @@ class Social(commands.Cog):
     @commands.user_command(name="View Profile")  # create a user command for the supplied guilds
     async def player_information_click(self, ctx: discord.ApplicationContext, member: discord.Member):  # user commands return the member
         await self.profile(ctx, member, ephemeral=True)  # respond with the member's display name
-
     
     @slash_command(name='interview', description='Get a user\'s vetting answers.')
     @option('user', discord.User, description='The user to get answers for')
