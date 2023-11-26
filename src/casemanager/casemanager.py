@@ -153,8 +153,6 @@ def eventToEmbed(event: Event, case_name: str) -> discord.Embed:
     
     if event["event_id"] == "case_filed":
         icon_url = utils.twemojiPNG.opencab
-    elif event["event_id"] == "status_update":
-        icon_url = utils.twemojiPNG.label
     elif event["event_id"] == "juror_join":
         icon_url = utils.twemojiPNG.scale
     elif event["event_id"] == "juror_leave":
@@ -163,6 +161,8 @@ def eventToEmbed(event: Event, case_name: str) -> discord.Embed:
         icon_url = utils.twemojiPNG.ballot
     elif event["event_id"] == "personal_statement":
         icon_url = utils.twemojiPNG.leftchat
+    elif event["event_id"] == "case_status_update":
+        icon_url = utils.twemojiPNG.label
 
     if event["event_id"] == "evidence_submit":
         icon_url = utils.twemojiPNG.folder
