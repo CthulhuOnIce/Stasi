@@ -265,7 +265,7 @@ class Case:
 
         tasks = []
         for juror in self.jury_pool():
-            asyncio.sleep(0.1)
+            await asyncio.sleep(0.1)
             try:
                 tasks.append(juror.send(f"**JSAY: {self.nameUserByID(user.id)}:** {content}"))
             except Exception as e:
