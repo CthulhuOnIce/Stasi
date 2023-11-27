@@ -1,7 +1,13 @@
+from typing import TYPE_CHECKING
+
 import discord
-from ..casemanager import Motion
+
 from ..stasilogging import discord_dynamic_timestamp
 from ..utils import twemojiPNG
+
+if TYPE_CHECKING:
+    from ..casemanager import Motion
+    
 
 async def confirmView(msg: discord.Message, cancel_option: bool = False) -> bool:
     
