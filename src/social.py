@@ -15,6 +15,7 @@ from .stasilogging import discord_dynamic_timestamp, log, log_user
 class Social(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.bump_reminder.start()
 
     @slash_command(name='profile', description='Get info about a user.')
     @option('user', discord.User, description='The user to get info about')
