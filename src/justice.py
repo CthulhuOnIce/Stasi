@@ -343,6 +343,26 @@ class Justice(commands.Cog):
 
     dbg = discord.SlashCommandGroup("debug", "Debug commands for testing purposes")
 
+    @dbg.command(name='juryinvite', description='Invite a user to a case as a juror.')
+    @option("member", discord.Member, description="The member to invite as a juror.")
+    async def jury_invite(self, ctx: discord.ApplicationContext, member: discord.Member):
+        case = getActiveCase(ctx.author)
+        if not ctx.author.guild_permissions.administrator:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        if case.stage != 1:
+            return await ctx.respond("This case is not in the jury selection stage.", ephemeral=True)
+        if member.id in case.jury_pool_ids:
+            return await ctx.respond("This member is already a juror in this case.", ephemeral=True)
+        if member.id in case.jury_invites:
+            return await ctx.respond("This member has already been invited to this case.", ephemeral=True)
+
+        await ctx.interaction.response.defer(ephemeral=True)
+        await case.sendJuryInvite(member)
+        await case.Save()
+        await ctx.respond(f"Invited {utils.normalUsername(member)} to this case.", ephemeral=True)
+
     @dbg.command(name='wipecases', description='Wipe all cases from the database.')
     async def wipe_cases(self, ctx: discord.ApplicationContext):
         if not ctx.author.guild_permissions.administrator:

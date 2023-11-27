@@ -104,7 +104,10 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
         for key in DBDocument:
             if key == "Case":
                 continue
-            setattr(self, key, DBDocument[key])
+            if isinstance(DBDocument[key], datetime.datetime):
+                setattr(self, key, DBDocument[key].replace(tzinfo=datetime.timezone.utc))
+            else:
+                setattr(self, key, DBDocument[key])
         return self
     
     async def New(self, author) -> Motion:  # the event log entry should be updated by the subtype's New() function

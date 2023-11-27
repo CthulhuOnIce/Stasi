@@ -310,6 +310,7 @@ class Case:
     async def closeCase(self):
         self.no_tick = True 
         self.stage = 3
+        self.motion_queue = []
         ACTIVECASES.remove(self)
         for evidence in self.evidence:
             await evidence.delete()
@@ -532,6 +533,34 @@ class Case:
 
         return
     
+    async def sendJuryInvite(self, user: discord.Member):
+        embed = discord.Embed(title="Jury Invite", description=f"You have been invited to the case {self} {self.id} to participate as a juror.", color=discord.Color.gold())
+        embed.add_field(name="Case Description", value=self.description, inline=False)
+
+        what_is_jury = "Jury members act as a combination of judge and jury in the case. They are responsible for voting on motions, proposing motions, considering evidence, and ultimately deciding the verdict.\n\n"
+        what_is_jury += "Jury members are expected to be active in the case, and to participate in good faith.\n"
+        what_is_jury += "Abuse of the jury system can result in penalties, including prison time or a block from jury work."
+
+        embed.add_field(name="What does this mean?", value=what_is_jury, inline=False)
+
+        how_do_i_join = "To join the jury, use the command provided in 'Jury Join Command'.\n"
+        how_do_i_join += "You will be notified automatically for case updates.\n"
+        how_do_i_join += "If you do not wish to join, you can ignore this message."
+
+        embed.add_field(name="How do I join?", value=how_do_i_join, inline=False)
+        embed.add_field(name="Jury Join Command", value=f"/jury join {self.id}", inline=False)
+
+        embed.set_author(name=self.title, icon_url=utils.twemojiPNG.scale)
+
+        try:
+            await user.send(embed=embed)
+            self.jury_invites.append(user.id)
+            log("Case", "sendJuryInvite", f"Sent jury invite to {user} ({user.id}) for case {self} ({self.id})")
+            return True
+        except Exception as e:
+            log("Case", "sendJuryInvite", f"Failed to send jury invite to {user} ({user.id}) for case {self} ({self.id}): {e}")
+            return False
+    
     async def Tick(self):
         # await self.Save()
         await self.HeartBeat()
@@ -578,16 +607,15 @@ class Case:
                 for motion in self.motion_queue:
                     await motion.CancelVoting(reason=f"Jury cannot act on motions until 5 jurors are present.")
                 self.stage = 1  # back in the recruitment stage
+            
             invites_to_send = random.randint(2, 3)  # send 2-3 invites per cycle
             eligible_jurors = await self.findEligibleJurors()
+            tasks = []
+
             for invitee in random.sample(eligible_jurors, invites_to_send):
-                try:
-                    log("Case", "InviteSent", f"Sending jury invite to {utils.normalUsername(invitee)} ({invitee.id}) for case {self} {self.id}")
-                    self.jury_invites.append(invitee.id)
-                    # await invitee.send(f"You have been invited to be a juror for {self.title} (`{self.id}`).\nTo accept, use `/jury join {self.id}`.")
-                except:
-                    pass  # already removed from eligible jurors
-            return
+                tasks.append(self.sendJuryInvite(invitee))
+
+            asyncio.gather(*tasks)
         
         elif self.stage == 1:  # we have jurors selected, so move the case to the next stage
             await self.startArgumentation()
