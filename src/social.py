@@ -264,6 +264,11 @@ class Social(commands.Cog):
     last_bump_channel = None
 
     @commands.Cog.listener()
+    async def on_ready(self):
+        last_bump = await db.get_global("last_bump")
+        self.last_bump = last_bump
+
+    @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.id == 302050872383242240:  # for bump ping
             if message.embeds and "bump done" in message.embeds[0].description.lower() and message.interaction:
@@ -273,6 +278,7 @@ class Social(commands.Cog):
                 await message.channel.send(f"Thanks for bumping, {bumper.mention}! A reminder will be sent in 2 hours to bump again.")
 
                 self.last_bump = datetime.datetime.now(datetime.timezone.utc)
+                await db.set_global("last_bump", self.last_bump)
                 self.last_bump_channel = message.channel
 
         if message.author.bot:

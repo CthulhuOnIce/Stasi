@@ -20,8 +20,15 @@ from .stasilogging import *
 
 case_selection = {}
 
-def setActiveCase(member: discord.Member, case: cm.Case):
+def saveCaseSelection():
+    return {str(k): str(v) for k, v in case_selection.items()}
+
+def loadCaseSelection(data):
+    return {int(k): str(v) for k, v in data.items()}
+
+async def setActiveCase(member: discord.Member, case: cm.Case):
     case_selection[member.id] = case.id
+    await db.set_global(f"case_selection", saveCaseSelection())
 
 def getActiveCase(member: discord.Member) -> cm.Case:
     return cm.getCaseByID(case_selection.get(member.id, None))
@@ -34,6 +41,10 @@ class Justice(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         await cm.populateActiveCases(self.bot, self.bot.get_guild(config.C["guild_id"]))
+        case_selection_new = await db.get_global("case_selection")
+        if case_selection_new is not None:
+            global case_selection
+            case_selection = loadCaseSelection(case_selection_new)
         log("Case", "CaseManager", "Justice module ready.")
 
     async def active_case_options(ctx: discord.AutocompleteContext):
@@ -46,7 +57,7 @@ class Justice(commands.Cog):
         if case is None:
             return await ctx.respond("Invalid case ID.", ephemeral=True)
         
-        setActiveCase(ctx.author, case)
+        await setActiveCase(ctx.author, case)
         return await ctx.respond(f"Selected case **{case}** (`{case.id}`) as your active case.", ephemeral=True)
 
     @case.command(name='file', description='File a case against a user.')
@@ -115,8 +126,8 @@ class Justice(commands.Cog):
 
         guild = self.bot.get_guild(config.C["guild_id"])
         case = await cm.Case(self.bot, guild).New(ctx.author, member, cm.WarningPenalty(cm.Case).New("This is a test warning"), reason)
-        setActiveCase(ctx.author, case)
-        setActiveCase(member, case)
+        await setActiveCase(ctx.author, case)
+        await setActiveCase(member, case)
 
     # TODO: Confirmation message
     @case.command(name="statement", description="Make a statement in your active case.")
@@ -145,7 +156,7 @@ class Justice(commands.Cog):
         front_page.add_field(name="Filed Against", value=case.nameUserByID(case.defense_id), inline=True)
         if case.motion_in_consideration is not None:
             front_page.add_field(name="Motion in Consideration", value=case.motion_in_consideration, inline=False)
-            front_page.add_field(name="Voting Ends", value=discord_dynamic_timestamp(case.motion_in_consideration.expiry, 'RT'), inline=False)
+            front_page.add_field(name="Voting Ends", value=discord_dynamic_timestamp(case.motion_in_consideration.expiry, 'RF'), inline=False)
         front_page.add_field(name="Guilty Penalty", value=case.describePenalties(case.penalties), inline=False)
 
         event_page = discord.Embed(title=str(case), description=str(case.id))
@@ -313,7 +324,7 @@ class Justice(commands.Cog):
         
         await ctx.interaction.response.defer(ephemeral=True)
 
-        setActiveCase(ctx.author, case)
+        await setActiveCase(ctx.author, case)
         await case.addJuror(ctx.author)
 
         return await ctx.respond(f"Joined case **{case}** (`{case.id}`) as a juror.", ephemeral=True)
