@@ -176,6 +176,31 @@ class Justice(commands.Cog):
             
         await ctx.respond(embed=front_page, view=caseinfoview(), ephemeral=True)
 
+    @case.command(name="vote", description="Vote on a motion in your active case.")
+    async def case_vote(self, ctx: discord.ApplicationContext):
+        case = getActiveCase(ctx.author)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        if case.motion_in_consideration is None:
+            return await ctx.respond("This case does not have a motion in consideration.", ephemeral=True)
+        if not case.canVote(ctx.author):
+            return await ctx.respond("You are not a juror in this case.", ephemeral=True)
+        if ctx.author.id in case.motion_in_consideration.votes["Yes"]:
+            return await ctx.respond("You have already voted on this motion: **Pass**", ephemeral=True)
+        if ctx.author.id in case.motion_in_consideration.votes["No"]:
+            return await ctx.respond("You have already voted on this motion: **Reject**", ephemeral=True)
+
+        response = await cmui.voteView(ctx, case.motion_in_consideration)
+        if response is None:
+            return
+        if response is True:
+            case.motion_in_consideration.votes["Yes"].append(ctx.author.id)
+            await case.Save()
+            return await ctx.respond("Vote cast: **Pass**", ephemeral=True)
+        elif response is False:
+            case.motion_in_consideration.votes["No"].append(ctx.author.id)
+            await case.Save()
+            return await ctx.respond("Vote cast: **Reject**", ephemeral=True)
 
     move = case.create_subgroup("move", "Commands for basic case motions and management.")
 
@@ -371,6 +396,23 @@ class Justice(commands.Cog):
         for c in cm.ACTIVECASES:
             await c.closeCase()
         await ctx.respond("Cases wiped.", ephemeral=True)
+
+    @dbg.command(name='viewtest', description="Test whatever view is being debugged right now.")
+    async def view_test(self, ctx: discord.ApplicationContext):
+        if not ctx.author.guild_permissions.administrator:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        case = getActiveCase(ctx.author)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        
+        # Start View below
+
+        if not case.motion_in_consideration:
+            return await ctx.respond("This case does not have a motion in consideration.", ephemeral=True)
+        
+        response = await cmui.voteView(ctx, case.motion_in_consideration)
+        await ctx.respond(response, ephemeral=True)
+
 
     # TODO: remove when done debugging
     @dbg.command(name="tickone", description="DEBUG: trigger a tick event on your active case.")
