@@ -534,7 +534,7 @@ class Case:
         return
     
     async def sendJuryInvite(self, user: discord.Member):
-        embed = discord.Embed(title="Jury Invite", description=f"You have been invited to the case {self} {self.id} to participate as a juror.", color=discord.Color.gold())
+        embed = discord.Embed(title="Jury Invite", description=f"You have been invited to the case **{self}** `{self.id}` to participate as a juror.", color=discord.Color.gold())
         embed.add_field(name="Case Description", value=self.description, inline=False)
 
         what_is_jury = "Jury members act as a combination of judge and jury in the case. They are responsible for voting on motions, proposing motions, considering evidence, and ultimately deciding the verdict.\n\n"
