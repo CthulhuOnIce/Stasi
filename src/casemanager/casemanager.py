@@ -499,6 +499,12 @@ class Case:
         return user_resolved
     
 
+    async def startArgumentation(self):
+        self.stage = 2
+        await self.updateStatus("Argumentation and Case Body")
+        self.jury_invites = []
+        await self.Save()
+        return
     
     async def addJuror(self, user: discord.Member, pseudonym: str = None):
         
@@ -584,8 +590,7 @@ class Case:
             return
         
         elif self.stage == 1:  # we have jurors selected, so move the case to the next stage
-            await self.updateStatus("Argumentation and Case Body")
-            self.stage = 2
+            await self.startArgumentation()
         
         # switching from stage 1 to 2 should be done by the function which assigns a juror to the case
         if self.stage == 2 and len(self.motion_queue):  # work the motion queue
