@@ -7,7 +7,7 @@ from typing import Optional
 import discord
 import motor  # doing this locally instead of in database.py for greater modularity
 from discord import option, slash_command
-from discord.ext import commands, tasks
+from discord.ext import commands, tasks, pages
 
 from . import casemanager as cm
 from . import casemanagerui as cmui
@@ -175,19 +175,41 @@ class Justice(commands.Cog):
             await case.Save()
             return await ctx.respond("Vote cast: **Reject**", ephemeral=True)
         
-    @case.command(name="withdraw", description="Used for the Plaintiff to withdraw a case.")
+    @case.command(name="withdraw", description="Used for the Prosecutor to withdraw a case.")
     async def case_withdraw(self, ctx: discord.ApplicationContext):
         case = getActiveCase(ctx.author)
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
 
-        if ctx.author.id != case.plaintiff_id:
-            return await ctx.respond("Only the plaintiff can withdraw a case.", ephemeral=True)
+        if ctx.author.id != case.prosecutor_id:
+            return await ctx.respond("Only the prosecutor can withdraw a case.", ephemeral=True)
         
         await ctx.interaction.response.defer(ephemeral=True)
         await case.closeCase(f"Withdrawn by {case.nameUserByID(ctx.author.id)}")
         await case.deleteCase()
         await ctx.respond("Case withdrawn.", ephemeral=True)
+    
+    @case.command(name='eventlog', description='View the event log for your active case.')
+    @option("reverse", bool, description="Whether to reverse the order of the event log.", default=False)
+    async def case_eventlog(self, ctx: discord.ApplicationContext, reverse:bool = False):
+        case = getActiveCase(ctx.author)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        
+        embeds = [cm.eventToEmbed(e, f"{case} ({case.id})") for e in case.event_log]
+        if reverse:
+            embeds.reverse()
+
+        # split it into smaller lists of 2
+        embeds = [embeds[i:i + 2] for i in range(0, len(embeds), 2)]
+        
+        if len(embeds) == 0:
+            return await ctx.respond("This case has no events.", ephemeral=True)
+        if len(embeds) == 1:
+            return await ctx.respond(embed=embeds[0], ephemeral=True)
+        else:
+            paginator = pages.Paginator(pages=embeds)
+            await paginator.respond(ctx.interaction, ephemeral=True)
 
     move = case.create_subgroup("move", "Commands for basic case motions and management.")
 
@@ -485,8 +507,8 @@ class Justice(commands.Cog):
             #     await case.defendantLeave()
             # elif member.id in case.jury_pool_ids:
             #     await case.jurorLeave(member)
-            # elif member.id == case.plaintiff_id:
-            #     await case.plaintiffLeave()
+            # elif member.id == case.prosecutor_id:
+            #     await case.prosecutorLeave()
 
     @tasks.loop(minutes=15)
     async def CaseManager(self):

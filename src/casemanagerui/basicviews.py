@@ -149,7 +149,7 @@ async def caseInfoView(ctx: discord.ApplicationContext, case: "Case"):
     front_page.add_field(name="Current Status", value=case.status, inline=False)
     front_page.add_field(name="Filed Datetime", value=discord_dynamic_timestamp(case.created, 'F'), inline=True)
     front_page.add_field(name="Filed Relative", value=discord_dynamic_timestamp(case.created, 'R'), inline=True)
-    front_page.add_field(name="Filed By", value=case.nameUserByID(case.plaintiff_id), inline=True)
+    front_page.add_field(name="Filed By", value=case.nameUserByID(case.prosecutor_id), inline=True)
     front_page.add_field(name="Filed Against", value=case.nameUserByID(case.defense_id), inline=True)
     if case.motion_in_consideration is not None:
         front_page.add_field(name="Motion in Consideration", value=case.motion_in_consideration, inline=False)

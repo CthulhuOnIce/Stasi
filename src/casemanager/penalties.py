@@ -52,7 +52,7 @@ class WarningPenalty(Penalty):
 
     # needs to be made async for implementation
     async def Execute(self):
-        # note = await db.add_note(self.case.defense.id, self.case.plaintiff.id, f"User Warned as Penalty of Case {self.case.id}: `{self.warning_text}`")
+        # note = await db.add_note(self.case.defense.id, self.case.prosecutor.id, f"User Warned as Penalty of Case {self.case.id}: `{self.warning_text}`")
         print(f"User Warned as Penalty of Case {self.case.id}: `{self.warning_text}`")
     
 class PermanentBanPenalty(Penalty):
@@ -90,7 +90,7 @@ class PrisonPenalty(Penalty):
             return f"Prison: Permanent / Indefinite"
         
     async def Execute(self):
-        await warden.newWarrant(self.case.defense(), "case", f"Case {self.case.id} Verdict", self.case.plaintiff_id, self.prison_length_seconds)
+        await warden.newWarrant(self.case.defense(), "case", f"Case {self.case.id} Verdict", self.case.prosecutor_id, self.prison_length_seconds)
 
 class JuryBanPenalty(Penalty):
     def __init__(self, case):

@@ -36,15 +36,15 @@ Cases are also saved to the database when they are updated, and when the bot shu
 Cases are not saved to the database when they are closed, as they are archived and removed from memory.
 When this happens, they are saved to a zip file and sent to relevant discord channels. 
 
-Cases are created by the plaintiff, and the defendant is notified.
-The plaintiff can also offer a plea deal at any time, including before jury selection, and the defendant can accept or decline.
+Cases are created by the prosecutor, and the defendant is notified.
+The prosecutor can also offer a plea deal at any time, including before jury selection, and the defendant can accept or decline.
 The bot is meant to handle most communication in case-related matters, to allow for greater archival capacity, and the 
 ability to anonymize jurors.
 
 Cases are created with a title, description, and a list of penalties.
 Penalties are o_summary_bjects which are executed when a case is closed, and can be warnings, bans, or prison sentences.
-Penalties are also used in plea deals, and can be modified by the plaintiff and defendant at any time.
-Penalties are also used in motions, and can be modified by the plaintiff and defendant at any time.
+Penalties are also used in plea deals, and can be modified by the prosecutor and defendant at any time.
+Penalties are also used in motions, and can be modified by the prosecutor and defendant at any time.
 
 Feature Complete:
 - [ ] Penalty Drafting UI
@@ -93,7 +93,7 @@ Optimizations:
 - [ ] Make sure security checks are good on debug and all new commands
 
 All in one suite for managing plea deals.
-When ran by the plaintiff, allows them to offer a plea deal and check on it, or withdraw/modifiy it.
+When ran by the prosecutor, allows them to offer a plea deal and check on it, or withdraw/modifiy it.
 When ran by the defense, allows them to accept or decline a plea deal.
 - [ ] /case plea offer
 """
@@ -101,6 +101,7 @@ When ran by the defense, allows them to accept or decline a plea deal.
 ACTIVECASES: List[Case] = []
 
 JURY_SIZE = 5
+FIRE_UNREACHABLE_JURORS = True
 
 def getCaseByID(case_id: str) -> Case:
     
@@ -178,6 +179,7 @@ def eventToEmbed(event: Event, case_name: str) -> discord.Embed:
             embed.add_field(name="Run This Command To View", value=f"/case evidence view {event['evidence']['id']}", inline=False)
 
     embed.set_author(name=case_name, icon_url=icon_url)
+    embed.add_field(name="Timestamp", value=f"{discord_dynamic_timestamp(event['timestamp'], 'FR')}", inline=False)
     return embed
 
 class Case:
@@ -288,8 +290,8 @@ class Case:
         self.plea_deal_expiration = None
         self.event_log.append(await self.newEvent(
             "plea_deal_declined",
-            f"{self.nameUserByID(self.plaintiff_id)} has declined the plea deal.",
-            f"{self.nameUserByID(self.plaintiff_id)} has declined the plea deal."
+            f"{self.nameUserByID(self.prosecutor_id)} has declined the plea deal.",
+            f"{self.nameUserByID(self.prosecutor_id)} has declined the plea deal."
         ))
         return
     
@@ -300,8 +302,8 @@ class Case:
         self.plea_deal_expiration = None
         self.event_log.append(await self.newEvent(
             "plea_deal_accepted",
-            f"{self.nameUserByID(self.plaintiff_id)} has accepted the plea deal.",
-            f"{self.nameUserByID(self.plaintiff_id)} has accepted the plea deal."
+            f"{self.nameUserByID(self.prosecutor_id)} has accepted the plea deal.",
+            f"{self.nameUserByID(self.prosecutor_id)} has accepted the plea deal."
         ))
         return
 
@@ -342,8 +344,8 @@ class Case:
         while getCaseByID(candidate):
             candidate = f"{datetime.datetime.now(datetime.timezone.utc).strftime('%m%d%Y')}-{random.randint(100, 999)}"
         return candidate
-
-    async def Announce(self, content: str = None, embed: discord.Embed = None, jurors: bool = True, defense: bool = True, prosecution: bool = True, news_wire: bool = True):
+    
+    async def DispatchAnnouncement(self, content: str = None, embed: discord.Embed = None, jurors: bool = True, defense: bool = True, prosecution: bool = True, news_wire: bool = True):
         # content = plain text content
         # embed = an embed
         # jurors = whether or not to send this announcement to the jury
@@ -357,24 +359,29 @@ class Case:
         if defense:
             recipients.append(self.defense())
         if prosecution:
-            recipients.append(self.plaintiff())
+            recipients.append(self.prosecutor())
         if news_wire:
+            # TODO: remove placeholder
             recipients.append(self.guild.get_channel(863539768306171928))
 
         jobs = []
 
         for recipient in recipients:
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(1)
             try:
                 if content:
-                    jobs.append(recipient.send(content))
+                    await recipient.send(content)
                 if embed:
-                    jobs.append(recipient.send(content, embed=embed))
+                    await recipient.send(content, embed=embed)
+            except discord.errors.Forbidden:
+                if recipient.id in self.jury_pool_ids:
+                    await self.removeJuror(recipient, "Forbidden to send DMs")
             except Exception as e:
                 log("Case", "Announce", f"Failed to send announcement to {recipient} ({recipient.id}) for case {self} ({self.id}): {e}")
-                pass
-        
-        asyncio.gather(*jobs)
+                pass 
+
+    async def Announce(self, content: str = None, embed: discord.Embed = None, jurors: bool = True, defense: bool = True, prosecution: bool = True, news_wire: bool = True):
+        asyncio.gather(self.DispatchAnnouncement(content, embed, jurors, defense, prosecution, news_wire))
 
     def registerUser(self, user, anonymousname: str = None):
         # TODO: decide whether known_users is mapped to int or str and remove these double cases
@@ -423,8 +430,8 @@ class Case:
             if userid == self.defense_id:
                 res += " (Defense)"
 
-            elif userid == self.plaintiff_id:
-                res += " (Plaintiff)"
+            elif userid == self.prosecutor_id:
+                res += " (Prosecutor)"
             
             else:
                 if userid in self.jury_pool_ids:
@@ -444,7 +451,7 @@ class Case:
             return False
         
     def canSubmitMotions(self, user: discord.Member):
-        if user.id == self.plaintiff_id:
+        if user.id == self.prosecutor_id:
             return True
         if user.id == self.defense_id:
             return True
@@ -493,7 +500,7 @@ class Case:
         # resolve user ids to discord.Member objects
         disqualified = []
         for case in ACTIVECASES:
-            disqualified.extend([case.defense_id, case.plaintiff_id])
+            disqualified.extend([case.defense_id, case.prosecutor_id])
 
         user_resolved = []
         for u in user:
@@ -685,8 +692,8 @@ class Case:
         elif got := self.guild.get_member(userid):
             return got
 
-    def plaintiff(self):
-        return self.fetchUser(self.plaintiff_id)
+    def prosecutor(self):
+        return self.fetchUser(self.prosecutor_id)
 
     def defense(self):
         return self.fetchUser(self.defense_id)
@@ -699,7 +706,7 @@ class Case:
         self.registerUser(author)  
 
         evidence_tag = "N"
-        if author.id == self.plaintiff_id:
+        if author.id == self.prosecutor_id:
             evidence_tag = "P"
         elif author.id == self.defense_id:
             evidence_tag = "D"
@@ -722,12 +729,12 @@ class Case:
         await self.Save()
         return new_evidence
 
-    async def New(self, plaintiff: discord.Member, defense: discord.Member, penalties: List[Penalty], description: str) -> Case:
+    async def New(self, prosecutor: discord.Member, defense: discord.Member, penalties: List[Penalty], description: str) -> Case:
 
         if isinstance(penalties, Penalty):
             penalties = [penalties]
 
-        self.title = f"{utils.normalUsername(plaintiff)} v. {utils.normalUsername(defense)}"
+        self.title = f"{utils.normalUsername(prosecutor)} v. {utils.normalUsername(defense)}"
         self.description = description
         # "Jury Selection", "Guilty", "Not Guilty", 
         self.status = "Jury Selection"
@@ -736,7 +743,7 @@ class Case:
         self.evidence: List[evidence.Evidence] = []
         self.evidence_number = 101
 
-        self.plaintiff_id = plaintiff.id
+        self.prosecutor_id = prosecutor.id
         self.defense_id = defense.id
         self.penalties: List[Penalty] = penalties
 
@@ -755,7 +762,7 @@ class Case:
         self.anonymization = {}
         
         self.known_users = {}
-        self.registerUser(plaintiff)
+        self.registerUser(prosecutor)
         self.registerUser(defense)
 
         # MIGHT REMOVE in favor of delivering verdict ny a motion
@@ -764,7 +771,7 @@ class Case:
         self.event_log: List[Event] = [await self.newEvent(
             "case_filed",
             f"Case {self.id} has been filed.",
-            f"Case {self.id} has been filed by {self.nameUserByID(self.plaintiff_id)} against {self.nameUserByID(self.defense_id)}.\n{self.description}"
+            f"Case {self.id} has been filed by {self.nameUserByID(self.prosecutor_id)} against {self.nameUserByID(self.defense_id)}.\n{self.description}"
         )]
         self.juror_chat_log = []
         self.motion_in_consideration: Motion = None
@@ -801,8 +808,8 @@ class Case:
                 "filed_date": self.created,
                 "filed_date_timestamp": self.created.timestamp(),
 
-                # plaintiff and defense
-                "plaintiff_id": self.plaintiff_id,
+                # prosecutor and defense
+                "prosecutor_id": self.prosecutor_id,
                 "defense_id": self.defense_id,
 
                 "personal_statements": self.personal_statements,
@@ -854,7 +861,7 @@ class Case:
         self.status = d["status"]
         self.created = d["filed_date"]
 
-        self.plaintiff_id = d["plaintiff_id"]
+        self.prosecutor_id = d["prosecutor_id"]
         self.defense_id = d["defense_id"]
 
         self.personal_statements = d["personal_statements"]
