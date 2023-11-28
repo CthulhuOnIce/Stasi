@@ -397,6 +397,35 @@ class Justice(commands.Cog):
         await case.Save()
         await ctx.respond(f"Invited {utils.normalUsername(member)} to this case.", ephemeral=True)
 
+    @dbg.command(name='stuffvotes', description='Load a motion up with votes.')
+    @option("passmotion", bool, description="True - Pass : False - Reject")
+    async def stuffvotes(self, ctx: discord.ApplicationContext, passmotion: bool):
+        case = getActiveCase(ctx.author)
+        if not ctx.author.guild_permissions.administrator:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        if case.motion_in_consideration is None:
+            return await ctx.respond("This case does not have a motion in consideration.", ephemeral=True)
+        
+        margin = random.randint(3, 5)
+        majority_voters = random.sample(case.jury_pool_ids, margin)
+
+        for jurist in case.jury_pool_ids:
+            if jurist in majority_voters:
+                if passmotion:
+                    case.motion_in_consideration.votes["Yes"].append(jurist)
+                else:
+                    case.motion_in_consideration.votes["No"].append(jurist)
+            else:
+                if passmotion:
+                    case.motion_in_consideration.votes["No"].append(jurist)
+                else:
+                    case.motion_in_consideration.votes["Yes"].append(jurist)
+
+        await case.Save()
+        await ctx.respond(f"Created manufactued vote: (Y: {len(majority_voters)}/N: {len(case.jury_pool_ids)-len(majority_voters)})", ephemeral=True)
+
     @dbg.command(name='wipecases', description='Wipe all cases from the database.')
     async def wipe_cases(self, ctx: discord.ApplicationContext):
         if not ctx.author.guild_permissions.administrator:

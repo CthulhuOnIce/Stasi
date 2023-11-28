@@ -367,7 +367,6 @@ class Case:
         jobs = []
 
         for recipient in recipients:
-            await asyncio.sleep(1)
             try:
                 if content:
                     await recipient.send(content)
