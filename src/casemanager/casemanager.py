@@ -162,6 +162,9 @@ def eventToEmbed(event: Event, case_name: str) -> discord.Embed:
     elif event["event_id"] == "motion_up":
         icon_url = utils.twemojiPNG.ballot
         embed.add_field(name="Hint", value=f"Use `/case vote` to cast your vote for or against this motion.", inline=False)
+    elif event["event_id"] == "motion_cancel_vote":
+        icon_url = utils.twemojiPNG.ballot
+        embed.add_field(name="Hint", value=f"All previously cast votes for this motion have been reset.", inline=False)
     elif event["event_id"] == "personal_statement":
         icon_url = utils.twemojiPNG.leftchat
     elif event["event_id"] == "case_status_update":
