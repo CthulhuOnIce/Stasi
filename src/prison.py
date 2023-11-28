@@ -335,7 +335,7 @@ class Prison(commands.Cog):
         await warden.populatePrisoners(self.bot.get_guild(config.C["guild_id"]))
                 
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(minutes=1, reconnect=True)
     async def prisoner_loop(self):
         log("justice", "loop", "Running prisoner loop", False)
         for prisoner in warden.PRISONERS:

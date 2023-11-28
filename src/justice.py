@@ -510,7 +510,7 @@ class Justice(commands.Cog):
             # elif member.id == case.prosecutor_id:
             #     await case.prosecutorLeave()
 
-    @tasks.loop(minutes=15)
+    @tasks.loop(minutes=15, reconnect=True)
     async def CaseManager(self):
         log("Case", "CaseManager", "Doing Periodic Case Manager Loop")
         for case in cm.ACTIVECASES:
