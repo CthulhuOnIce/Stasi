@@ -161,11 +161,11 @@ def eventToEmbed(event: Event, case_name: str) -> discord.Embed:
         icon_url = utils.twemojiPNG.scale
     elif event["event_id"] == "motion_up":
         icon_url = utils.twemojiPNG.ballot
+        embed.add_field(name="Hint", value=f"Use `/case vote` to cast your vote for or against this motion.", inline=False)
     elif event["event_id"] == "personal_statement":
         icon_url = utils.twemojiPNG.leftchat
     elif event["event_id"] == "case_status_update":
         icon_url = utils.twemojiPNG.label
-
     if event["event_id"] == "evidence_submit":
         icon_url = utils.twemojiPNG.folder
         if "evidence" in event:
