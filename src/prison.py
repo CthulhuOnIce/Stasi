@@ -229,6 +229,20 @@ class Prison(commands.Cog):
         else:
             paginator = pages.Paginator(pages=warrants_embeds)
             await paginator.respond(ctx.interaction, ephemeral=True)
+
+    @warrant.command(name='listprisoners', description='List all prisoners and their warrants.')
+    async def list_prisoners(self, ctx: discord.ApplicationContext):
+                
+        warrants_embeds = [prisoner.embed() for prisoner in warden.PRISONERS]
+        if len(warrants_embeds) == 0:
+            await ctx.respond(f"{utils.normalUsername(prisoner)} has no warrants.", ephemeral=True)
+            return
+        if len(warrants_embeds) == 1:
+            await ctx.respond(embed=warrants_embeds[0], ephemeral=True)
+            return
+        else:
+            paginator = pages.Paginator(pages=warrants_embeds)
+            await paginator.respond(ctx.interaction, ephemeral=True)
     
     admin = warrant.create_subgroup(name='admin', description='Admin warrant commands.')
 

@@ -140,6 +140,16 @@ class Prisoner:
         self._id = user.id
         log("justice", "prisoner", f"New prisoner: {utils.normalUsername(user)} ({user.id})")
         return self
+    
+    def embed(self) -> discord.Embed:
+        embed = discord.Embed(title="Prisoner Info", description=f"Prisoner `{self._id}`", color=discord.Color.red())
+        embed.add_field(name="Ping", value=f"<@{self._id}>", inline=False)
+        embed.add_field(name="Committed", value=discord_dynamic_timestamp(self.committed, "FR"), inline=False)
+        if self.warrants:
+            embed.add_field(name=f"Warrants ({len(self.warrants)})", value="\n\n".join([f"`{warrant._id}` - {warrant.status()}" for warrant in self.warrants]), inline=False)
+        else:
+            embed.add_field(name="Warrants", value="None", inline=False)
+        return embed
 
     async def communicate(self, content: str = None, embed: discord.Embed = None):
         try:
