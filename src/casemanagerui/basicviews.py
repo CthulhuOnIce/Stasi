@@ -70,11 +70,11 @@ async def voteView(ctx: discord.ApplicationContext, motion: "Motion"):
 
     yes_votes = ""
     for voter in motion.votes["Yes"]:
-        yes_votes += f"- {motion.Case.nameUserByID(voter)}\n"
+        yes_votes += f"- {motion.Case.nameUserByID(voter, False)}\n"
 
     no_votes = ""
     for voter in motion.votes["No"]:
-        no_votes += f"- {motion.Case.nameUserByID(voter)}\n"
+        no_votes += f"- {motion.Case.nameUserByID(voter, False)}\n"
 
     if yes_votes:
         embed.add_field(name=f"Yes Votes ({len(motion.votes['Yes'])})", value=yes_votes, inline=True)
@@ -158,7 +158,7 @@ async def caseInfoView(ctx: discord.ApplicationContext, case: "Case"):
 
     jurors = ""
     for juror in case.jury_pool_ids:
-        jurors += f"- {case.nameUserByID(juror)}\n"
+        jurors += f"- {case.nameUserByID(juror, False)}\n"
     
     if jurors:
         front_page.add_field(name=f"Jurors ({len(case.jury_pool_ids)})", value=jurors, inline=False)
@@ -181,13 +181,13 @@ async def caseInfoView(ctx: discord.ApplicationContext, case: "Case"):
 
         yes_votes = ""
         for voter in case.motion_in_consideration.votes["Yes"]:
-            yes_votes += f"- {case.nameUserByID(voter)}\n"
+            yes_votes += f"- {case.nameUserByID(voter, False)}\n"
         if yes_votes:
             motion_in_consideration_page.add_field(name=f"Yes Votes ({len(case.motion_in_consideration.votes['Yes'])})", value=yes_votes, inline=True)
 
         no_votes = ""
         for voter in case.motion_in_consideration.votes["No"]:
-            no_votes += f"- {case.nameUserByID(voter)}\n"
+            no_votes += f"- {case.nameUserByID(voter, False)}\n"
         if no_votes:
             motion_in_consideration_page.add_field(name=f"No Votes ({len(case.motion_in_consideration.votes['No'])})", value=no_votes, inline=True)
         
