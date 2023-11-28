@@ -307,16 +307,29 @@ class Case:
     
     # doesn't log or document the case closing, or act on punishments, which should all be done by 
     # preceding functions
-    async def closeCase(self):
+
+    async def closeCase(self, reason: str = None):
         self.no_tick = True 
         self.stage = 3
         self.motion_queue = []
+        self.motion_in_consideration = None
+
+        status = "Case Closed"
+        if reason:
+            status += f": {reason}"
+
+        await self.updateStatus(status)
+        
+        log("Case", "CLOSE", f"{self} ({self.id}): {status}")
+        return
+
+    async def deleteCase(self):
         ACTIVECASES.remove(self)
         for evidence in self.evidence:
             await evidence.delete()
         db_ = await db.create_connection("cases")
         await db_.delete_one({"_id": self.id})
-        log("Case", "close_case", f"Case {self} ({self.id}) closed.")
+        log("Case", "close_case", f"Case {self} ({self.id}) deleted.")
         return
 
     def generateNewID(self):

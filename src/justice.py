@@ -201,6 +201,20 @@ class Justice(commands.Cog):
             case.motion_in_consideration.votes["No"].append(ctx.author.id)
             await case.Save()
             return await ctx.respond("Vote cast: **Reject**", ephemeral=True)
+        
+    @case.command(name="withdraw", description="Used for the Plaintiff to withdraw a case.")
+    async def case_withdraw(self, ctx: discord.ApplicationContext):
+        case = getActiveCase(ctx.author)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+
+        if ctx.author.id != case.plaintiff_id:
+            return await ctx.respond("Only the plaintiff can withdraw a case.", ephemeral=True)
+        
+        await ctx.interaction.response.defer(ephemeral=True)
+        await case.closeCase(f"Withdrawn by {case.nameUserByID(ctx.author.id)}")
+        await case.deleteCase()
+        await ctx.respond("Case withdrawn.", ephemeral=True)
 
     move = case.create_subgroup("move", "Commands for basic case motions and management.")
 
@@ -394,7 +408,9 @@ class Justice(commands.Cog):
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         
         for c in cm.ACTIVECASES:
-            await c.closeCase()
+            await c.closeCase("Cases Wiped for Debugging")
+            await c.deleteCase()
+
         await ctx.respond("Cases wiped.", ephemeral=True)
 
     @dbg.command(name='viewtest', description="Test whatever view is being debugged right now.")
