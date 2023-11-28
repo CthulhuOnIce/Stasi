@@ -207,7 +207,7 @@ async def caseInfoView(ctx: discord.ApplicationContext, case: "Case"):
         
         def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
-            if not self.motion_in_consideration:
+            if not case.motion_in_consideration:
                 self.remove_item(self.children[2])
         
     await ctx.respond(embed=front_page, view=caseinfoview(), ephemeral=True)
