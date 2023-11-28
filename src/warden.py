@@ -41,6 +41,7 @@ class Warrant:
         self.category = None
         self.description = None
         self.author = None
+        self.author_name = None
         self.created = None
         self.started = None
         self.len_seconds = 0
@@ -50,9 +51,11 @@ class Warrant:
 
     def embed(self) -> discord.Embed:
         embed = discord.Embed(title="Warrant Info", description=f"Warrant `{self._id}`", color=discord.Color.red())
-        embed.add_field(name="Description", value=self.description, inline=False)
         if self.author:
-            embed.add_field(name="Author", value=f"<@{self.author}>", inline=False)
+            embed.add_field(name="Author", value=f"{self.author_name}", inline=False)
+        if self.prisoner():
+            embed.add_field(name="Target", value=f"{self.prisoner().prisoner_name}", inline=False)
+        embed.add_field(name="Description", value=self.description, inline=False)
         if self.started:
             embed.add_field(name="Started", value=discord_dynamic_timestamp(self.started, "F"), inline=False)
         if self.expires:
@@ -64,6 +67,12 @@ class Warrant:
         if self.no_enforce:
             embed.add_field(name="No Enforce", value="Yes", inline=False)
         return embed
+
+    def prisoner(self):
+        for prisoner in PRISONERS:
+            for warrant in prisoner.warrants:
+                if warrant._id == self._id:
+                    return prisoner
 
     def status(self) -> str:
         if self.expires:
@@ -93,11 +102,12 @@ class Warrant:
     def generateNewID(self):
         return f"{random.randint(1000,9999)}-{random.choice(utils.elements).title()}-{random.choice(utils.elements).title()}-{random.choice(utils.elements).title()}"
 
-    def New(self, category: str, description: str, author: int, len_seconds: int) -> "Warrant":
+    def New(self, category: str, description: str, author: int, author_name: str, len_seconds: int) -> "Warrant":
         self._id = self.generateNewID()
         self.category = category
         self.description = description
         self.author = author
+        self.author_name = author_name
         self.created = datetime.datetime.now(datetime.timezone.utc)
         self.len_seconds = len_seconds
         log("justice", "warrant", f"New warrant: ({self._id})")
@@ -108,6 +118,7 @@ class Warrant:
         self.category = data["category"]
         self.description = data["description"]
         self.author = data["author"]
+        self.author_name = data["author_name"]
 
         self.created = data["created"]
         if self.created:
@@ -132,18 +143,20 @@ class Prisoner:
     def __init__(self, guild):
         self.guild: discord.Guild = guild
         self._id = None
+        self.prisoner_name = None
         self.roles = []
         self.committed = None
         self.warrants: List[Warrant] = []
 
-    def New(self, user: discord.Member) -> "Prisoner":
+    def New(self, user: discord.Member, user_name: str) -> "Prisoner":
         self._id = user.id
+        self.user_name = user_name
         log("justice", "prisoner", f"New prisoner: {utils.normalUsername(user)} ({user.id})")
         return self
     
     def embed(self) -> discord.Embed:
         embed = discord.Embed(title="Prisoner Info", description=f"Prisoner `{self._id}`", color=discord.Color.red())
-        embed.add_field(name="Ping", value=f"<@{self._id}>", inline=False)
+        embed.add_field(name="Name", value=f"{self.prisoner_name}", inline=False)
         embed.add_field(name="Committed", value=discord_dynamic_timestamp(self.committed, "FR"), inline=False)
         if self.warrants:
             embed.add_field(name=f"Warrants ({len(self.warrants)})", value="\n\n".join([f"`{warrant._id}` - {warrant.status()}" for warrant in self.warrants]), inline=False)
@@ -235,6 +248,7 @@ class Prisoner:
         if self.committed:
             self.committed = self.committed.replace(tzinfo=datetime.timezone.utc)
         self.warrants = [Warrant().loadFromDict(warrant) for warrant in data["warrants"]]
+        self.prisoner_name = data["prisoner_name"]
         log("justice", "prisoner", f"Loaded prisoner: {utils.normalUsername(self.prisoner())} ({self._id})")
         return
 
@@ -337,11 +351,11 @@ def getPrisonerByID(user_id: int) -> Optional[Prisoner]:
         if prisoner._id == user_id:
             return prisoner
 
-async def newWarrant(target: discord.Member, category: str, description: str, author: int, len_seconds: int) -> Warrant:
-    warrant = Warrant().New(category, description, author, len_seconds)
+async def newWarrant(target: discord.Member, category: str, description: str, author: int, author_name: str, len_seconds: int) -> Warrant:
+    warrant = Warrant().New(category, description, author, author_name, len_seconds)
 
     embed = discord.Embed(title="Warrant Issued", description=f"Warrant `{warrant._id}` has been issued.", color=discord.Color.red())
-    embed.add_field(name="Author", value=f"<@{author}>", inline=False)
+    embed.add_field(name="Author", value=f"{author_name}", inline=False)
     embed.add_field(name="Sentence Length", value=utils.seconds_to_time_long(warrant.len_seconds) if warrant.len_seconds > 0 else "Indefinite", inline=False)
     embed.add_field(name="Description", value=warrant.description, inline=False)
     embed.set_author(name=utils.normalUsername(target), icon_url=utils.twemojiPNG.penlock)

@@ -205,7 +205,7 @@ class Prison(commands.Cog):
             await ctx.respond("Cancelled. Run the command again to re-file.", ephemeral=True)
             return
         
-        warrant = await warden.newWarrant(target, "admin", reason, ctx.author.id, sentence)
+        warrant = await warden.newWarrant(target, "admin", reason, ctx.author.id, utils.normalUsername(ctx.author), sentence)
         await ctx.respond(f"Created warrant `{warrant._id}`", ephemeral=True)
 
     @warrant.command(name='prisoner', description='View a prisoner\'s warrants.')

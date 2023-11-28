@@ -90,7 +90,7 @@ class PrisonPenalty(Penalty):
             return f"Prison: Permanent / Indefinite"
         
     async def Execute(self):
-        await warden.newWarrant(self.case.defense(), "case", f"Case {self.case.id} Verdict", self.case.prosecutor_id, self.prison_length_seconds)
+        await warden.newWarrant(self.case.defense(), "case", f"Case {self.case.id} Verdict", self.case.prosecutor_id, {self.case.nameUserByID(self.case.prosecutor_id)}, self.prison_length_seconds)
 
 class JuryBanPenalty(Penalty):
     def __init__(self, case):
