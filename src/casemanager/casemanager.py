@@ -529,6 +529,8 @@ class Case:
         self.stage = 2
         await self.updateStatus("Argumentation and Case Body")
         self.jury_invites = []
+        if self.motion_queue:
+            await self.motion_queue[0].startVoting()
         await self.Save()
         return
     
