@@ -48,6 +48,23 @@ class Warrant:
         self.frozen = None
         self.no_enforce = None
 
+    def embed(self) -> discord.Embed:
+        embed = discord.Embed(title="Warrant Info", description=f"Warrant `{self._id}`", color=discord.Color.red())
+        embed.add_field(name="Description", value=self.description, inline=False)
+        if self.author:
+            embed.add_field(name="Author", value=f"<@{self.author}>", inline=False)
+        if self.started:
+            embed.add_field(name="Started", value=discord_dynamic_timestamp(self.started, "F"), inline=False)
+        if self.expires:
+            embed.add_field(name="Expires", value=discord_dynamic_timestamp(self.expires, "FR"), inline=False)
+        if self.len_seconds > 0:
+            embed.add_field(name="Sentence Length", value=utils.seconds_to_time_long(self.len_seconds), inline=False)
+        if self.frozen:
+            embed.add_field(name="Frozen", value="Yes", inline=False)
+        if self.no_enforce:
+            embed.add_field(name="No Enforce", value="Yes", inline=False)
+        return embed
+
     def status(self) -> str:
         if self.expires:
             time_left_seconds = (self.expires - datetime.datetime.now(datetime.timezone.utc)).total_seconds()
@@ -314,6 +331,7 @@ async def newWarrant(target: discord.Member, category: str, description: str, au
     warrant = Warrant().New(category, description, author, len_seconds)
 
     embed = discord.Embed(title="Warrant Issued", description=f"Warrant `{warrant._id}` has been issued.", color=discord.Color.red())
+    embed.add_field(name="Author", value=f"<@{author}>", inline=False)
     embed.add_field(name="Sentence Length", value=utils.seconds_to_time_long(warrant.len_seconds) if warrant.len_seconds > 0 else "Indefinite", inline=False)
     embed.add_field(name="Description", value=warrant.description, inline=False)
     embed.set_author(name=utils.normalUsername(target), icon_url=utils.twemojiPNG.penlock)

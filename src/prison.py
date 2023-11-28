@@ -2,7 +2,7 @@ from typing import Optional
 
 import discord
 from discord import option, slash_command
-from discord.ext import commands, tasks
+from discord.ext import commands, tasks, pages
 
 from . import database as db
 from . import config
@@ -213,17 +213,22 @@ class Prison(commands.Cog):
     async def view_prisoner(self, ctx: discord.ApplicationContext, prisoner: discord.Member = None):
         if not prisoner:
             prisoner = ctx.author
-        prisoner = warden.getPrisonerByID(prisoner.id)
+
+        prisoner_ = warden.getPrisonerByID(prisoner.id)
         if not prisoner:
             await ctx.respond(f"{utils.normalUsername(prisoner)} is not a prisoner.", ephemeral=True)
             return
-        embed = discord.Embed(title=f"{utils.normalUsername(prisoner.prisoner())}'s Warrants", color=0x000000)
-        for warrant in prisoner.warrants:
-            if warrant.expires:
-                embed.add_field(name=f"{warrant.category} ({warrant._id})", value=f"Status: {warrant.status()}\nDescription: {warrant.description}\nAuthor: {utils.normalUsername(ctx.guild.get_member(warrant.author))}\nCreated: {discord_dynamic_timestamp(warrant.created)}\nExpires: {discord_dynamic_timestamp(warrant.expires)}", inline=False)
-            else:
-                embed.add_field(name=f"{warrant.category} ({warrant._id})", value=f"Status: {warrant.status()}\nDescription: {warrant.description}\nAuthor: {utils.normalUsername(ctx.guild.get_member(warrant.author))}\nCreated: {discord_dynamic_timestamp(warrant.created)}", inline=False)
-        await ctx.respond(embed=embed, ephemeral=True)
+        
+        warrants_embeds = [warrant.embed() for warrant in prisoner_.warrants]
+        if len(warrants_embeds) == 0:
+            await ctx.respond(f"{utils.normalUsername(prisoner)} has no warrants.", ephemeral=True)
+            return
+        if len(warrants_embeds) == 1:
+            await ctx.respond(embed=warrants_embeds[0], ephemeral=True)
+            return
+        else:
+            paginator = pages.Paginator(pages=warrants_embeds)
+            await paginator.respond(ctx.interaction, ephemeral=True)
     
     admin = warrant.create_subgroup(name='admin', description='Admin warrant commands.')
 
