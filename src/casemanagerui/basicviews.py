@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import discord
@@ -60,7 +61,7 @@ async def confirmView(msg: discord.Message, cancel_option: bool = False) -> bool
     await view.wait()
     return view.value
 
-async def voteView(ctx: discord.ApplicationContext, motion: Motion):
+async def voteView(ctx: discord.ApplicationContext, motion: "Motion"):
 
     embed = discord.Embed(title="Vote", description=f"**{motion.id}**", color=discord.Color.blurple())
 

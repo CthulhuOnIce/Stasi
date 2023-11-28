@@ -100,6 +100,8 @@ When ran by the defense, allows them to accept or decline a plea deal.
 
 ACTIVECASES: List[Case] = []
 
+JURY_SIZE = 5
+
 def getCaseByID(case_id: str) -> Case:
     
     if not case_id:  return None
@@ -542,9 +544,11 @@ class Case:
         msg += f"You will be notified automatically for case updates.\n"
 
         await user.send(msg)
-        await self.Save()
 
-        return
+        if len(self.jury_pool_ids) >= JURY_SIZE:
+            return await self.startArgumentation()  # this also handles saving
+        else:
+            return await self.Save()
     
     async def sendJuryInvite(self, user: discord.Member):
         embed = discord.Embed(title="Jury Invite", description=f"You have been invited to the case **{self}** `{self.id}` to participate as a juror.", color=discord.Color.gold())
@@ -612,13 +616,13 @@ class Case:
                 penalties = self.penalties
             ))
 
-        if len(self.jury_pool_ids) < 5:
+        if len(self.jury_pool_ids) < JURY_SIZE:
             # juror left the case, but it was already in the body stage
             # when this happens, the case basically has to revert to the recruitment stage
             if self.stage > 1:  
                 await self.updateStatus("Jury Re-Selection to Fill Vacancy")
                 for motion in self.motion_queue:
-                    await motion.CancelVoting(reason=f"Jury cannot act on motions until 5 jurors are present.")
+                    await motion.CancelVoting(reason=f"Jury cannot act on motions until {JURY_SIZE} jurors are present.")
                 self.stage = 1  # back in the recruitment stage
             
             invites_to_send = random.randint(2, 3)  # send 2-3 invites per cycle
@@ -965,4 +969,4 @@ async def removeJurorFromCases(juror_id: int, reason: str):
         juror_id = juror_id.id
     for case in ACTIVECASES:
         if juror_id in case.jury_pool_ids:
-            case.removeJuror(juror_id, reason)
+            await case.removeJuror(juror_id, reason)
