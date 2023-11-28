@@ -235,7 +235,9 @@ class Prison(commands.Cog):
                 
         warrants_embeds = [prisoner.embed() for prisoner in warden.PRISONERS]
         if len(warrants_embeds) == 0:
-            await ctx.respond(f"{utils.normalUsername(prisoner)} has no warrants.", ephemeral=True)
+            embed = discord.Embed(title="No Prisoners", description="There are no prisoners.", color=0x000000)
+            embed.set_author(name="Prison", icon_url=utils.twemojiPNG.chain)
+            await ctx.respond(embed=embed, ephemeral=True)
             return
         if len(warrants_embeds) == 1:
             await ctx.respond(embed=warrants_embeds[0], ephemeral=True)
