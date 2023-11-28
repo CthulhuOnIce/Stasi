@@ -364,8 +364,6 @@ class Case:
             # TODO: remove placeholder
             recipients.append(self.guild.get_channel(863539768306171928))
 
-        jobs = []
-
         for recipient in recipients:
             try:
                 if content:
