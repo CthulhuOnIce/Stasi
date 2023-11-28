@@ -266,10 +266,11 @@ class Social(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         last_bump = await db.get_global("last_bump")
-        last_bump = last_bump.replace(tzinfo=datetime.timezone.utc)  # get the last bump time from the db
-        last_bump_channel = await db.get_global("last_bump_channel")
-        last_bump_channel = self.bot.get_channel(last_bump_channel) if last_bump_channel else None
-        self.last_bump = last_bump
+
+        last_bump_time = last_bump["time"].replace(tzinfo=datetime.timezone.utc)  # get the last bump time from the db
+        last_bump_channel = self.bot.get_channel(last_bump["channel"]) if last_bump["channel"] else None
+
+        self.last_bump = last_bump_time
         self.last_bump_channel = last_bump_channel
 
     @commands.Cog.listener()
@@ -283,9 +284,9 @@ class Social(commands.Cog):
                 log("bump", "bumped", f"Bumped by {utils.normalUsername(bumper)}")
 
                 self.last_bump = datetime.datetime.now(datetime.timezone.utc)
-                await db.set_global("last_bump", self.last_bump)
                 self.last_bump_channel = message.channel
-                await db.set_global("last_bump_channel", self.last_bump_channel.id)
+                await db.set_global("last_bump", {"channel": self.last_bump_channel.id, "time": self.last_bump})
+
 
         if message.author.bot:
             return
@@ -300,8 +301,7 @@ class Social(commands.Cog):
                 await self.last_bump_channel.send("It's been 2 hours since the last bump! Time to bump again! <@&863539767249338368>")
                 self.last_bump_channel = None
                 self.last_bump = None
-                await db.set_global("last_bump", None)
-                await db.set_global("last_bump_channel", None)
+                await db.set_global("last_bump", {"channel": None, "time": None})
     
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
