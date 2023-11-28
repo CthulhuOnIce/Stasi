@@ -148,34 +148,7 @@ class Justice(commands.Cog):
         if case is None:
             return await ctx.respond("You do not have an active case.", ephemeral=True)
     
-        front_page = discord.Embed(title=str(case), description=str(case.id))
-        front_page.add_field(name="Current Status", value=case.status, inline=False)
-        front_page.add_field(name="Filed Datetime", value=discord_dynamic_timestamp(case.created, 'F'), inline=True)
-        front_page.add_field(name="Filed Relative", value=discord_dynamic_timestamp(case.created, 'R'), inline=True)
-        front_page.add_field(name="Filed By", value=case.nameUserByID(case.plaintiff_id), inline=True)
-        front_page.add_field(name="Filed Against", value=case.nameUserByID(case.defense_id), inline=True)
-        if case.motion_in_consideration is not None:
-            front_page.add_field(name="Motion in Consideration", value=case.motion_in_consideration, inline=False)
-            front_page.add_field(name="Voting Ends", value=discord_dynamic_timestamp(case.motion_in_consideration.expiry, 'RF'), inline=False)
-        front_page.add_field(name="Guilty Penalty", value=case.describePenalties(case.penalties), inline=False)
-
-        event_page = discord.Embed(title=str(case), description=str(case.id))
-        event_page.add_field(name="Event Log Length", value=len(case.event_log), inline=False)
-        event_page.add_field(name="Last Event Title", value=case.event_log[-1]["name"])
-        event_page.add_field(name="Last Event Desc", value=case.event_log[-1]["desc"])
-        event_page.add_field(name="Last Event Datetime", value=discord_dynamic_timestamp(case.event_log[-1]["timestamp"], 'F'))
-
-        class caseinfoview(discord.ui.View):
-            @discord.ui.button(label="Main Info", style=discord.ButtonStyle.primary, emoji="📔")
-            async def main_info(self, button, interaction: discord.Interaction):
-                await interaction.response.edit_message(embed=front_page)
-
-            @discord.ui.button(label="Event Log Info", style=discord.ButtonStyle.primary, emoji="📇")
-            async def event_log(self, button, interaction: discord.Interaction):
-                await interaction.response.edit_message(embed=event_page)
-            
-        await ctx.respond(embed=front_page, view=caseinfoview(), ephemeral=True)
-
+        await cmui.caseInfoView(ctx, case)
     @case.command(name="vote", description="Vote on a motion in your active case.")
     async def case_vote(self, ctx: discord.ApplicationContext):
         case = getActiveCase(ctx.author)

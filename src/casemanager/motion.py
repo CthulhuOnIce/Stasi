@@ -111,8 +111,8 @@ Unless another vote is rushed, voting will end on {discord_dynamic_timestamp(sel
         return self
     
     async def New(self, author) -> Motion:  # the event log entry should be updated by the subtype's New() function
-        self.created = datetime.datetime.now(datetime.timezone.utc)
-        self.author_id = author.id
+        self.created: datetime.datetime = datetime.datetime.now(datetime.timezone.utc)
+        self.author_id: int = author.id
         self.id = f"{self.Case.id}-M{self.Case.motion_number}"  # 11042023-M001 for example
         self.Case.motion_number += 1
         self.Case.motion_queue.append(self)

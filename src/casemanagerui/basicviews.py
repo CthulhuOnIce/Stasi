@@ -7,7 +7,7 @@ from ..stasilogging import discord_dynamic_timestamp
 from ..utils import twemojiPNG
 
 if TYPE_CHECKING:
-    from ..casemanager import Motion
+    from ..casemanager import Motion, Case
     
 
 async def confirmView(msg: discord.Message, cancel_option: bool = False) -> bool:
@@ -141,3 +141,73 @@ async def voteView(ctx: discord.ApplicationContext, motion: "Motion"):
         return first_vote
     else:
         return False
+    
+async def caseInfoView(ctx: discord.ApplicationContext, case: "Case"):
+        
+    # Main case summary
+    front_page = discord.Embed(title=str(case), description=str(case.id))
+    front_page.add_field(name="Current Status", value=case.status, inline=False)
+    front_page.add_field(name="Filed Datetime", value=discord_dynamic_timestamp(case.created, 'F'), inline=True)
+    front_page.add_field(name="Filed Relative", value=discord_dynamic_timestamp(case.created, 'R'), inline=True)
+    front_page.add_field(name="Filed By", value=case.nameUserByID(case.plaintiff_id), inline=True)
+    front_page.add_field(name="Filed Against", value=case.nameUserByID(case.defense_id), inline=True)
+    if case.motion_in_consideration is not None:
+        front_page.add_field(name="Motion in Consideration", value=case.motion_in_consideration, inline=False)
+        front_page.add_field(name="Voting Ends", value=discord_dynamic_timestamp(case.motion_in_consideration.expiry, 'RF'), inline=False)
+    front_page.add_field(name="Guilty Penalty", value=case.describePenalties(case.penalties), inline=False)
+
+    jurors = ""
+    for juror in case.jury_pool_ids:
+        jurors += f"- {case.nameUserByID(juror)}\n"
+    
+    if jurors:
+        front_page.add_field(name=f"Jurors ({len(case.jury_pool_ids)})", value=jurors, inline=False)
+
+
+    # event log summary
+    event_page = discord.Embed(title=str(case), description=str(case.id))
+    event_page.add_field(name="Event Log Length", value=len(case.event_log), inline=False)
+    event_page.add_field(name="Last Event Title", value=case.event_log[-1]["name"])
+    event_page.add_field(name="Last Event Desc", value=case.event_log[-1]["desc"])
+    event_page.add_field(name="Last Event Datetime", value=discord_dynamic_timestamp(case.event_log[-1]["timestamp"], 'FR'))
+
+    # motion in consideration summary
+    motion_in_consideration_page = discord.Embed(title=str(case), description=str(case.id))
+    if case.motion_in_consideration is not None:
+        motion_in_consideration_page.add_field(name="Motion ID", value=case.motion_in_consideration.id, inline=False)
+        motion_in_consideration_page.add_field(name="Motion Author", value=case.nameUserByID(case.motion_in_consideration.author_id), inline=False)
+        motion_in_consideration_page.add_field(name="Motion Created", value=discord_dynamic_timestamp(case.motion_in_consideration.created, 'FR'), inline=False)
+        motion_in_consideration_page.add_field(name="Motion Expiry", value=discord_dynamic_timestamp(case.motion_in_consideration.expiry, 'FR'), inline=False)
+
+        yes_votes = ""
+        for voter in case.motion_in_consideration.votes["Yes"]:
+            yes_votes += f"- {case.nameUserByID(voter)}\n"
+        if yes_votes:
+            motion_in_consideration_page.add_field(name=f"Yes Votes ({len(case.motion_in_consideration.votes['Yes'])})", value=yes_votes, inline=True)
+
+        no_votes = ""
+        for voter in case.motion_in_consideration.votes["No"]:
+            no_votes += f"- {case.nameUserByID(voter)}\n"
+        if no_votes:
+            motion_in_consideration_page.add_field(name=f"No Votes ({len(case.motion_in_consideration.votes['No'])})", value=no_votes, inline=True)
+        
+
+    class caseinfoview(discord.ui.View):
+        @discord.ui.button(label="Main Info", style=discord.ButtonStyle.primary, emoji="📔")
+        async def main_info(self, button, interaction: discord.Interaction):
+            await interaction.response.edit_message(embed=front_page)
+
+        @discord.ui.button(label="Event Log Info", style=discord.ButtonStyle.primary, emoji="📇")
+        async def event_log(self, button, interaction: discord.Interaction):
+            await interaction.response.edit_message(embed=event_page)
+        
+        @discord.ui.button(label="Current Motion Info", style=discord.ButtonStyle.primary, emoji="🗳️")
+        async def motion_in_consideration(self, button, interaction: discord.Interaction):
+            await interaction.response.edit_message(embed=motion_in_consideration_page)
+        
+        def __init__(self, *args, **kwargs) -> None:
+            super().__init__(*args, **kwargs)
+            if not self.motion_in_consideration:
+                self.remove_item(self.children[2])
+        
+    await ctx.respond(embed=front_page, view=caseinfoview(), ephemeral=True)
