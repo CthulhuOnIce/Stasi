@@ -1,36 +1,46 @@
+import datetime
 from typing import Optional
 
 import discord
 from discord import option, slash_command
-from discord.ext import commands, tasks, pages
+from discord.ext import commands, pages, tasks
 
-from . import database as db
-from . import config
 from . import artificalint as ai
-from .logging import discord_dynamic_timestamp, log, log_user
+from . import config
+from . import database as db
+from . import utils
+from .stasilogging import discord_dynamic_timestamp, log, log_user
+
 
 class Social(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.bump_reminder.start()
 
-    @slash_command(name='userinfo', description='Get info about a user.')
+    @slash_command(name='profile', description='Get info about a user.')
     @option('user', discord.User, description='The user to get info about')
     @option('ephemeral', bool, description='Whether to send the message as an ephemeral message')
-    async def userinfo(self, ctx, user:discord.User, ephemeral:bool=False):
+    async def profile(self, ctx: discord.ApplicationContext, user:discord.User, ephemeral:bool=True):
         embed = discord.Embed(title="User Info", description=f"Info about {user.display_name}", color=0x00ff00)
         embed.set_author(name=str(user), icon_url=user.avatar.url if user.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
         if user.avatar:
             embed.set_thumbnail(url=user.avatar.url)
-        embed.add_field(name="Joined Discord", value=user.created_at.strftime("%m/%d/%Y %H:%M:%S"), inline=False)
+
+        joined_str = f"{discord_dynamic_timestamp(user.created_at, 'F')} ({discord_dynamic_timestamp(user.created_at, 'R')})"
+        embed.add_field(name="Joined Discord", value=joined_str, inline=False)
 
         if user in ctx.guild.members:
             member = ctx.guild.get_member(user.id)
-            embed.add_field(name="Joined Server", value=member.joined_at.strftime("%m/%d/%Y %H:%M:%S"), inline=False)
+            joined_str = f"{discord_dynamic_timestamp(member.joined_at, 'F')} ({discord_dynamic_timestamp(member.joined_at, 'R')})"
+            embed.add_field(name="Joined Server", value=joined_str, inline=False)
         
         db_user = await db.get_user(user.id)
         if db_user:
             if "messages" in db_user:
                 embed.add_field(name="Total Messages", value=db_user["messages"], inline=False)
+            if "last_seen" in db_user:
+                last_seen_str = f"{discord_dynamic_timestamp(db_user['last_seen'], 'F')} ({discord_dynamic_timestamp(db_user['last_seen'], 'R')})"
+                embed.add_field(name="Last Seen", value=last_seen_str, inline=False)
             if "reactions" in db_user:
                 react_list = [{"reaction": reaction, "count": db_user["reactions"][reaction]} for reaction in db_user["reactions"]]
 
@@ -43,11 +53,16 @@ class Social(commands.Cog):
                 embed.add_field(name="Top 10 Reactions", value="\n".join([f"{i['reaction']}: {i['count']}" for i in react_list]), inline=False)
         
         await ctx.respond(embed=embed, ephemeral=ephemeral)
+
+    # option to right click a user to get their info
+    @commands.user_command(name="View Profile")  # create a user command for the supplied guilds
+    async def player_information_click(self, ctx: discord.ApplicationContext, member: discord.Member):  # user commands return the member
+        await self.profile(ctx, member, ephemeral=True)  # respond with the member's display name
     
     @slash_command(name='interview', description='Get a user\'s vetting answers.')
     @option('user', discord.User, description='The user to get answers for')
     @option('ephemeral', bool, description='Whether to send the message as an ephemeral message')
-    async def vettinganswers(self, ctx, user:discord.User, ephemeral:bool=True):
+    async def vettinganswers(self, ctx: discord.ApplicationContext, user:discord.User, ephemeral:bool=True):
         if not ctx.author.guild_permissions.manage_roles:
             await ctx.respond("You do not have permission to use this command.", ephemeral=True)
             return
@@ -66,7 +81,7 @@ class Social(commands.Cog):
 
     @slash_command(name='interviewpaged', description='Get a user\'s vetting answers.')
     @option('user', discord.User, description='The user to get answers for')
-    async def vettinganswerspaginated(self, ctx, user:discord.User):
+    async def vettinganswerspaginated(self, ctx: discord.ApplicationContext, user:discord.User):
         if not ctx.author.guild_permissions.manage_roles:
             await ctx.respond("You do not have permission to use this command.", ephemeral=True)
             return
@@ -89,7 +104,7 @@ class Social(commands.Cog):
     @notes.command(name='view', description='Get a user\'s admin notes.')
     @option('user', discord.User, description='The user to get notes for')
     @option('ephemeral', bool, description='Whether to send the message as an ephemeral message')
-    async def viewnotes(self, ctx, user:discord.User, ephemeral:bool=True):
+    async def viewnotes(self, ctx: discord.ApplicationContext, user:discord.User, ephemeral:bool=True):
         if not ctx.author.guild_permissions.manage_roles:
             await ctx.respond("You do not have permission to use this command.", ephemeral=True)
             return
@@ -139,7 +154,7 @@ class Social(commands.Cog):
     @notes.command(name='add', description='Add a note to a user.')
     @option('member', discord.Member, description='The member to add the note to')
     @option('note', str, description='The note to add')
-    async def addnote(self, ctx, member: discord.Member, note: str):
+    async def addnote(self, ctx: discord.ApplicationContext, member: discord.Member, note: str):
         if not ctx.author.guild_permissions.moderate_members:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
 
@@ -162,7 +177,7 @@ class Social(commands.Cog):
     @notes.command(name='warn', description='Add a warning to a user. (like a note but sends a dm)')
     @option('member', discord.Member, description='The member to add the warning to')
     @option('reason', str, description='The reason for the warning')
-    async def warn(self, ctx, member: discord.Member, warning: str):
+    async def warn(self, ctx: discord.ApplicationContext, member: discord.Member, warning: str):
         if not ctx.author.guild_permissions.moderate_members:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
 
@@ -190,7 +205,7 @@ class Social(commands.Cog):
 
     @notes.command(name='remove', description='Remove a note from a user.')
     @option('note_id', str, description='The id of the note to remove')
-    async def removenote(self, ctx, note_id: str):
+    async def removenote(self, ctx: discord.ApplicationContext, note_id: str):
         if not ctx.author.guild_permissions.moderate_members:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         note = await db.get_note(note_id.lower())
@@ -227,7 +242,7 @@ class Social(commands.Cog):
 
     @notes.command(name='clear', description='Clear all notes for a user.')
     @option('member', discord.Member, description='The member to clear notes for')
-    async def clearnotes(self, ctx, member):
+    async def clearnotes(self, ctx: discord.ApplicationContext, member):
         if not ctx.author.guild_permissions.moderate_members:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         
@@ -245,6 +260,48 @@ class Social(commands.Cog):
 
         await ctx.respond(embed=embed, ephemeral=True)
 
+    last_bump = None
+    last_bump_channel = None
+
+    @commands.Cog.listener()
+    async def on_ready(self):
+        last_bump = await db.get_global("last_bump")
+
+        last_bump_time = last_bump["time"].replace(tzinfo=datetime.timezone.utc)  # get the last bump time from the db
+        last_bump_channel = self.bot.get_channel(last_bump["channel"]) if last_bump["channel"] else None
+
+        self.last_bump = last_bump_time
+        self.last_bump_channel = last_bump_channel
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if message.author.id == 302050872383242240:  # for bump ping
+            if message.embeds and "bump done" in message.embeds[0].description.lower() and message.interaction:
+
+                bumper = message.interaction.user
+
+                await message.channel.send(f"Thanks for bumping, {bumper.mention}! A reminder will be sent in 2 hours to bump again.")
+                log("bump", "bumped", f"Bumped by {utils.normalUsername(bumper)}")
+
+                self.last_bump = datetime.datetime.now(datetime.timezone.utc)
+                self.last_bump_channel = message.channel
+                await db.set_global("last_bump", {"channel": self.last_bump_channel.id, "time": self.last_bump})
+
+
+        if message.author.bot:
+            return
+        await db.add_message(message.author.id)
+
+    @tasks.loop(minutes=1, reconnect=True)
+    async def bump_reminder(self):  # actually do the bump ping
+        if self.last_bump and self.last_bump_channel:
+            if (datetime.datetime.now(datetime.timezone.utc) - self.last_bump).total_seconds() > 7200:
+                # TODO: make this a config option or a command or something
+                log("bump", "reminder", "Bump reminder sent")
+                await self.last_bump_channel.send("It's been 2 hours since the last bump! Time to bump again! <@&863539767249338368>")
+                self.last_bump_channel = None
+                self.last_bump = None
+                await db.set_global("last_bump", {"channel": None, "time": None})
     
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):

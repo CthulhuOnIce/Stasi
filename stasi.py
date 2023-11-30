@@ -9,7 +9,8 @@ import yaml
 from discord.ext import commands
 import git
 
-from src import config, prison, vetting, administration, social, errortracking, logging
+from src import config, prison, vetting, administration, social, errortracking, justice
+from src import stasilogging as logging
 
 # from disputils import BotEmbedPaginator, BotConfirmation, BotMultipleChoice
 
@@ -23,11 +24,11 @@ logging.log("main", "setup", "Setting up cogs...")
 
 # Setup cogs
 i = 0
-COGS = [prison, vetting, administration, social, errortracking]
+COGS = [prison, vetting, administration, social, errortracking, justice]
 for cog in COGS:
     i += 1
     cog.setup(bot)
-    logging.log("main", "setup", f"Cog {i}/{len(COGS)} loaded")
+    logging.log("main", "setup", f"Cog {i}/{len(COGS)} loaded ({cog.__name__}))")
 
 
 logging.log("main", "setup", f"Finished setting up {i} cogs")
@@ -60,7 +61,7 @@ async def on_ready():  # I just like seeing basic info like this
         
 
 @bot.event
-async def on_command_error(ctx, error):  # share certain errors with the user
+async def on_command_error(ctx: discord.ApplicationContext, error):  # share certain errors with the user
     if isinstance(error, commands.CommandNotFound):
         return
     if isinstance(error, commands.BadArgument):
@@ -97,12 +98,13 @@ async def on_application_command_error(ctx, error):  # share certain errors with
         if isinstance(original, IndexError):
             await ctx.send(f"IndexError: {original}\n[This might mean your search found no results]")
             return
-    await ctx.respond("That command caused an error. This has been reported to the developer.", ephemeral = True)
-
+    
     error_raw = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
     errortracking.report_error(error_raw)
 
     logging.log("main", "runtime", f"Error {logging.lid(error)} in '{ctx.command}' by '{logging.log_user(ctx.author) if ctx.author else 'unknown'}'. Check runtimes.log for more details.")
     logging.log("runtimes", "error", f"Error {logging.lid(error)} in '{ctx.command}' by '{logging.log_user(ctx.author) if ctx.author else 'unknown'}': \n```\n{error_raw}\n```", False, True)
+
+    await ctx.respond("That command caused an error. This has been reported to the developer.", ephemeral = True)
 
 bot.run(config.C["token"])

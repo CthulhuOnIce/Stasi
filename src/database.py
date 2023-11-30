@@ -62,6 +62,10 @@ user_template = {
     "messages": int
 }
 
+async def set_roles(member_id, roles: List[int]):
+    db = await create_connection("users")
+    return await db.update_one({"_id": member_id}, {"$set": {"roles": roles}}, upsert=True)
+
 async def get_user(member_id):
     db = await create_connection("users")
     user = await db.find_one({"_id": member_id})

@@ -2,15 +2,17 @@ from typing import Optional
 
 import discord
 from discord import option, slash_command
-from discord.ext import commands, tasks
+from discord.ext import commands, tasks, pages
 
 from . import database as db
 from . import config
 from . import utils
-from .logging import log, log_user, discord_dynamic_timestamp
+from . import security
+from .stasilogging import log, log_user, discord_dynamic_timestamp
+from . import warden
 
 import datetime
-import pytz
+import time
 
 class Prison(commands.Cog):
     bot: commands.Bot
@@ -19,207 +21,300 @@ class Prison(commands.Cog):
         self.bot = bot
         self.prisoner_loop.start()
 
-    async def free_prisoner(self, user: dict, admin = None, reason = "Sentence expired."):
-        guild = self.bot.get_guild(config.C["guild_id"])
-        if not guild:   return
-        member = guild.get_member(user["_id"])
+    warrant = discord.SlashCommandGroup("warrant", "Warrant management commands.")
 
-        if not member:  # the user left the server, remove them from database only
-            # get their roles to see if they are in the guild
-            roles = await db.get_roles(user["_id"])
-            if roles:
-                await db.add_roles_stealth(user["_id"], user["roles"])  # so they get their original roles if they rejoin
-            await db.remove_prisoner(user["_id"])
-            log("justice", "expired-nouser", f"Prisoner {user['_id']} expired but is no longer in the guild.")
+    @warrant.command(name='new', description='Create a new warrant.')
+    @option(name='target', description='The target of the warrant.', type=discord.Member, required=True)
+    async def new_warrant(self, ctx: discord.ApplicationContext, target: discord.Member):
+        if not ctx.author.guild_permissions.manage_roles:
+            await ctx.respond("You do not have permission to create warrants.", ephemeral=True)
             return
 
-        prison_role = guild.get_role(config.C["prison_role"])
+        class ReasonModal(discord.ui.Modal):
+            def __init__(self, *args, **kwargs) -> None:
+                super().__init__(*args, **kwargs)
+                self.add_item(discord.ui.InputText(label="Reason for Prison Sentence", style=discord.InputTextStyle.long))
 
-        await member.remove_roles(prison_role)
+            async def callback(self, interaction: discord.Interaction):
+                self.value = self.children[0].value
+                self.interaction = interaction
 
-        roles = []
-        for role_id in user["roles"]:
-            role = guild.get_role(role_id)
-            if role and role < guild.me.top_role:
-                roles.append(role)
+        def generateEmbed(reason: str) -> discord.Embed:
+            embed = discord.Embed(title="Prison Reason", description=reason, color=0x000000)
+            embed.set_author(name=utils.normalUsername(target), icon_url=utils.twemojiPNG.memo)
+            return embed
+
+        modal = ReasonModal(title="Reason for Prison Sentence")
+        await ctx.send_modal(modal)
+        await modal.wait()
+        await modal.interaction.response.defer()
+
+        msg = await ctx.respond(embed=generateEmbed(modal.value), ephemeral=True)
+
+        class confirmView(discord.ui.View):
             
-        await member.edit(roles=roles)
-        
-        embed = discord.Embed(title="Released", description=f"{member.mention} has been successfully released from prison and can now access channels normally.", color=0x8ff0a4)
-        if admin:
-            embed = discord.Embed(title="Released Early", description=f"{member.mention} has been released from prison early by {admin.mention}.", color=0x8ff0a4)
-        if "sentenced" in user:
-            embed.add_field(name="Sentenced", value=discord_dynamic_timestamp(user["sentenced"], "F"), inline=False)
-            embed.add_field(name="Time Served", value=utils.seconds_to_time_long((datetime.datetime.utcnow() - user["sentenced"]).total_seconds()), inline=False)
-        if admin:
-            embed.add_field(name="Original Release Date", value=discord_dynamic_timestamp(user["expires"], "F"), inline=False)
-            embed.add_field(name="Time Left", value=utils.seconds_to_time_long((user["expires"] - datetime.datetime.utcnow()).total_seconds()), inline=False)
-        embed.add_field(name="Reason", value=reason, inline=False)
+            def __init__(self, *args, **kwargs) -> None:
+                super().__init__(*args, **kwargs)
+                self.value = modal.value
+                self.embed = generateEmbed(modal.value)
+                self.timed_out = False
 
-        try:
-            await member.send(embed=embed)
-        except discord.Forbidden:
-            pass
+            async def on_timeout(self) -> None:
+                self.timed_out = True
+                return await super().on_timeout()
 
-        try:
-            log_channel = guild.get_channel(config.C["log_channel"])
-            await log_channel.send(embed=embed)
-        except discord.Forbidden:
-            pass
+            @discord.ui.button(label="Accept", style=discord.ButtonStyle.green, emoji="✅")
+            async def yes_click(self, button, interaction: discord.Interaction):
+                for child in self.children:
+                    child.disabled = True
+                await msg.edit(view=self)
+                
+                await interaction.response.defer()
+                self.stop()
 
-        await db.remove_prisoner(user["_id"])
+            @discord.ui.button(label="Edit", style=discord.ButtonStyle.red, emoji="📝")
+            async def no_click(self, button, interaction: discord.Interaction):
+                modal = ReasonModal(title="Reason for Prison Sentece")
+                await interaction.response.send_modal(modal)
+                await modal.wait()
+                self.value = modal.value
+                await modal.interaction.response.defer()
+                await msg.edit(embed=generateEmbed(modal.value))
 
-        log("justice", "release", f"{log_user(member)} has been successfully released from prison")
+        def lenToEmbed(length: int) -> discord.Embed:
+            embed = discord.Embed(title="Prison Sentence", description= utils.seconds_to_time_long(length) if length > 0 else "Permanent", color=0x000000)
+            embed.set_author(name=utils.normalUsername(target), icon_url=utils.twemojiPNG.swatch)
+            return embed
 
+        view = confirmView()
+        await msg.edit(embed=view.embed, view=view)
+        await view.wait()
+        if view.timed_out:
+            await ctx.respond("Timed out. Run the command again to re-file", ephemeral=True)
+            return
+        reason = view.value
 
-    @slash_command(name='prison', description='Prison a user.')
-    @option('member', discord.Member, description='The member to prison')
-    @option('time', str, description='The time to prison the member for')
-    @option('reason', str, description='The reason for the prison')
-    @option('ephemeral', bool, description='Whether to send the sentence as an ephemeral message')
-    async def prison(self, ctx, member: discord.Member, time: str, reason: str, ephemeral: Optional[bool] = False):
-        if not ctx.author.guild_permissions.manage_roles:
-            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
-        
-        await ctx.interaction.response.defer(ephemeral=ephemeral)
+        sentence = 60*60*24  # 1 day
 
-        prison_role = ctx.guild.get_role(config.C["prison_role"])
-        time_seconds = utils.time_to_seconds(time)
-        release_date = datetime.datetime.utcnow() + datetime.timedelta(seconds=time_seconds)
+        msg = await ctx.respond(embed=lenToEmbed(sentence), ephemeral=True)
 
-        member_roles = [role for role in member.roles if str(role) != "@everyone"]
-        roles = [role.id for role in member_roles]
+        class LengthModal(discord.ui.Modal):
+            def __init__(self, *args, **kwargs) -> None:
+                super().__init__(*args, **kwargs)
 
-        await db.add_prisoner(member.id, ctx.author.id, roles, release_date, reason)
+                self.add_item(discord.ui.InputText(label="Length (ex. 1d1h1m1s)", style=discord.InputTextStyle.short))
 
-        await member.edit(roles=[prison_role])
-
-        log("justice", "prison", f"{log_user(ctx.author)} imprisoned {log_user(member)} for {time} (reason: {reason})")
-
-        embed=discord.Embed(title="Prisoned!", description=f"{member.mention} has been prisoned by {ctx.author.mention}!", color=0xf66151)
-        embed.set_author(name=str(member), icon_url=member.avatar.url if member.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
-        embed.add_field(name="Expires", value=discord_dynamic_timestamp(release_date, 'F'), inline=False)
-        embed.add_field(name="Time Left", value=utils.seconds_to_time_long(time_seconds), inline=False)
-        embed.add_field(name="Reason", value=reason, inline=False)
-
-        try:
-            await member.send(embed=embed)
-        except discord.Forbidden:
-            pass
-
-        try:
-            log_channel = ctx.guild.get_channel(config.C["log_channel"])
-            await log_channel.send(embed=embed)
-        except discord.Forbidden:
-            pass
-
-        await ctx.respond(embed=embed, ephemeral=ephemeral)
-
-    sentence = discord.SlashCommandGroup("sentence", "View or edit prisoner sentences")
+            async def callback(self, interaction: discord.Interaction):
+                self.value = self.children[0].value
+                self.interaction = interaction
     
-    @sentence.command(name='view', description='Get the sentence of a user.')
-    @option('member', discord.Member, description='The member to get the sentence of')
-    @option('ephemeral', bool, description='Whether to send the sentence as an ephemeral message')
-    async def view_sentence(self, ctx, member: discord.Member = None, ephemeral: Optional[bool] = True):
-        if not member:
-            member = ctx.author
+        class lengthView(discord.ui.View):
+            
+            def __init__(self, *args, **kwargs) -> None:
+                super().__init__(*args, **kwargs)
+                self.value = sentence
+                self.embed = lenToEmbed(sentence)
+                self.timed_out = False
 
-        prisoner = await db.get_prisoner(member.id)
-        if not prisoner:
-            return await ctx.respond("That user is not in prison.", ephemeral=True)
+            async def on_timeout(self) -> None:
+                self.timed_out = True
+                return await super().on_timeout()
+
+            @discord.ui.button(label="Proceed", style=discord.ButtonStyle.green, emoji="✅")
+            async def yes_click(self, button, interaction: discord.Interaction):
+                for child in self.children:
+                    child.disabled = True
+                await msg.edit(view=self)
+                await interaction.response.defer()
+                self.stop()
+
+            @discord.ui.button(label="Permanent", style=discord.ButtonStyle.blurple, emoji="🔒")
+            async def permanent_click(self, button, interaction: discord.Interaction):
+                global sentence
+                sentence = -1
+                self.value = sentence
+                self.embed = lenToEmbed(sentence)
+                await msg.edit(embed=self.embed, view=self)
+                await interaction.response.defer()
+
+            @discord.ui.button(label="Edit Sentence", style=discord.ButtonStyle.red, emoji="📝")
+            async def edit_click(self, button, interaction: discord.Interaction):
+                modal = LengthModal(title="Length of Prison Sentence")
+                await interaction.response.send_modal(modal)
+                await modal.wait()
+                await modal.interaction.response.defer()
+                try:
+                    sentence = utils.time_to_seconds(modal.value)
+                    self.value = sentence
+                    self.embed = lenToEmbed(sentence)
+                    await msg.edit(embed=self.embed, view=self)
+                except:
+                    await interaction.response.send_message("Invalid length.", ephemeral=True)
+                    return
         
-        if prisoner["expires"] > datetime.datetime.utcnow():
-            time_left = utils.seconds_to_time_long((prisoner["expires"] - datetime.datetime.utcnow()).total_seconds())
-        else:
-            time_left = "Expired: Will be released next prison cycle"
+        view = lengthView()
+        await msg.edit(view=view)
+        await view.wait()
+        if view.timed_out:
+            await ctx.respond("Timed out. Run the command again to re-file", ephemeral=True)
+            return
+        sentence = view.value
 
-        embed=discord.Embed(title="Prisoner Info", description=f"Info For Prisoner #{member.id}", color=0xf66151)
-        embed.set_author(name=str(member), icon_url=member.avatar.url if member.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
-        embed.add_field(name="Current Datetime", value=discord_dynamic_timestamp(datetime.datetime.utcnow(), 'F'))
-        if "sentenced" in prisoner:
-            embed.add_field(name="Sentenced", value=discord_dynamic_timestamp(prisoner["sentenced"], "F"), inline=False)
-            embed.add_field(name='Time Served', value=utils.seconds_to_time_long((datetime.datetime.utcnow() - prisoner["sentenced"]).total_seconds()), inline=False)
-        embed.add_field(name="Expires", value=discord_dynamic_timestamp(prisoner["expires"], "F"), inline=False)
-        embed.add_field(name="Expires (Relative)", value=discord_dynamic_timestamp(prisoner["expires"], "R"), inline=False)
-        embed.add_field(name="Time Left", value=time_left, inline=False)
-        embed.add_field(name="Reason", value=prisoner["reason"], inline=False)
-        await ctx.respond(embed=embed, ephemeral=ephemeral)
+        embed = discord.Embed(title="New Warrant", description=f"Warrant To Be Filed Against {utils.normalUsername(target)}", color=0x000000)
+        embed.add_field(name="Sentence Length", value=utils.seconds_to_time_long(sentence) if sentence > 0 else "Permanent / Indefinite", inline=False)
+        embed.add_field(name="Reason", value=reason, inline=False)
+        embed.set_author(name=utils.normalUsername(target), icon_url=utils.twemojiPNG.normal)
+
+        msg = await ctx.respond(embed=embed, ephemeral=True)
+
+        class FinalConfirmation(discord.ui.View):
+                
+                def __init__(self, *args, **kwargs) -> None:
+                    super().__init__(*args, **kwargs)
+                    self.decision = False
+                    self.timed_out = False
     
-    @sentence.command(name='release', description='Release a user from prison.')
-    @option('member', discord.Member, description='The member to release')
-    @option('reason', str, description='The reason for the release')
-    @option('ephemeral', bool, description='Whether to send the sentence as an ephemeral message')
-    async def release(self, ctx, member: discord.Member, reason: str, ephemeral: Optional[bool] = False):
-        if not ctx.author.guild_permissions.manage_roles:
-            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+                async def on_timeout(self) -> None:
+                    self.timed_out = True
+                    return await super().on_timeout()
+    
+                @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green, emoji="✅")
+                async def yes_click(self, button, interaction: discord.Interaction):
+                    for child in self.children:
+                        child.disabled = True
+                    self.decision = True
+                    await msg.edit(view=self)
+                    await interaction.response.defer()
+                    self.stop()
+    
+                @discord.ui.button(label="Cancel", style=discord.ButtonStyle.grey, emoji="🚫")
+                async def no_click(self, button, interaction: discord.Interaction):
+                    for child in self.children:
+                        child.disabled = True
+                    await msg.edit(view=self)
+                    await interaction.response.defer()
+                    self.stop()
 
-        prisoner = await db.get_prisoner(member.id)
+        view = FinalConfirmation()
+        await msg.edit(view=view)
+        await view.wait()
+        if view.timed_out:
+            await ctx.respond("Timed out. Run the command again to re-file.", ephemeral=True)
+            return
+        if not view.decision:
+            await ctx.respond("Cancelled. Run the command again to re-file.", ephemeral=True)
+            return
+        
+        warrant = await warden.newWarrant(target, "admin", reason, ctx.author.id, utils.normalUsername(ctx.author), sentence)
+        await ctx.respond(f"Created warrant `{warrant._id}`", ephemeral=True)
+
+    @warrant.command(name='prisoner', description='View a prisoner\'s warrants.')
+    @option(name='prisoner', description='The prisoner to view.', type=discord.Member, required=False)
+    async def view_prisoner(self, ctx: discord.ApplicationContext, prisoner: discord.Member = None):
         if not prisoner:
-            return await ctx.respond("That user is not in prison.", ephemeral=True)
-        
-        await ctx.interaction.response.defer(ephemeral=ephemeral)
+            prisoner = ctx.author
 
-        await self.free_prisoner(prisoner, ctx.author, reason)
-        log("justice", "release", f"{log_user(ctx.author)} released {log_user(member)} from prison (reason: {reason})")
-
-        await db.add_note(member.id, ctx.author.id, f"Released from prison early for '{reason}'")
-
-        await ctx.respond(f"{member.mention} has been released from prison for `{reason}`.", ephemeral=ephemeral)
-
-    @sentence.command(name='adjust', description='Adjust the sentence of a user.')
-    @option('member', discord.Member, description='The member to adjust the sentence of')
-    @option('time', str, description='The time to adjust the sentence by')
-    @option('ephemeral', bool, description='Whether to send the sentence as an ephemeral message')
-    async def adjustsentence(self, ctx, member: discord.Member, time: str, ephemeral: Optional[bool] = True):
-        if not ctx.author.guild_permissions.manage_roles:
-            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
-        
-        if time[0] not in ["+", "-"]:
-            return await ctx.respond("Time must start with `+` or `-`.", ephemeral=True)
-        
-        time_abs = time[1:]
-        time_seconds = utils.time_to_seconds(time_abs)
-
-        if time[0] == "-":
-            time_seconds = -time_seconds
-
-        time_seconds_absolute_value = abs(time_seconds)
-
-        prisoner = await db.get_prisoner(member.id)
+        prisoner_ = warden.getPrisonerByID(prisoner.id)
         if not prisoner:
-            return await ctx.respond("That user is not in prison.", ephemeral=True)
+            await ctx.respond(f"{utils.normalUsername(prisoner)} is not a prisoner.", ephemeral=True)
+            return
         
-        release_date = prisoner["expires"] + datetime.timedelta(seconds=time_seconds)
-
-        time_left_in_new_sentence = (release_date - datetime.datetime.utcnow()).total_seconds()
-
-        embed=discord.Embed(title="Sentence Adjusted", description=f"{member.mention} has had their sentence adjusted by {ctx.author.mention}.", color=0x8ff0a4 if time[0] == "-" else 0xf66151)
-        embed.add_field(name="Old Expiration Date", value=discord_dynamic_timestamp(prisoner["expires"], "F"), inline=False)
-        embed.add_field(name="New Expiration Date", value=discord_dynamic_timestamp(release_date, "F"), inline=False)
-        embed.add_field(name="Difference", value=f"<{time[0]}> {utils.seconds_to_time_long(time_seconds_absolute_value)}", inline=False)
-        if time_left_in_new_sentence < 0:
-            embed.add_field(name="Time Left", value="Expired: Will be released next prison cycle", inline=False)
+        warrants_embeds = [warrant.embed() for warrant in prisoner_.warrants]
+        if len(warrants_embeds) == 0:
+            await ctx.respond(f"{utils.normalUsername(prisoner)} has no warrants.", ephemeral=True)
+            return
+        if len(warrants_embeds) == 1:
+            await ctx.respond(embed=warrants_embeds[0], ephemeral=True)
+            return
         else:
-            embed.add_field(name="Time to Release", value=utils.seconds_to_time_long(time_left_in_new_sentence), inline=False)
-        embed.set_author(name=str(member), icon_url=member.avatar.url if member.avatar else "https://cdn.discordapp.com/embed/avatars/0.png")
+            paginator = pages.Paginator(pages=warrants_embeds)
+            await paginator.respond(ctx.interaction, ephemeral=True)
 
-        await db.add_note(member.id, ctx.author.id, f"Sentence adjusted by '{time}', new release date is '{release_date}'")
-        result = await db.adjust_sentence(member.id, release_date)
+    @warrant.command(name='listprisoners', description='List all prisoners and their warrants.')
+    async def list_prisoners(self, ctx: discord.ApplicationContext):
+                
+        warrants_embeds = [prisoner.embed() for prisoner in warden.PRISONERS]
+        if len(warrants_embeds) == 0:
+            embed = discord.Embed(title="No Prisoners", description="There are no prisoners.", color=0x000000)
+            embed.set_author(name="Prison", icon_url=utils.twemojiPNG.chain)
+            await ctx.respond(embed=embed, ephemeral=True)
+            return
+        if len(warrants_embeds) == 1:
+            await ctx.respond(embed=warrants_embeds[0], ephemeral=True)
+            return
+        else:
+            paginator = pages.Paginator(pages=warrants_embeds)
+            await paginator.respond(ctx.interaction, ephemeral=True)
+    
+    admin = warrant.create_subgroup(name='admin', description='Admin warrant commands.')
 
-        log("justice", "adjust", f"{log_user(ctx.author)} adjusted sentence of {log_user(member)} by {time} (new release date: {release_date})")
-        
-        try:
-            await member.send(embed=embed)
-        except discord.Forbidden:
-            pass
+    @admin.command(name='void', description='Void a warrant.')
+    @option(name='warrant', description='The warrant to void.', type=str, required=True)
+    async def void_warrant(self, ctx: discord.ApplicationContext, warrant: str):
+        if not ctx.author.guild_permissions.manage_roles:
+            await ctx.respond("You do not have permission to void warrants.", ephemeral=True)
+            return
+        warrant = warden.getWarrantByID(warrant)
+        if not warrant:
+            await ctx.respond(f"Warrant {warrant} not found.", ephemeral=True)
+            return
+        prisoner = warden.getPrisonerByWarrantID(warrant._id)
+        await warden.voidWarrantByID(warrant._id)
+        log("justice", "warrant", f"Warrant voided by {utils.normalUsername(ctx.author)}: {utils.normalUsername(prisoner.prisoner())} ({warrant._id})")
+        await ctx.respond(f"Voided warrant {warrant._id}", ephemeral=True)
 
-        try:
-            log_channel = ctx.guild.get_channel(config.C["log_channel"])
-            await log_channel.send(embed=embed)
-        except discord.Forbidden:
-            pass
-        
-        await ctx.respond(embed=embed, ephemeral=ephemeral)
+    @admin.command(name='voiduser', description='Void all warrants for a user.')
+    @option(name='user', description='The user to void warrants for.', type=discord.Member, required=True)
+    async def void_user(self, ctx: discord.ApplicationContext, user: discord.Member):
+        if not ctx.author.guild_permissions.manage_roles:
+            await ctx.respond("You do not have permission to void warrants.", ephemeral=True)
+            return
+        prisoner = warden.getPrisonerByID(user.id)
+        if not prisoner:
+            await ctx.respond(f"{utils.normalUsername(user)} is not a prisoner.", ephemeral=True)
+            return
+        count = len(prisoner.warrants)
+
+        prisoner.warrants = []
+
+        log("justice", "warrant", f"All warrants voided by {utils.normalUsername(ctx.author)}: {utils.normalUsername(prisoner.prisoner())} ({count})")
+        embed = discord.Embed(title="Warrants Voided", description=f"All ({count}) warrants for {utils.normalUsername(user)} have been voided.", color=0x000000)
+        embed.add_field(name="Voided By", value=utils.normalUsername(ctx.author), inline=False)
+        embed.add_field(name="Voided At", value=discord_dynamic_timestamp(datetime.datetime.utcnow()), inline=False)
+        embed.add_field(name="Initially Committed At", value=discord_dynamic_timestamp(prisoner.committed), inline=False)
+        embed.add_field(name="Total Time Served", value=utils.seconds_to_time_long(prisoner.total_time_served()), inline=False)
+        embed.add_field(name="Total Time Remaining", value=utils.seconds_to_time_long(prisoner.total_time_remaining()), inline=False)
+        embed.set_author(name=utils.normalUsername(prisoner.prisoner()), icon_url=utils.twemojiPNG.ticket)
+        await prisoner.communicate(embed=embed)
+
+        await prisoner.Tick()
+        await ctx.respond(embed=embed, ephemeral=True)
+
+    @admin.command(name='tick', description='Create a warrant tick event.')
+    async def tick_warrants(self, ctx: discord.ApplicationContext):
+        if not ctx.author.guild_permissions.administrator:
+            await ctx.respond("You do not have permission to tick warrants.", ephemeral=True)
+            return
+        for prisoner in warden.PRISONERS:
+            await prisoner.Tick()
+        await ctx.respond("Done", ephemeral=True)
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member):
+        roles = [role.id for role in member.roles]
+        await db.set_roles(member.id, roles)
+        log("admin", "leave", f"{log_user(member)} left the server")
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member):
+        user = await db.get_user(member.id)
+        if "roles" in user:
+            roles = [member.guild.get_role(role) for role in user["roles"]]
+            await member.edit(roles=roles)
+
+        elif user == {}:
+            unverified_role = member.guild.get_role(config.C["unverified_role"])
+            await member.edit(roles=[unverified_role])
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
@@ -235,19 +330,16 @@ class Prison(commands.Cog):
         await db.add_note(user.id, entry.user.id, f"User Kicked: `{entry.reason if entry.reason else 'No reason given'}`")
         log("admin", "kick", f"{log_user(entry.user)} kicked {log_user(user)} (reason: {entry.reason if entry.reason else 'No reason given'})")
 
-
     @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.author.bot:
-            return
-        await db.add_message(message.author.id)
+    async def on_ready(self):
+        await warden.populatePrisoners(self.bot.get_guild(config.C["guild_id"]))
                 
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(minutes=1, reconnect=True)
     async def prisoner_loop(self):
         log("justice", "loop", "Running prisoner loop", False)
-        for user in await db.get_expired_prisoners():
-            await self.free_prisoner(user)
+        for prisoner in warden.PRISONERS:
+            await prisoner.Tick()
 
 def setup(bot):
     bot.add_cog(Prison(bot))

@@ -1,6 +1,7 @@
 import os
 import datetime
 import base64
+import sys
 
 def discord_dynamic_timestamp(timestamp: datetime.datetime, format_style: str = 'f') -> str:
     """
@@ -17,11 +18,13 @@ def discord_dynamic_timestamp(timestamp: datetime.datetime, format_style: str = 
                 - 'f': Short date and time format (e.g., April 18, 2023 at 1:13 PM)
                 - 'F': Long date and time format (e.g., Tuesday, April 18, 2023 at 1:13 PM)
                 - 'R': Relative time format (e.g., 2 months ago)
+                - 'FR': Custom: F and R (e.g., Tuesday, April 18, 2023 at 1:13 PM (2 months ago))
+                - 'RF' Custom: R and F (e.g., 2 months ago (Tuesday, April 18, 2023 at 1:13 PM))
 
     Returns:
         str: The Discord dynamic timestamp string.
     """
-    if format_style not in ['t', 'T', 'd', 'D', 'f', 'F', 'R']:
+    if format_style not in ['t', 'T', 'd', 'D', 'f', 'F', 'R', 'FR', 'RF']:
         raise ValueError("Invalid format style. Please use one of the following: 't', 'T', 'd', 'D', 'f', 'F'")
 
     if timestamp.tzinfo is None:
@@ -29,12 +32,21 @@ def discord_dynamic_timestamp(timestamp: datetime.datetime, format_style: str = 
 
     # Convert the timezone aware datetime object to Unix timestamp (epoch time)
     epoch = int(timestamp.timestamp())
-
-    unix_timestamp = int(epoch)
     
-    return f'<t:{unix_timestamp}:{format_style}>'
+    if format_style == 'FR':
+        return f'<t:{epoch}:F> (<t:{epoch}:R>)'
+    
+    elif format_style == 'RF':
+        return f'<t:{epoch}:R> (<t:{epoch}:F>)'
+    
+    else:
+        return f'<t:{epoch}:{format_style}>'
 
 def log(category_broad, category_fine, message, print_message=True, preserve_newlines=False):
+    
+    if "--debug" in sys.argv or "--verbose" in sys.argv:
+        print_message = True
+        
     # create timestamp like JAN 6 2021 12:00:00
     os.makedirs("logs", exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%b %d %Y %H:%M:%S")

@@ -18,7 +18,7 @@ class ErrorTracking(commands.Cog):
     runtimes = discord.SlashCommandGroup("runtimes", "Runtime error tracking commands")
     
     @runtimes.command(name="list", description="List the last [error_limit] errors")
-    async def list_errors(self, ctx):
+    async def list_errors(self, ctx: discord.Interaction):
         if not ctx.author.guild_permissions.manage_guild:
             return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         embeds = []
