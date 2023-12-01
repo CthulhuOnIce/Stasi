@@ -10,15 +10,19 @@ rightwing_role: 1028176829502193726
 
 
 log_channels:
-    vetting:
+    verification:
       - 1028176829502193726
     case_updates: 
       - 1028176829502193726
     case_private:
       - 1028176829502193726
+    warrant_updates:
+      - 1028176829502193726
     audit_log:
       - 1028176829502193726
-    audit_log_no_del:  # like audit_log but slightly better about privacy, doesn't log deleted / edited messages.
+    stasi_audit_log:
+      - 1028176829502193726
+    audit_log_public:  # like audit_log but slightly better about privacy, doesn't log deleted / edited messages.
       - 1028176829502193726
 
 mongodb:

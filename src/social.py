@@ -9,7 +9,7 @@ from . import artificalint as ai
 from . import config
 from . import database as db
 from . import utils
-from .stasilogging import discord_dynamic_timestamp, log, log_user
+from .stasilogging import discord_dynamic_timestamp, log, log_user, channelLog, ChannelLogCategories
 
 
 class Social(commands.Cog):
@@ -165,12 +165,8 @@ class Social(commands.Cog):
         embed.add_field(name="Note", value=note["note"], inline=False)
         embed.set_footer(text=f"Note ID: `{note['_id']}`")
 
-        try:
-            log_channel = self.bot.get_channel(config.C["log_channel"])
-            await log_channel.send(embed=embed)
-        except discord.Forbidden:
-            pass
 
+        await channelLog(embed=embed, category=ChannelLogCategories.stasi_audit_log)
 
         await ctx.respond(embed=embed, ephemeral=True)
 
@@ -194,11 +190,7 @@ class Social(commands.Cog):
             embed.add_field(name="DM", value="*Could Not DM User*", inline=False)
             await ctx.channel.send(member.mention, embed=embed)
         
-        try:
-            log_channel = self.bot.get_channel(config.C["log_channel"])
-            await log_channel.send(embed=embed)
-        except discord.Forbidden:
-            pass
+        await channelLog(embed=embed, category=ChannelLogCategories.stasi_audit_log)
 
         log("admin", "warn", f"{log_user(ctx.author)} warned {log_user(member)} ({note['_id']}: {note['note']})")
         await ctx.respond(embed=embed, ephemeral=True)
@@ -232,11 +224,7 @@ class Social(commands.Cog):
         embed.add_field(name="Note", value=note["note"], inline=False)
         embed.set_footer(text=f"Note ID: `{note['_id']}`")
 
-        try:
-            log_channel = self.bot.get_channel(config.C["log_channel"])
-            await log_channel.send(embed=embed)
-        except discord.Forbidden:
-            pass
+        await channelLog(embed=embed, category=ChannelLogCategories.stasi_audit_log)
 
         await ctx.respond(embed=embed, ephemeral=True)
 
@@ -252,11 +240,7 @@ class Social(commands.Cog):
         embed = discord.Embed(title="Notes Cleared", description=f"Notes cleared for {member.mention} by {ctx.author.mention}", color=0x34eb98)
         embed.add_field(name="Note Count", value=ret.deleted_count, inline=False)
 
-        try:
-            log_channel = self.bot.get_channel(config.C["log_channel"])
-            await log_channel.send(embed=embed)
-        except discord.Forbidden:
-            pass
+        await channelLog(embed=embed, category=ChannelLogCategories.stasi_audit_log)
 
         await ctx.respond(embed=embed, ephemeral=True)
 

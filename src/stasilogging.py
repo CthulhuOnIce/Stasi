@@ -70,6 +70,15 @@ def log_user(user):
 def lid(object):  # convert the id(object) to base64
     return base64.b64encode(str(id(object)).encode("utf-8")).decode("utf-8")
 
+class ChannelLogCategories:
+    verification = "verification"
+    case_updates = "case_updates"
+    case_private = "case_private"
+    audit_log = "audit_log"
+    stasi_audit_log = "stasi_audit_log"
+    audit_log_public = "audit_log_public"
+    warrant_updates = "warrant_updates"
+
 async def channelDispatch(content: str = None, embed: discord.Embed = None, channel: discord.TextChannel = None):
     try:
         await channel.send(content=content, embed=embed)
