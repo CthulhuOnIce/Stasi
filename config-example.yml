@@ -1,16 +1,35 @@
 token: token
+
 guild_id: 1028176829502193726
+
 prison_role: 1028176829502193726
+
 leftwing_role: 1028176829502193726
+
 rightwing_role: 1028176829502193726
-log_channel: 1028176829502193726
+
+
+log_channels:
+    vetting:
+      - 1028176829502193726
+    case_updates: 
+      - 1028176829502193726
+    case_private:
+      - 1028176829502193726
+    audit_log:
+      - 1028176829502193726
+    audit_log_no_del:  # like audit_log but slightly better about privacy, doesn't log deleted / edited messages.
+      - 1028176829502193726
+  
 mongodb:
   url: 'mongodburl'
   username: mongouser
   password: mongopass
   name: Stasi
+
 sudoers:
   - 291321148715696138
+
 openai:  # openai integration
   vettingmodel: gpt-3.5-turbo
   key: ai key here

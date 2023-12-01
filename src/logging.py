@@ -1,6 +1,12 @@
-import os
-import datetime
+import asyncio
 import base64
+import datetime
+import os
+
+import discord
+
+from . import config
+
 
 def discord_dynamic_timestamp(timestamp: datetime.datetime, format_style: str = 'f') -> str:
     """
@@ -51,3 +57,43 @@ def log_user(user):
 
 def lid(object):  # convert the id(object) to base64
     return base64.b64encode(str(id(object)).encode("utf-8")).decode("utf-8")
+
+async def channelDispatch(content: str = None, embed: discord.Embed = None, channel: discord.TextChannel = None):
+    try:
+        await channel.send(content=content, embed=embed)
+    except discord.Forbidden:
+        pass
+
+async def channelLog(content: str = None, embed: discord.Embed = None, category: str = None, dry: bool = False):
+    bot = config.get_global("bot")
+    if category not in config.C["log_channels"]:
+        return
+    
+    channels = []
+
+    if isinstance(config.C["log_channels"][category], list):
+        for channel_id in config.C["log_channels"][category]:
+            channel = bot.get_channel(channel_id)
+            if channel:
+                channels.append(channel)
+
+    elif isinstance(config.C["log_channels"][category], int):
+        channel = bot.get_channel(config.C["log_channels"][category])
+        if channel:
+            channels.append(channel)
+    
+    else:
+        return
+    
+    if not channels:
+        return
+
+    if dry:  # can be used for custom behavior or testing
+        return channels
+
+    tasks = []
+    for channel in channels:
+        asyncio.sleep(0.1)
+        tasks.append(channelDispatch(content=content, embed=embed, channel=channel))
+    
+    asyncio.gather(*tasks)
