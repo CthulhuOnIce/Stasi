@@ -7,6 +7,7 @@ import discord
 import asyncio
 
 from . import config
+from . import utils
 
 
 def discord_dynamic_timestamp(timestamp: datetime.datetime, format_style: str = 'f') -> str:
@@ -65,7 +66,7 @@ def log(category_broad, category_fine, message, print_message=True, preserve_new
         f.write(f"[{timestamp}] [{category_fine.upper()}] {message}\n")
 
 def log_user(user):
-    return f"{user} ({user.id})"
+    return f"{utils.normalUsername(user)} ({user.id})"
 
 def lid(object):  # convert the id(object) to base64
     return base64.b64encode(str(id(object)).encode("utf-8")).decode("utf-8")
@@ -114,7 +115,7 @@ async def channelLog(content: str = None, embed: discord.Embed = None, category:
 
     tasks = []
     for channel in channels:
-        asyncio.sleep(0.1)
+        await asyncio.sleep(0.1)
         tasks.append(channelDispatch(content=content, embed=embed, channel=channel))
     
     asyncio.gather(*tasks)
