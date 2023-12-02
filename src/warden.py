@@ -376,7 +376,7 @@ async def newWarrant(target: discord.Member, category: str, description: str, au
         await prisoner.Tick()
         return warrant
     else:
-        prisoner = Prisoner(target.guild).New(target)
+        prisoner = Prisoner(target.guild).New(target, utils.normalUsername(target))
         prisoner.warrants.append(warrant)
         PRISONERS.append(prisoner)
         await prisoner.communicate(embed=embed)
