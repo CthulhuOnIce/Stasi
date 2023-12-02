@@ -181,3 +181,5 @@ def diffMDGrouped(str1, str2):
                     result.append("~~" + " ".join(diff1) + "~~")
                 if diff2:
                     result.append("**" + " ".join(diff2) + "**")
+    
+    return ' '.join(result)
