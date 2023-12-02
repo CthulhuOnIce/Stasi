@@ -127,3 +127,57 @@ def randomKey(length: int):
     # remove similar looking characters
     chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
     return "".join(random.choice(chars) for _ in range(length))
+
+def diffMD(str1, str2):
+    words1 = str1.split()
+    words2 = str2.split()
+    result = []
+
+    for w1, w2 in zip(words1, words2):
+        if w1 != w2:
+            result.append(f"~~{w1}~~ **{w2}**")
+        else:
+            result.append(w1)
+
+    # Handling the case where the strings have different lengths
+    if len(words1) != len(words2):
+        longer_list = words1 if len(words1) > len(words2) else words2
+        result.extend(longer_list[len(result):])
+
+    return ' '.join(result)
+
+def diffMDGrouped(str1, str2):
+    words1 = str1.split()
+    words2 = str2.split()
+    result = []
+    i = j = 0
+
+    while i < len(words1) or j < len(words2):
+        if i < len(words1) and j < len(words2) and words1[i] == words2[j]:
+            result.append(words1[i])
+            i += 1
+            j += 1
+        else:
+            diff1, diff2 = [], []
+            # Scan for differences in the first string
+            while i < len(words1) and (j >= len(words2) or words1[i] != words2[j]):
+                diff1.append(words1[i])
+                i += 1
+
+            # Scan for differences in the second string
+            while j < len(words2) and (i >= len(words1) or i < len(words1) and words2[j] != words1[i]):
+                diff2.append(words2[j])
+                j += 1
+
+            # Append differences, but exclude common tail words
+            if diff1 and diff2 and diff1[-1] == diff2[-1]:
+                common_tail = diff1.pop()
+                diff2.pop()
+                result.append("~~" + " ".join(diff1) + "~~" if diff1 else "")
+                result.append("**" + " ".join(diff2) + "**" if diff2 else "")
+                result.append(common_tail)
+            else:
+                if diff1:
+                    result.append("~~" + " ".join(diff1) + "~~")
+                if diff2:
+                    result.append("**" + " ".join(diff2) + "**")

@@ -297,6 +297,7 @@ class Social(commands.Cog):
         embed = discord.Embed(title="Message Edited", description=f"Message edited by **{utils.normalUsername(before.author)}** in {before.channel.mention}", color=0x00ff00)
         embed.add_field(name="Before", value=before.clean_content, inline=False)
         embed.add_field(name="After", value=after.clean_content, inline=False)
+        embed.add_field(name="Diff", value=utils.diffMDGrouped(before.clean_content, after.clean_content), inline=False)
         embed.add_field(name="Jump", value=f"[Here]({before.jump_url})", inline=False)
         embed.set_footer(text=f"Message ID: `{before.id}`")
 
