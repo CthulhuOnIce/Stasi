@@ -169,6 +169,9 @@ class Prisoner:
             await self.prisoner().send(content=content, embed=embed)
         except discord.Forbidden:
             pass
+        
+        await channelLog(content=content, embed=embed, category=ChannelLogCategories.warrant_updates)
+
         channel = self.guild.get_channel(config.C["log_channel"])
         await channel.send(content=content, embed=embed)
 

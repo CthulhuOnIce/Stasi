@@ -9,7 +9,7 @@ from . import artificalint as ai
 from . import config
 from . import database as db
 from . import utils
-from .stasilogging import discord_dynamic_timestamp, log, log_user
+from .stasilogging import discord_dynamic_timestamp, log, log_user, channelLog, ChannelLogCategories
 
 
 class Social(commands.Cog):
@@ -161,16 +161,12 @@ class Social(commands.Cog):
         note = await db.add_note(member.id, ctx.author.id, note)
         log("admin", "note", f"{log_user(ctx.author)} added note to {log_user(member)} ({note['_id']}: {note['note']})")
 
-        embed = discord.Embed(title="Note", description=f"Note added to {member.mention} by {ctx.author.mention}", color=0x00ff6e)
+        embed = discord.Embed(title="Note", description=f"Note added to **{utils.normalUsername(member)}**\nby **{utils.normalUsername(ctx.author)}**", color=0x00ff6e)
         embed.add_field(name="Note", value=note["note"], inline=False)
         embed.set_footer(text=f"Note ID: `{note['_id']}`")
 
-        try:
-            log_channel = self.bot.get_channel(config.C["log_channel"])
-            await log_channel.send(embed=embed)
-        except discord.Forbidden:
-            pass
 
+        await channelLog(embed=embed, category=ChannelLogCategories.stasi_audit_log)
 
         await ctx.respond(embed=embed, ephemeral=True)
 
@@ -183,7 +179,7 @@ class Social(commands.Cog):
 
         note = await db.add_note(member.id, ctx.author.id, f"User Warned: `{warning}`")
 
-        embed = discord.Embed(title="Warning", description=f"{member.mention} has been warned in {ctx.guild.name}, by {ctx.author.mention} ") #for\n`{warning}`", color=0xeb6a29)
+        embed = discord.Embed(title="Warning", description=f"**{utils.normalUsername(member)}** has been warned in **{ctx.guild.name}**, by **{utils.normalUsername(ctx.author)}**.") #for\n`{warning}`", color=0xeb6a29)
         embed.add_field(name="Warn Text", value=warning, inline=False)
 
         embed.set_footer(text=f"Note ID: `{note['_id']}`")
@@ -194,11 +190,7 @@ class Social(commands.Cog):
             embed.add_field(name="DM", value="*Could Not DM User*", inline=False)
             await ctx.channel.send(member.mention, embed=embed)
         
-        try:
-            log_channel = self.bot.get_channel(config.C["log_channel"])
-            await log_channel.send(embed=embed)
-        except discord.Forbidden:
-            pass
+        await channelLog(embed=embed, category=ChannelLogCategories.stasi_audit_log)
 
         log("admin", "warn", f"{log_user(ctx.author)} warned {log_user(member)} ({note['_id']}: {note['note']})")
         await ctx.respond(embed=embed, ephemeral=True)
@@ -214,7 +206,11 @@ class Social(commands.Cog):
         await db.remove_note(note_id.lower())
         log("admin", "delnote", f"{log_user(ctx.author)} removed note from {note['user']} ({note_id}: {note['note']})")
 
-        embed = discord.Embed(title="Note Removed", description=f"Note removed from <@{note['user']}> by {ctx.author.mention}", color=0x34eb98)
+        user_name = f"<@{note['user']}>"
+        if user := self.bot.get_user(note["user"]):
+            user_name = utils.normalUsername(user)
+
+        embed = discord.Embed(title="Note Removed", description=f"Note removed from **{user_name}** by {utils.normalUsername(ctx.author)}", color=0x34eb98)
         author = None
 
         author = self.bot.get_user(note["author"])
@@ -232,11 +228,7 @@ class Social(commands.Cog):
         embed.add_field(name="Note", value=note["note"], inline=False)
         embed.set_footer(text=f"Note ID: `{note['_id']}`")
 
-        try:
-            log_channel = self.bot.get_channel(config.C["log_channel"])
-            await log_channel.send(embed=embed)
-        except discord.Forbidden:
-            pass
+        await channelLog(embed=embed, category=ChannelLogCategories.stasi_audit_log)
 
         await ctx.respond(embed=embed, ephemeral=True)
 
@@ -249,14 +241,10 @@ class Social(commands.Cog):
         ret = await db.clear_notes(member.id)
         log("admin", "clearnotes", f"{log_user(ctx.author)} cleared {ret.deleted_count} notes for {log_user(member)}")
 
-        embed = discord.Embed(title="Notes Cleared", description=f"Notes cleared for {member.mention} by {ctx.author.mention}", color=0x34eb98)
+        embed = discord.Embed(title="Notes Cleared", description=f"Notes cleared for **{utils.normalUsername(member)}** by **{utils.normalUsername(ctx.author)}**", color=0x34eb98)
         embed.add_field(name="Note Count", value=ret.deleted_count, inline=False)
 
-        try:
-            log_channel = self.bot.get_channel(config.C["log_channel"])
-            await log_channel.send(embed=embed)
-        except discord.Forbidden:
-            pass
+        await channelLog(embed=embed, category=ChannelLogCategories.stasi_audit_log)
 
         await ctx.respond(embed=embed, ephemeral=True)
 
@@ -266,6 +254,13 @@ class Social(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         last_bump = await db.get_global("last_bump")
+
+        if not last_bump:
+            return
+        if not last_bump["time"]:
+            return
+        if not last_bump["channel"]:
+            return
 
         last_bump_time = last_bump["time"].replace(tzinfo=datetime.timezone.utc)  # get the last bump time from the db
         last_bump_channel = self.bot.get_channel(last_bump["channel"]) if last_bump["channel"] else None
@@ -291,6 +286,34 @@ class Social(commands.Cog):
         if message.author.bot:
             return
         await db.add_message(message.author.id)
+
+    @commands.Cog.listener()
+    async def on_message_edit(self, before: discord.Message, after: discord.Message):
+        if before.author.bot:
+            return
+        if before.clean_content == after.clean_content:
+            return
+    
+        embed = discord.Embed(title="Message Edited", description=f"Message edited by **{utils.normalUsername(before.author)}** in {before.channel.mention}", color=0x00ff00)
+        embed.add_field(name="Before", value=before.clean_content, inline=False)
+        embed.add_field(name="After", value=after.clean_content, inline=False)
+        embed.add_field(name="Jump", value=f"[Here]({before.jump_url})", inline=False)
+        embed.set_footer(text=f"Message ID: `{before.id}`")
+
+        await channelLog(embed=embed, category=ChannelLogCategories.audit_log)
+
+    @commands.Cog.listener()
+    async def on_message_delete(self, message: discord.Message):
+        if message.author.bot:
+            return
+        
+        content = message.clean_content if message.clean_content else "*No Content*"
+    
+        embed = discord.Embed(title="Message Deleted", description=f"Message deleted by **{utils.normalUsername(message.author)}** in {message.channel.mention}", color=0xff0000)
+        embed.add_field(name="Content", value=content, inline=False)
+        embed.set_footer(text=f"Message ID: `{message.id}`")
+
+        await channelLog(embed=embed, category=ChannelLogCategories.audit_log)
 
     @tasks.loop(minutes=1, reconnect=True)
     async def bump_reminder(self):  # actually do the bump ping

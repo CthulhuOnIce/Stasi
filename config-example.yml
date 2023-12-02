@@ -1,9 +1,30 @@
 token: token
+
 guild_id: 1028176829502193726
+
 prison_role: 1028176829502193726
+
 leftwing_role: 1028176829502193726
+
 rightwing_role: 1028176829502193726
-log_channel: 1028176829502193726
+
+
+log_channels:
+    verification:
+      - 1028176829502193726
+    case_updates: 
+      - 1028176829502193726
+    case_private:
+      - 1028176829502193726
+    warrant_updates:
+      - 1028176829502193726
+    audit_log:
+      - 1028176829502193726
+    stasi_audit_log:
+      - 1028176829502193726
+    audit_log_public:  # like audit_log but slightly better about privacy, doesn't log deleted / edited messages.
+      - 1028176829502193726
+
 mongodb:
   url: 'mongodburl'
   username: mongouser

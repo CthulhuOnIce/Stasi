@@ -9,7 +9,7 @@ from . import database as db
 from . import config
 from . import artificalint as ai
 from . import security
-from .stasilogging import log, log_user, lid
+from .stasilogging import log, log_user, lid, channelLog, ChannelLogCategories
 
 class Verification(commands.Cog):
 
@@ -115,14 +115,9 @@ class Verification(commands.Cog):
         interviewer.messages = [message for message in interviewer.messages if message["role"] != "system"]
 
         # log to channel
-        log_channel = None
-        if "log_channel" in config.C and config.C["log_channel"]:
-            log_channel = ctx.guild.get_channel(config.C["log_channel"])
-            if not log_channel:
-                log_channel = ctx.channel
-            if log_channel:
-                embed = ai.build_verification_embed(ctx.author, interviewer.messages, verdict)
-                await log_channel.send(embed=embed)
+        embed = ai.build_verification_embed(ctx.author, interviewer.messages, verdict)
+
+        await channelLog(embed=embed, category=ChannelLogCategories.verification)
 
         # decide which role to use for verification
         verification_role = None

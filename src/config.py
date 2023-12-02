@@ -15,5 +15,12 @@ def load_config():
 def initialize_globals():
     return
 
+def get_global(key):
+    if key in G:
+        return G[key]
+
+def set_global(key, value):
+    G[key] = value
+
 load_config()
 initialize_globals()
