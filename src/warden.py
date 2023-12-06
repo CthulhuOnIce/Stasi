@@ -172,9 +172,6 @@ class Prisoner:
         
         await channelLog(content=content, embed=embed, category=ChannelLogCategories.warrant_updates)
 
-        channel = self.guild.get_channel(config.C["log_channel"])
-        await channel.send(content=content, embed=embed)
-
     def prisoner(self) -> Optional[discord.Member]:
         return self.guild.get_member(self._id)
     
