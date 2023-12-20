@@ -554,7 +554,7 @@ class Case:
         self.stage = 2
         await self.updateStatus("Argumentation and Case Body")
 
-        embed = discord.Embed(title="Invite Expired", description="All jury members have been selected. The case is now in the argumentation stage.", color=discord.Color.red())
+        embed = discord.Embed(title="Invite Expired: Jury Full", description="All jury members have been selected. The case is now in the argumentation stage.", color=discord.Color.red())
         embed.set_author(name=self.title, icon_url=utils.twemojiPNG.scale)
 
         await self.sendToInvitees(embed=embed)
