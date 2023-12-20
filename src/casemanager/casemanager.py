@@ -325,6 +325,13 @@ class Case:
         if reason:
             status += f": {reason}"
 
+        embed = discord.Embed(title="Invite Expired: Case Closed", description="The Case has been closed", color=discord.Color.red())
+        embed.set_author(name=self.title, icon_url=utils.twemojiPNG.scale)
+        if reason:
+            embed.add_field(name="Reason", value=reason, inline=False)
+
+        await self.sendToInvitees(embed=embed)
+
         await self.updateStatus(status)
         
         log("Case", "CLOSE", f"{self} ({self.id}): {status}")
@@ -480,6 +487,27 @@ class Case:
             return True
         else:
             return False
+        
+    async def sendToInvitee(self, invitee: int, content=None, embed=None):
+        invitee = self.guild.get_member(invitee)
+        if invitee:
+            try:  # TODO: maybe invitee.send(content, embed=embed) would work better here
+                if content:
+                    await invitee.send(content)
+                if embed:
+                    await invitee.send(embed=embed)
+                if embed and content:
+                    await invitee.send(content, embed=embed)
+            except Exception as e:
+                log("Case", "sendToInvitee", f"Failed to send invite to {invitee} ({invitee.id}) for case {self} ({self.id}): {e}")
+                pass
+
+    async def sendToInvitees(self, content=None, embed=None):
+        tasks = []
+        for invitee in self.jury_invites:
+            tasks.append(self.sendToInvitee(invitee, content, embed))
+        asyncio.gather(*tasks)
+        return
 
     async def findEligibleJurors(self) -> List[discord.Member]:
         t = time.time()
@@ -508,14 +536,14 @@ class Case:
             if u["_id"] in disqualified:
                 continue
 
-            disqual_role = self.guild.get_role(config.C["rightwing_role"])
+            qual_role = self.guild.get_role(config.C["leftwing_role"])
             member: discord.Member = self.guild.get_member(u["_id"])
             if member:
                 if member.guild_permissions.administrator:
                     continue
                 if member.guild_permissions.ban_members:
                     continue
-                if disqual_role and disqual_role in member.roles:
+                if qual_role and not qual_role in member.roles:
                     continue
                 user_resolved.append(member)
         log("Case", "findEligibleJurors", f"Found {len(user_resolved)} eligible jurors for case {self} ({self.id}) in {round(time.time() - t, 5)} seconds")
@@ -525,6 +553,12 @@ class Case:
     async def startArgumentation(self):
         self.stage = 2
         await self.updateStatus("Argumentation and Case Body")
+
+        embed = discord.Embed(title="Invite Expired", description="All jury members have been selected. The case is now in the argumentation stage.", color=discord.Color.red())
+        embed.set_author(name=self.title, icon_url=utils.twemojiPNG.scale)
+
+        await self.sendToInvitees(embed=embed)
+
         self.jury_invites = []
         if self.motion_queue:
             await self.motion_queue[0].startVoting()
