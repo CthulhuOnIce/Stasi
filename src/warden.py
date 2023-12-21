@@ -215,8 +215,12 @@ class Prisoner:
         await self.communicate(embed=embed)
 
         user = self.prisoner()
-        await user.edit(roles=[self.guild.get_role(role_id) for role_id in self.roles])
-        self.roles = []
+        if user:  # update the user's roles if they're still in the server
+            await user.edit(roles=[self.guild.get_role(role_id) for role_id in self.roles])
+            self.roles = []
+        else:  # if not, update the database which restores their roles when they rejoin
+            await db.set_roles(self._id, self.roles)
+            self.roles = []
 
     def getNextWarrant(self) -> Optional[Warrant]:
         if not self.warrants:
