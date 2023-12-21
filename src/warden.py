@@ -54,7 +54,7 @@ class Warrant:
         if self.author:
             embed.add_field(name="Author", value=f"{self.author_name}", inline=False)
         if self.prisoner():
-            embed.add_field(name="Target", value=f"{self.prisoner_name}", inline=False)
+            embed.add_field(name="Target", value=f"{self.prisoner().prisoner_name}", inline=False)
         embed.add_field(name="Description", value=self.description, inline=False)
         if self.started:
             embed.add_field(name="Started", value=discord_dynamic_timestamp(self.started, "F"), inline=False)
