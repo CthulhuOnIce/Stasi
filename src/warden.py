@@ -352,7 +352,7 @@ async def voidWarrantByID(warrant_id: str, reason: str = None):
 def getWarrantByID(warrant_id: str) -> Optional[Warrant]:
     for prisoner in PRISONERS:
         for warrant in prisoner.warrants:
-            if warrant._id == warrant_id:
+            if warrant._id.lower() == warrant_id.lower():
                 return warrant
 
 def getPrisonerByWarrantID(warrant_id: str) -> Optional[Prisoner]:
