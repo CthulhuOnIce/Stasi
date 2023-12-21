@@ -603,12 +603,6 @@ class Case:
 
         embed.add_field(name="What does this mean?", value=what_is_jury, inline=False)
 
-        how_do_i_join = "To join the jury, use the command provided in 'Jury Join Command'.\n"
-        how_do_i_join += "You will be notified automatically for case updates.\n"
-        how_do_i_join += "If you do not wish to join, you can ignore this message."
-
-        embed.add_field(name="How do I join?", value=how_do_i_join, inline=False)
-
         what_do_i_do =  "Once you have joined the jury, you will be notified (DM'd) automatically for all case updates.\n"
         what_do_i_do += "You will use the following commands to participate in the case:\n"
         what_do_i_do += "- `/case info` - View the current status of the case.\n"
@@ -620,6 +614,12 @@ class Case:
         what_do_i_do += "- `/jury say` - Chat with other jurors.\n"
 
         embed.add_field(name="What do I do?", value=what_do_i_do, inline=False)
+
+        how_do_i_join = "To join the jury, use the command provided in 'Jury Join Command'.\n"
+        how_do_i_join += "You will be notified automatically for case updates.\n"
+        how_do_i_join += "If you do not wish to join, you can ignore this message."
+
+        embed.add_field(name="How do I join?", value=how_do_i_join, inline=False)
 
         embed.add_field(name="Jury Join Command", value=f"/jury join {self.id}", inline=False)
 
