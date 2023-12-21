@@ -173,7 +173,9 @@ class Prisoner:
     async def communicate(self, content: str = None, embed: discord.Embed = None):
         try:
             await self.prisoner().send(content=content, embed=embed)
-        except discord.Forbidden:
+        except discord.Forbidden:  # blocked the bot, disabled dm's, etc.
+            pass
+        except AttributeError:  # they are not in the server
             pass
         
         await channelLog(content=content, embed=embed, category=ChannelLogCategories.warrant_updates)
