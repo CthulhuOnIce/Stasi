@@ -200,16 +200,16 @@ class Justice(commands.Cog):
         if reverse:
             embeds.reverse()
 
-        # split it into smaller lists of 2
-        embeds = [embeds[i:i + 2] for i in range(0, len(embeds), 2)]
-        
         if len(embeds) == 0:
             return await ctx.respond("This case has no events.", ephemeral=True)
-        if len(embeds) == 1:
+        elif len(embeds) == 1:
             return await ctx.respond(embed=embeds[0], ephemeral=True)
-        else:
-            paginator = pages.Paginator(pages=embeds)
-            await paginator.respond(ctx.interaction, ephemeral=True)
+
+        # split it into smaller lists of 2
+        embeds = [embeds[i:i + 2] for i in range(0, len(embeds), 2)]
+
+        paginator = pages.Paginator(pages=embeds)
+        await paginator.respond(ctx.interaction, ephemeral=True)
 
     move = case.create_subgroup("move", "Commands for basic case motions and management.")
 

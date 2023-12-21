@@ -234,17 +234,22 @@ class Prison(commands.Cog):
     async def list_prisoners(self, ctx: discord.ApplicationContext):
                 
         warrants_embeds = [prisoner.embed() for prisoner in warden.PRISONERS]
+
         if len(warrants_embeds) == 0:
             embed = discord.Embed(title="No Prisoners", description="There are no prisoners.", color=0x000000)
             embed.set_author(name="Prison", icon_url=utils.twemojiPNG.chain)
             await ctx.respond(embed=embed, ephemeral=True)
             return
-        if len(warrants_embeds) == 1:
+    
+        elif len(warrants_embeds) == 1:
             await ctx.respond(embed=warrants_embeds[0], ephemeral=True)
             return
-        else:
-            paginator = pages.Paginator(pages=warrants_embeds)
-            await paginator.respond(ctx.interaction, ephemeral=True)
+
+        # split into sublists of 2 embeds each and paginate
+        warrants_embeds = [warrants_embeds[i:i + 2] for i in range(0, len(warrants_embeds), 2)]
+
+        paginator = pages.Paginator(pages=warrants_embeds)
+        await paginator.respond(ctx.interaction, ephemeral=True)
     
     admin = warrant.create_subgroup(name='admin', description='Admin warrant commands.')
 
