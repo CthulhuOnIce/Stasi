@@ -612,6 +612,7 @@ class Case:
         what_do_i_do =  "Once you have joined the jury, you will be notified (DM'd) automatically for all case updates.\n"
         what_do_i_do += "You will use the following commands to participate in the case:\n"
         what_do_i_do += "- `/case info` - View the current status of the case.\n"
+        what_do_i_do += "- `/case eventlog` - View the current case history.\n"
         what_do_i_do += "- `/case vote` - Vote on the current motion.\n"
         what_do_i_do += "- `/case motion` - File a motion.\n"
         what_do_i_do += "- `/case evidence` - View evidence.\n"
