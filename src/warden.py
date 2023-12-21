@@ -162,6 +162,12 @@ class Prisoner:
             embed.add_field(name=f"Warrants ({len(self.warrants)})", value="\n\n".join([f"`{warrant._id}` - {warrant.status()}" for warrant in self.warrants]), inline=False)
         else:
             embed.add_field(name="Warrants", value="None", inline=False)
+        
+        if not self.prisoner():
+            embed.add_field(name="User", value="User has left the server.", inline=False)
+        else:
+            embed.add_field(name="User", value=f"{self.prisoner().mention}", inline=False)
+
         return embed
 
     async def communicate(self, content: str = None, embed: discord.Embed = None):
