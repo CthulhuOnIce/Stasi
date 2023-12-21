@@ -54,7 +54,7 @@ class Warrant:
         if self.author:
             embed.add_field(name="Author", value=f"{self.author_name}", inline=False)
         if self.prisoner():
-            embed.add_field(name="Target", value=f"{self.prisoner().prisoner_name}", inline=False)
+            embed.add_field(name="Target", value=f"{self.prisoner_name}", inline=False)
         embed.add_field(name="Description", value=self.description, inline=False)
         if self.started:
             embed.add_field(name="Started", value=discord_dynamic_timestamp(self.started, "F"), inline=False)
@@ -148,9 +148,9 @@ class Prisoner:
         self.committed = None
         self.warrants: List[Warrant] = []
 
-    def New(self, user: discord.Member, user_name: str) -> "Prisoner":
+    def New(self, user: discord.Member, prisoner_name: str) -> "Prisoner":
         self._id = user.id
-        self.user_name = user_name
+        self.prisoner_name = prisoner_name
         log("justice", "prisoner", f"New prisoner: {utils.normalUsername(user)} ({user.id})")
         return self
     
@@ -173,7 +173,8 @@ class Prisoner:
         await channelLog(content=content, embed=embed, category=ChannelLogCategories.warrant_updates)
 
     def prisoner(self) -> Optional[discord.Member]:
-        return self.guild.get_member(self._id)
+        if user := self.guild.get_member(self._id):
+            return user
     
     def total_time_served(self) -> int:
         if not self.committed:
@@ -191,7 +192,7 @@ class Prisoner:
         if self.roles:
             return
 
-        log("justice", "prisoner", f"Booking prisoner: {utils.normalUsername(self.prisoner())} ({self._id})")
+        log("justice", "prisoner", f"Booking prisoner: {self.prisoner_name} ({self._id})")
 
         prisoner_role = self.guild.get_role(config.C["prison_role"])
         user = self.prisoner()
@@ -204,13 +205,13 @@ class Prisoner:
     async def release(self):  # gives them roles back and nothing more
         if not self.roles:
             return
-        log("justice", "prisoner", f"Releasing prisoner: {utils.normalUsername(self.prisoner())} ({self._id})")
+        log("justice", "prisoner", f"Releasing prisoner: {self.prisoner_name} ({self._id})")
 
         embed = discord.Embed(title="Prisoner Released", description=f"You have been released from prison and can now access channels normally.", color=discord.Color.green())
         embed.add_field(name="Time Served", value=utils.seconds_to_time_long((datetime.datetime.now(datetime.timezone.utc) - self.committed).total_seconds()))
         embed.add_field(name="Committed", value=discord_dynamic_timestamp(self.committed, "FR"), inline=False)
         embed.add_field(name="Released", value=discord_dynamic_timestamp(datetime.datetime.now(datetime.timezone.utc), "F"), inline=False)
-        embed.set_author(name=utils.normalUsername(self.prisoner()), icon_url=utils.twemojiPNG.unlock)
+        embed.set_author(name=self.prisoner_name, icon_url=utils.twemojiPNG.unlock)
         await self.communicate(embed=embed)
 
         user = self.prisoner()
@@ -249,11 +250,13 @@ class Prisoner:
             self.committed = self.committed.replace(tzinfo=datetime.timezone.utc)
         self.warrants = [Warrant().loadFromDict(warrant) for warrant in data["warrants"]]
         self.prisoner_name = data["prisoner_name"]
-        log("justice", "prisoner", f"Loaded prisoner: {utils.normalUsername(self.prisoner())} ({self._id})")
+        if not data["prisoner_name"] and data["user_name"]:
+            self.prisoner_name = data["user_name"]
+        log("justice", "prisoner", f"Loaded prisoner: {self.prisoner_name} ({self._id})")
         return
 
     async def Archive(self):
-        log("justice", "prisoner", f"Archiving prisoner: {utils.normalUsername(self.prisoner())} ({self._id})")
+        log("justice", "prisoner", f"Archiving prisoner: {self.prisoner_name} ({self._id})")
         db_ = await db.create_connection("Warden")
         grab = await db_.delete_one({"_id": self._id})
         PRISONERS.remove(self)
@@ -277,10 +280,10 @@ class Prisoner:
                 self.warrants.remove(warrant)
 
                 embed = discord.Embed(title="Warrant Expired", description=f"Warrant {warrant._id} has expired.", color=discord.Color.red())
-                embed.set_author(name=utils.normalUsername(self.prisoner()), icon_url=utils.twemojiPNG.chain)
+                embed.set_author(name=self.prisoner_name, icon_url=utils.twemojiPNG.chain)
                 await self.communicate(embed=embed)
 
-                log("justice", "warrant", f"Warrant expired: {utils.normalUsername(self.prisoner())} ({warrant._id})")
+                log("justice", "warrant", f"Warrant expired: {self.prisoner_name} ({warrant._id})")
         
         if nxt := self.getNextWarrant():
             nxt.activate()
@@ -292,11 +295,11 @@ class Prisoner:
             # expires - started 
             sentence_seconds = (nxt.expires - nxt.started).total_seconds()
             embed.add_field(name="Expires (S)", value=utils.seconds_to_time_long(sentence_seconds), inline=False)
-            embed.set_author(name=utils.normalUsername(self.prisoner()), icon_url=utils.twemojiPNG.chain)
+            embed.set_author(name=self.prisoner_name, icon_url=utils.twemojiPNG.chain)
 
             await self.communicate(embed=embed)
 
-            log("justice", "warrant", f"Warrant activated: {utils.normalUsername(self.prisoner())} ({nxt._id})")
+            log("justice", "warrant", f"Warrant activated: {self.prisoner_name} ({nxt._id})")
         
         if self.canFree():
             await self.release()
@@ -329,9 +332,9 @@ async def voidWarrantByID(warrant_id: str, reason: str = None):
                 embed.add_field(name="Description", value=warrant.description, inline=False)
                 if reason:
                     embed.add_field(name="Reason For Voiding", value=reason, inline=False)
-                embed.set_author(name=utils.normalUsername(prisoner.prisoner()), icon_url=utils.twemojiPNG.ticket)
+                embed.set_author(name=prisoner.prisoner_name, icon_url=utils.twemojiPNG.ticket)
                 await prisoner.communicate(embed=embed)
-                log("justice", "warrant", f"Warrant voided: {utils.normalUsername(prisoner.prisoner())} ({warrant._id})")
+                log("justice", "warrant", f"Warrant voided: {prisoner.prisoner_name} ({warrant._id})")
                 return
 
 def getWarrantByID(warrant_id: str) -> Optional[Warrant]:

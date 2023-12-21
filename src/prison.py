@@ -260,7 +260,7 @@ class Prison(commands.Cog):
             return
         prisoner = warden.getPrisonerByWarrantID(warrant._id)
         await warden.voidWarrantByID(warrant._id)
-        log("justice", "warrant", f"Warrant voided by {utils.normalUsername(ctx.author)}: {utils.normalUsername(prisoner.prisoner())} ({warrant._id})")
+        log("justice", "warrant", f"Warrant voided by {utils.normalUsername(ctx.author)}: {prisoner.prisoner_name} ({warrant._id})")
         await ctx.respond(f"Voided warrant {warrant._id}", ephemeral=True)
 
     @admin.command(name='voiduser', description='Void all warrants for a user.')
@@ -277,14 +277,14 @@ class Prison(commands.Cog):
 
         prisoner.warrants = []
 
-        log("justice", "warrant", f"All warrants voided by {utils.normalUsername(ctx.author)}: {utils.normalUsername(prisoner.prisoner())} ({count})")
+        log("justice", "warrant", f"All warrants voided by {utils.normalUsername(ctx.author)}: {prisoner.prisoner_name} ({count})")
         embed = discord.Embed(title="Warrants Voided", description=f"All ({count}) warrants for {utils.normalUsername(user)} have been voided.", color=0x000000)
         embed.add_field(name="Voided By", value=utils.normalUsername(ctx.author), inline=False)
         embed.add_field(name="Voided At", value=discord_dynamic_timestamp(datetime.datetime.utcnow()), inline=False)
         embed.add_field(name="Initially Committed At", value=discord_dynamic_timestamp(prisoner.committed), inline=False)
         embed.add_field(name="Total Time Served", value=utils.seconds_to_time_long(prisoner.total_time_served()), inline=False)
         embed.add_field(name="Total Time Remaining", value=utils.seconds_to_time_long(prisoner.total_time_remaining()), inline=False)
-        embed.set_author(name=utils.normalUsername(prisoner.prisoner()), icon_url=utils.twemojiPNG.ticket)
+        embed.set_author(name=prisoner.prisoner_name, icon_url=utils.twemojiPNG.ticket)
         await prisoner.communicate(embed=embed)
 
         await prisoner.Tick()

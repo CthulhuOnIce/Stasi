@@ -488,8 +488,11 @@ class Case:
         else:
             return False
         
-    async def sendToInvitee(self, invitee: int, content=None, embed=None):
-        invitee = self.guild.get_member(invitee)
+    async def sendToMember(self, invitee: int, content=None, embed=None):
+
+        if isinstance(invitee, int):
+            invitee = self.guild.get_member(invitee)
+        
         if invitee:
             try:  # TODO: maybe invitee.send(content, embed=embed) would work better here
                 if content:
@@ -505,7 +508,7 @@ class Case:
     async def sendToInvitees(self, content=None, embed=None):
         tasks = []
         for invitee in self.jury_invites:
-            tasks.append(self.sendToInvitee(invitee, content, embed))
+            tasks.append(self.sendToMember(invitee, content, embed))
         asyncio.gather(*tasks)
         return
 
