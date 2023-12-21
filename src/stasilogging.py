@@ -87,8 +87,10 @@ async def channelDispatch(content: str = None, embed: discord.Embed = None, chan
         pass
     except discord.HTTPException as e:
         if e.code == 50035:
-            await channel.send(content=content, embed=None)
-            await channel.send(f"**[ERROR]** {e.text}")
+            # remove all fields from embed
+            embed.clear_fields()
+            embed.add_field(name="**[ERROR]**", value=e.text, inline=False)
+            await channel.send(content=content, embed=embed)
 
 async def channelLog(content: str = None, embed: discord.Embed = None, category: str = None, dry: bool = False):
     bot = config.get_global("bot")
