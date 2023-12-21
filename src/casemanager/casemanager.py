@@ -368,7 +368,7 @@ class Case:
         if prosecution:
             recipients.append(self.prosecutor())
         if news_wire:
-            for channel_id in config.C["case_updates"]:
+            for channel_id in config.C["log_channels"]["case_updates"]:
                 if channel := self.guild.get_channel(channel_id):
                     recipients.append(channel)
 
