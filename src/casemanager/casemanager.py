@@ -368,8 +368,9 @@ class Case:
         if prosecution:
             recipients.append(self.prosecutor())
         if news_wire:
-            # TODO: remove placeholder
-            recipients.append(self.guild.get_channel(863539768306171928))
+            for channel_id in config.C["case_updates"]:
+                if channel := self.guild.get_channel(channel_id):
+                    recipients.append(channel)
 
         for recipient in recipients:
             try:
