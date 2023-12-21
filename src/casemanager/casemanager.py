@@ -608,7 +608,7 @@ class Case:
         what_do_i_do += "- `/case info` - View the current status of the case.\n"
         what_do_i_do += "- `/case eventlog` - View the current case history.\n"
         what_do_i_do += "- `/case vote` - Vote on the current motion.\n"
-        what_do_i_do += "- `/case motion` - File a motion.\n"
+        what_do_i_do += "- `/case move` - File a motion.\n"
         what_do_i_do += "- `/case evidence` - View evidence.\n"
         what_do_i_do += "- `/case statement` - Make a personal statement.\n"
         what_do_i_do += "- `/jury say` - Chat with other jurors.\n"
