@@ -274,7 +274,11 @@ class Justice(commands.Cog):
             return await ctx.respond("You do not have an active case.", ephemeral=True)
         if not case.canSubmitMotions(ctx.author):
             return await ctx.respond("You cannot submit evidence to this case.", ephemeral=True)
-    
+
+        # modal to set alt-text for the file
+        alt_text = await cmui.universalModal(ctx.interaction, "Evidence Alt-Text", [discord.ui.InputText(label="Describe the Evidence", style=discord.InputTextStyle.long, min_length=10, max_length=1024)])
+        alt_text = alt_text[0].value
+
         await ctx.respond("Upload the file here. You have 5 minutes.", ephemeral=True)
         try:
             file_message: discord.Message = await self.bot.wait_for("message", check=lambda m: m.author.id == ctx.author.id and m.channel.id == ctx.channel.id, timeout=300)
@@ -299,6 +303,9 @@ class Justice(commands.Cog):
         await msg.edit(content=f"Uploading file {file.filename}...", embed=None)
 
         new_evidence = await case.newEvidence(ctx.author, file.filename, file_bytes)
+        new_evidence.alt_text = alt_text
+        await case.Save()
+
         await msg.edit(f"Uploaded evidence **{new_evidence.filename}** (`{new_evidence.id}`) to case **{case}** (`{case.id}`)")
 
     async def evidence_options(ctx: discord.AutocompleteContext):
@@ -338,6 +345,8 @@ class Justice(commands.Cog):
         embed = discord.Embed(title=f"Viewing Evidence: {file_name}", description=f"**{case}** (`{case.id}`)")
         embed.add_field(name="Evidence ID", value=file.id, inline=False)
         embed.add_field(name="Evidence Filename", value=file.filename, inline=False)
+        if file.alt_text:
+            embed.add_field(name="Evidence Description", value=file.alt_text, inline=False)
         embed.add_field(name="Filed By", value=case.nameUserByID(file.author), inline=False)
         embed.add_field(name="Filed On", value=discord_dynamic_timestamp(file.created, 'FR'), inline=False)
 
