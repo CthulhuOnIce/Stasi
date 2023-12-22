@@ -63,6 +63,8 @@ class Justice(commands.Cog):
     @case.command(name='file', description='File a case against a user.')
     @option("member", discord.Member, description="The member to file a case against.")
     async def file_case(self, ctx: discord.ApplicationContext, member: discord.Member):
+        if not ctx.author.guild_permissions.kick_members:
+            await ctx.respond("You do not have permission to use this command", ephemeral= True)
         
         # Collect Reason from User
 
