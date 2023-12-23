@@ -436,10 +436,15 @@ class Justice(commands.Cog):
 
         await ctx.interaction.response.defer(ephemeral=True)
         old_prosecutor = case.prosecutor_id
-        await case.registerUser(member)
+
+        case.registerUser(member)
         case.prosecutor_id = member.id
+        
         await case.newEvent("prosecutor_change", f"New Prosecutor: {case.nameUserByID(member.id)}",
                             f"Old Prosecutor: {case.nameUserByID(old_prosecutor)}\nNew Prosecutor: {case.nameUserByID(member.id)}")
+        
+        await case.Save()
+        
         await ctx.respond(f"Changed prosecutor to {utils.normalUsername(member)}.", ephemeral=True)
 
     @dbg.command(name='stuffvotes', description='Load a motion up with votes.')
