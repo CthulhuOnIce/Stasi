@@ -408,6 +408,40 @@ class Justice(commands.Cog):
         await case.Save()
         await ctx.respond(f"Invited {utils.normalUsername(member)} to this case.", ephemeral=True)
 
+    @dbg.command(name='jurykick', description='Kick a juror from a case.')
+    @option("member", discord.Member, description="The member to kick from the case.")
+    async def jury_kick(self, ctx: discord.ApplicationContext, member: discord.Member):
+        case = getActiveCase(ctx.author)
+        if not ctx.author.guild_permissions.administrator:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        if member.id not in case.jury_pool_ids:
+            return await ctx.respond("This member is not a juror in this case.", ephemeral=True)
+
+        await ctx.interaction.response.defer(ephemeral=True)
+        await case.removeJuror(member, f"Juror kicked from case by {utils.normalUsername(ctx.author)}.")
+        await ctx.respond(f"Kicked {utils.normalUsername(member)} from this case.", ephemeral=True)
+
+    @dbg.command(name='changeprosecutor', description='Change the prosecutor of a case.')
+    @option("member", discord.Member, description="The member to appoint as the prosecutor.")
+    async def change_prosecutor(self, ctx: discord.ApplicationContext, member: discord.Member):
+        case = getActiveCase(ctx.author)
+        if not ctx.author.guild_permissions.administrator:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        if member.id == case.prosecutor_id:
+            return await ctx.respond("This member is already the prosecutor of this case.", ephemeral=True)
+
+        await ctx.interaction.response.defer(ephemeral=True)
+        old_prosecutor = case.prosecutor_id
+        await case.registerUser(member)
+        case.prosecutor_id = member.id
+        await case.newEvent("prosecutor_change", f"New Prosecutor: {case.nameUserByID(member.id)}",
+                            f"Old Prosecutor: {case.nameUserByID(old_prosecutor)}\nNew Prosecutor: {case.nameUserByID(member.id)}")
+        await ctx.respond(f"Changed prosecutor to {utils.normalUsername(member)}.", ephemeral=True)
+
     @dbg.command(name='stuffvotes', description='Load a motion up with votes.')
     @option("passmotion", bool, description="True - Pass : False - Reject")
     async def stuffvotes(self, ctx: discord.ApplicationContext, passmotion: bool):
