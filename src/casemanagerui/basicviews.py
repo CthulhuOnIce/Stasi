@@ -200,11 +200,13 @@ async def caseInfoView(ctx: discord.ApplicationContext, case: "Case"):
             motion_in_consideration_page.add_field(name=f"No Votes ({len(case.motion_in_consideration.votes['No'])})", value=no_votes, inline=True)
 
         undecided = ""
+        undecided_count = 0
         for juror in case.jury_pool_ids:
             if juror not in case.motion_in_consideration.votes["Yes"] and juror not in case.motion_in_consideration.votes["No"]:
+                undecided_count += 1
                 undecided += f"- {case.nameUserByID(juror, False)}\n"
         if undecided:
-            motion_in_consideration_page.add_field(name=f"Undecided ({len(undecided)})", value=undecided, inline=False)
+            motion_in_consideration_page.add_field(name=f"Undecided ({undecided_count})", value=undecided, inline=False)
 
 
 
