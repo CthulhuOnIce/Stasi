@@ -440,7 +440,7 @@ class Justice(commands.Cog):
         case.registerUser(member)
         case.prosecutor_id = member.id
         
-        await case.newEvent("prosecutor_change", f"New Prosecutor: {case.nameUserByID(member.id)}",
+        await case.newEvent("prosecutor_change", f"A New Prosecutor Has Been Appointed",
                             f"Old Prosecutor: {case.nameUserByID(old_prosecutor)}\nNew Prosecutor: {case.nameUserByID(member.id)}")
         
         await case.Save()
