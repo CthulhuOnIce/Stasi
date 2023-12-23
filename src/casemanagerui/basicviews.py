@@ -81,6 +81,14 @@ async def voteView(ctx: discord.ApplicationContext, motion: "Motion"):
     if no_votes:
         embed.add_field(name=f"No Votes ({len(motion.votes['No'])})", value=no_votes, inline=True)
 
+    undecided = []
+    for juror in motion.Case.jury_pool_ids:
+        if juror not in motion.votes["Yes"] and juror not in motion.votes["No"]:
+            undecided.append(motion.Case.nameUserByID(juror, False))
+    
+    if undecided:
+        embed.add_field(name=f"Undecided ({len(undecided)})", value="\n".join(undecided), inline=False)
+
     embed.add_field(name="Voting Ends", value=discord_dynamic_timestamp(motion.expiry, 'FR'), inline=False)
 
     embed.set_author(name=f"{motion.Case} ({motion.Case.id})", icon_url=twemojiPNG.ballot)
