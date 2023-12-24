@@ -93,7 +93,7 @@ Optimizations:
 - [ ] Make sure security checks are good on debug and all new commands
 
 All in one suite for managing plea deals.
-When ran by the prosecutor, allows them to offer a plea deal and check on it, or withdraw/modifiy it.
+When ran by the prosecutor, allows them to offer a plea deal and check on it, or withd.raw/modifiy it.
 When ran by the defense, allows them to accept or decline a plea deal.
 - [ ] /case plea offer
 """
@@ -312,6 +312,27 @@ class Case:
             await penalty.Execute()
         return
     
+
+    async def sendZipArchive(self):
+
+        tasks = []
+
+        zip = await self.Zip()
+
+        for channel in config.C["log_channels"]["case_updates"]:
+            if channel := self.guild.get_channel(channel):
+                asyncio.sleep(0.5)
+                tasks.append(channel.send(file=discord.File(zip, filename=f"{self} {self.id}.zip")))
+        
+        zip_admin = await self.Zip(admin=True)
+
+        for channel in config.C["log_channels"]["case_private"]:
+            if channel := self.guild.get_channel(channel):
+                asyncio.sleep(0.5)
+                tasks.append(channel.send(file=discord.File(zip_admin, filename=f"{self} {self.id} (Admin).zip")))
+        
+        asyncio.gather(*tasks)
+    
     # doesn't log or document the case closing, or act on punishments, which should all be done by 
     # preceding functions
 
@@ -333,6 +354,8 @@ class Case:
         await self.sendToInvitees(embed=embed)
 
         await self.updateStatus(status)
+
+        await self.sendZipArchive()        
         
         log("Case", "CLOSE", f"{self} ({self.id}): {status}")
         return
@@ -448,6 +471,40 @@ class Case:
         else:
             log("case", "nameUserByID", f"nameUserByID for {self.case} ({self.case.id}) Could not look up {userid}. This should never happen.")
             return f"Unknown User #{utils.int_to_base64(userid)}"
+    
+    # same as above, but doesn't anonymize, used for admin stuff
+    def nameUserByIDNoAnon(self, userid: int, title: bool = True):
+        if userid in self.known_users:
+            res = self.known_users[userid]
+       
+        elif str(userid) in self.known_users:
+            res = self.known_users[str(userid)]
+    
+        # last resort, look them up and register them
+        elif self.guild:
+            user = self.guild.get_member(userid)
+            if user:
+                log("case", "nameUserByIDNoAnon", f"nameUserByIDNoAnon for {self} ({self.id}) just had to look up an unregistered user {user} ({user.id}), make sure you're registering users to cases properly")
+                self.registerUser(user)
+                res = utils.normalUsername(user)
+
+        if title:
+            if userid == self.defense_id:
+                res += " (Defense)"
+
+            elif userid == self.prosecutor_id:
+                res += " (Prosecutor)"
+            
+            else:
+                if userid in self.jury_pool_ids:
+                    res += " (Juror)"
+
+
+        if res:
+            return res
+        else:
+            log("case", "nameUserByIDNoAnon", f"nameUserByIDNoAnon for {self.case} ({self.case.id}) Could not look up {userid}. This should never happen.")
+            return f"Unknown User #{utils.int_to_base64(userid)}" 
         
     def canVote(self, user: discord.Member):
         if user.id in self.jury_pool_ids:
@@ -973,19 +1030,53 @@ class Case:
             return f"<<non-serializable: {type(o).__qualname__}>>"
         return json.dumps(d, default=default, indent=2)
     
-    def sanitize_event(self, event: Event) -> Event:
+    # doesn't remove personal information, just removes any keys that aren't in the Event class
+    # so that reference data stored in the event log isnt shown
+    def sanitize_event(self, event: Event, anonymize = True) -> Event:
         san_event = event.copy()
         for key in event:
             if key not in Event.__annotations__ and key in san_event:
                 del san_event[key]
         return san_event
+    
+    # does remove personal information, is meant to be used with evidence.toDict()
+    # having anonymize = true will replace the author's name with their anonymized name
+    # as opposed to just removing the author key
+    # is meant to be used with Zip()
+    def sanitize_evidence(self, evidence: evidence.Evidence, anonymize = True) -> evidence.Evidence:
+        nameUser = self.nameUserByID if anonymize else self.nameUserByIDNoAnon
+
+        dict_santized = self.sanitize_evidence(evidence.toDict())
+        dict_santized["author"] = nameUser(dict_santized["author"])
+        return dict_santized
 
     # create in-memory zip file archive of the case
-    def Zip(self) -> io.BytesIO:
-        zip = zipfile.ZipFile(io.BytesIO(), "w")
+    # will create a folder called "raw" with all the raw data
+    # if admin is set, will create a folder called "admin" with some hidden information unobscured
+    async def Zip(self, admin=False) -> io.BytesIO:
+        file = io.BytesIO()
+        zip = zipfile.ZipFile(file, "w")
+
+        # - [ ] Event Log
+        # - [ ] Evidence
+        # - [ ] Case Summary
+        # - [ ] Admin: Juror Chat Log
+
+        if admin:
+            zip.writestr("admin/.raw/case_dump.json", self.safedump(self.__dict__))
 
         # sanitize the event log to remove any pii or other sensitive information
-        zip.writestr("raw/event_log.json", self.safedump([self.sanitize_event(event) for event in self.event_log]))
+        zip.writestr(".raw/event_log.json", self.safedump([self.sanitize_event(event) for event in self.event_log]))
+
+        if admin:
+            zip.writestr("admin/.raw/event_log.json", self.safedump(self.event_log))
+            zip.writestr("admin/.raw/juror_chat_log.json", self.safedump(self.juror_chat_log))
+            juror_chat = ""
+            for message in self.juror_chat_log:
+                ts = message["timestamp"].strftime("%Y-%m-%d %H:%M:%S")
+                juror_chat += f"[{ts}] {self.nameUserByID(message['user_id'])} ({message['user_id']}): {message['content']}\n"
+            if juror_chat:
+                zip.writestr("admin/juror_chat_log.log", juror_chat)
 
         # save the event log as a simple text file
         s = ""
@@ -993,22 +1084,107 @@ class Case:
             desc = event["desc"].replace("\n", "\n\t")
             s += f"{event['timestamp'].isoformat()}: {event['name']}\n\t{desc}\n\n"
         zip.writestr("event_log.log", s)
+        if admin:
+            zip.writestr("admin/event_log.log", s)
+
+        evidence_manifest = ""
+        evidence_manifest_admin = ""
         
-        # TODO: create an evidence manifest and an evidence folder
-        # raw/evidence_manifest.json
-        # .evidence/manifest.log
-        # .evidence/locker/*.* (evidence files)
+        for evidence in self.evidence:
 
-        # TODO: create a juror chat log
-        # raw/juror_chat_log.json
-        # juror_chat_log.log
+            evidence_manifest += f"{evidence.id}: {evidence.filename}\n"
+            evidence_manifest += f"\tAuthor: {self.nameUserByID(evidence.author)}\n"
+            if evidence.alt_text:
+                evidence_manifest += f"\tAlt Text: {evidence.alt_text}\n"
 
-        # Summary file
-        # raw/summary.json
-        # summary.txt
-        # README.md
+            evidence_manifest += "\n"
 
-        return zip
+            evidence_manifest_admin += f"{evidence.id}: {evidence.filename}\n"
+            evidence_manifest_admin += f"\tAuthor: {self.nameUserByIDNoAnon(evidence.author)} ({evidence.author})\n"
+            if evidence.alt_text:
+                evidence_manifest_admin += f"\tAlt Text: {evidence.alt_text}\n"
+            
+            evidence_manifest_admin += f"\n"
+            
+            zip.writestr(f".raw/evidence/{evidence.id}.json", self.safedump(evidence.toDict()))
+            zip.writestr(f"evidence/{evidence.id}/{evidence.id}.txt", evidence.alt_text)
+
+            file_name = evidence.filename
+            file_bytes = await evidence.getFile()
+            file_bytes = file_bytes["file"]
+
+            zip.writestr(f"evidence/{evidence.id}/{file_name}", file_bytes.read())
+
+            if admin:
+                zip.writestr(f"admin/.raw/evidence/{evidence.id}.json", self.safedump(evidence.__dict__))
+                zip.writestr(f"admin/evidence/{evidence.id}/{evidence.id}.txt", evidence.alt_text)
+                zip.writestr(f"admin/evidence/{evidence.id}/{file_name}", file_bytes.read())
+        
+        zip.writestr("evidence/evidence_manifest.txt", evidence_manifest)
+
+        if admin:
+            zip.writestr("admin/evidence/evidence_manifest.txt", evidence_manifest_admin)
+
+        raw_summary_admin = {
+            "case": self.id,
+            "title": self.title,
+            "status": self.status,
+            "description": self.description,
+            "prosecutor": self.nameUserByID(self.prosecutor_id),
+            "prosecutor_id": self.prosecutor_id,
+
+            "defense": self.nameUserByID(self.defense_id),
+            "defense_id": self.defense_id,
+
+            "jurors": [self.nameUserByID(juror) for juror in self.jury_pool_ids],
+
+            "jurors_admin": [
+                {
+                    "name": self.nameUserByIDNoAnon(juror),
+                    "id": juror,
+                    "anon": self.nameUserByID(juror) if juror in self.anonymization else None
+                } for juror in self.jury_pool_ids
+            ],
+
+        }
+        
+        raw_summary = raw_summary_admin.copy()
+        del raw_summary["jurors_admin"]
+
+        zip.writestr(".raw/summary.json", self.safedump(raw_summary))
+        if admin:
+            zip.writestr("admin/.raw/summary.json", self.safedump(raw_summary_admin))
+
+        summary_txt = f"Case ID: {self.id}\n"
+        summary_txt += f"Title: {self.title}\n"
+        summary_txt += f"Status: {self.status}\n"
+        summary_txt += f"Description: {self.description}\n"
+        summary_txt += f"Prosecutor: {self.nameUserByID(self.prosecutor_id)}\n"
+        summary_txt += f"Defense: {self.nameUserByID(self.defense_id)}\n"
+        summary_txt += f"Jurors:\n"
+        for juror in self.jury_pool_ids:
+            summary_txt += f" - {self.nameUserByID(juror)}\n"
+
+        summary_txt_admin = summary_txt + "\n\n---------------===ADMIN===---------------\n"
+        summary_txt_admin += f"Prosecutor ID: {self.prosecutor_id}\n"
+        summary_txt_admin += f"Defense ID: {self.defense_id}\n"
+        summary_txt_admin += f"Jurors:\n"
+
+        for juror in self.jury_pool_ids:
+            summary_txt_admin += f" - {self.nameUserByID(juror)}"
+            if juror in self.anonymization:
+                summary_txt_admin += f" ({self.nameUserByID(juror)})"
+            summary_txt_admin += f" [{juror}]\n"
+
+        zip.writestr("summary.txt", summary_txt)
+        if admin:
+            zip.writestr("admin/summary.txt", summary_txt_admin)
+
+        # save
+        zip.close()
+        file.seek(0)
+
+        return file
     
     def __init__(self, bot, guild: discord.Guild):
         self.bot = bot

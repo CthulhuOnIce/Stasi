@@ -213,6 +213,32 @@ class Justice(commands.Cog):
         paginator = pages.Paginator(pages=embeds)
         await paginator.respond(ctx.interaction, ephemeral=True)
 
+    @case.command(name='dump', description='Dump the contents of your active case into a zip.')
+    @option("ephemeral", bool, description="Whether to make the message ephemeral", default=True)
+    @option("admin", bool, description="Whether to include admin-only information.", default=False)
+    async def case_dump(self, ctx: discord.ApplicationContext, ephemeral: bool = True, admin: bool = False):
+        case = getActiveCase(ctx.author)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+    
+        if admin and not ctx.author.guild_permissions.administrator:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+
+        t = time.time()
+
+        log("case", "dump", f"Dumping case ({case}) {case.id} for {utils.normalUsername(ctx.author)}...")
+
+        response = await ctx.respond(f"Dumping case {case} ({case.id})...", ephemeral=ephemeral)
+        
+        zip_file = await case.Zip(admin=admin)
+        zip_name = f"{case.id}.zip"
+        file = discord.File(zip_file, zip_name, description=f"Case Dump for {case} ({case.id})")
+
+        seconds = round(time.time() - t, 3)
+        log("case", "dump", f"Dumped case ({case}) {case.id} for {utils.normalUsername(ctx.author)} in {seconds} seconds.")
+
+        await response.edit_original_response(content=f"Case {case} ({case.id}) dumped in {seconds} seconds.", file=file)
+
     move = case.create_subgroup("move", "Commands for basic case motions and management.")
 
     @move.command(name="statement", description="Move to have the court issue an official statement.")
