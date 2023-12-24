@@ -170,6 +170,8 @@ def eventToEmbed(event: Event, case_name: str) -> discord.Embed:
         icon_url = utils.twemojiPNG.leftchat
     elif event["event_id"] == "case_status_update":
         icon_url = utils.twemojiPNG.label
+    elif event["event_id"] == "admin_statement":
+        icon_url = utils.twemojiPNG.judge
     if event["event_id"] == "evidence_submit":
         icon_url = utils.twemojiPNG.folder
         if "evidence" in event:

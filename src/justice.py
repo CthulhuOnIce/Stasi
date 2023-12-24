@@ -541,6 +541,21 @@ class Justice(commands.Cog):
         await case.Tick()
         await ctx.respond("Tick triggered.", ephemeral=True)
 
+    @dbg.command(name="adminstatement", description="DEBUG: Make a statement in your active case as an admin.")
+    async def adminstatement(self, ctx: discord.ApplicationContext):
+        if not ctx.author.guild_permissions.administrator:
+            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
+        case = getActiveCase(ctx.author)
+        if case is None:
+            return await ctx.respond("You do not have an active case.", ephemeral=True)
+        
+        case.registerUser(ctx.author)
+        
+        modal = await cmui.universalModal(ctx.interaction, "Statement", [discord.ui.InputText(label="Enter Statement", style=discord.InputTextStyle.long, min_length=1, max_length=1024)])
+        statement = modal[0].value
+        
+        case.event_log.append(await case.newEvent("admin_statement", f"ADMIN Statement by {case.nameUserByID(ctx.author.id)}", statement))
+
     @dbg.command(name='appointjuror', description='Appoint a juror to a case.')
     @option("member", discord.Member, description="The member to appoint as a juror.")
     @option("pseudonym", str, description="The pseudonym to use for the juror.", optional=True)
