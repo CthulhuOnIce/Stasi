@@ -321,14 +321,14 @@ class Case:
 
         for channel in config.C["log_channels"]["case_updates"]:
             if channel := self.guild.get_channel(channel):
-                asyncio.sleep(0.5)
+                await asyncio.sleep(0.5)
                 tasks.append(channel.send(file=discord.File(zip, filename=f"{self} {self.id}.zip")))
         
         zip_admin = await self.Zip(admin=True)
 
         for channel in config.C["log_channels"]["case_private"]:
             if channel := self.guild.get_channel(channel):
-                asyncio.sleep(0.5)
+                await asyncio.sleep(0.5)
                 tasks.append(channel.send(file=discord.File(zip_admin, filename=f"{self} {self.id} (Admin).zip")))
         
         asyncio.gather(*tasks)
@@ -391,9 +391,9 @@ class Case:
         if prosecution:
             recipients.append(self.prosecutor())
         if news_wire:
-            for channel_id in config.C["log_channels"]["case_updates"]:
+            for channel_id in (config.C["log_channels"]["case_updates"] + config.C["log_channels"]["case_private"]):
                 if channel := self.guild.get_channel(channel_id):
-                    recipients.append(channel)
+                    recipients.append(channel) 
 
         for recipient in recipients:
             try:
