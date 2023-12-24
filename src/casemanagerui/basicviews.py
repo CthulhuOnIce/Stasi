@@ -5,7 +5,7 @@ import random
 import discord
 
 from ..stasilogging import discord_dynamic_timestamp
-from ..utils import twemojiPNG, trees, gems, flowers, birds
+from ..utils import twemojiPNG, trees, gems, flowers, birds, space, stones, cities, colors
 
 if TYPE_CHECKING:
     from ..casemanager import Motion, Case
@@ -271,12 +271,12 @@ async def jurorNameView(ctx: discord.ApplicationContext, case: "Case"):
         return None
 
     def pseudonymEmbed(pseudonym):
-        embed = discord.Embed(title=f"Juror Pseudonym", description=f"You may be known as this for the case:", color=discord.Color.blurple())
+        embed = discord.Embed(title=f"Juror Pseudonym", description=f"You may be known as this for the case as:", color=discord.Color.blurple())
         embed.add_field(name="Pseudonym", value=pseudonym, inline=False)
         embed.set_author(name=f"{case} ({case.id})", icon_url=twemojiPNG.label)
         return embed
     
-    all_names = trees + gems + flowers + birds
+    all_names = trees + gems + flowers + birds + space + stones + cities + colors
 
     def generatePseudonym(source: list = None):
         if not source:
@@ -297,7 +297,7 @@ async def jurorNameView(ctx: discord.ApplicationContext, case: "Case"):
                 embed = pseudonymEmbed(pseudonym)
                 await ctx.interaction.edit_original_response(content=None, embed=embed, view=self)
             
-            @discord.ui.button(label="Regenerate", style=discord.ButtonStyle.primary, emoji="🔀",row=1)
+            @discord.ui.button(label="Regenerate", style=discord.ButtonStyle.primary, emoji="🔀",row=2)
             async def generate(self, button, interaction: discord.Interaction):
                 await interaction.response.defer()
                 await self.redraw()
@@ -321,8 +321,29 @@ async def jurorNameView(ctx: discord.ApplicationContext, case: "Case"):
             async def generate_bird(self, button, interaction: discord.Interaction):
                 await interaction.response.defer()
                 await self.redraw(birds)
+
+            @discord.ui.button(label="Space", style=discord.ButtonStyle.green, emoji="🌌", row=1)
+            async def generate_space(self, button, interaction: discord.Interaction):
+                await interaction.response.defer()
+                await self.redraw(space)
+            
+            @discord.ui.button(label="Stones", style=discord.ButtonStyle.green, emoji="🪨", row=1)
+            async def generate_stone(self, button, interaction: discord.Interaction):
+                await interaction.response.defer()
+                await self.redraw(stones)
+            
+            @discord.ui.button(label="Cities", style=discord.ButtonStyle.green, emoji="🏙️", row=1)
+            async def generate_city(self, button, interaction: discord.Interaction):
+                await interaction.response.defer()
+                await self.redraw(cities)
+            
+            @discord.ui.button(label="Colors", style=discord.ButtonStyle.green, emoji="🎨", row=1)
+            async def generate_color(self, button, interaction: discord.Interaction):
+                await interaction.response.defer()
+                await self.redraw(colors)
+            
     
-            @discord.ui.button(label="Cancel", style=discord.ButtonStyle.grey, emoji="🚫", row=1)
+            @discord.ui.button(label="Cancel", style=discord.ButtonStyle.grey, emoji="🚫", row=2)
             async def cancel(self, button, interaction: discord.Interaction):
                 await interaction.response.defer()
                 for child in self.children:
@@ -331,7 +352,7 @@ async def jurorNameView(ctx: discord.ApplicationContext, case: "Case"):
                 self.value = None
                 self.stop()
 
-            @discord.ui.button(label="Accept", style=discord.ButtonStyle.green, emoji="✅", row=1)
+            @discord.ui.button(label="Accept", style=discord.ButtonStyle.green, emoji="✅", row=2)
             async def accept(self, button, interaction: discord.Interaction):
                 await interaction.response.defer()
                 for child in self.children:

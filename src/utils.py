@@ -10,6 +10,10 @@ trees = open("wordlists/trees.txt", "r").read().splitlines()
 flowers = open("wordlists/flowers.txt", "r").read().splitlines()
 birds = open("wordlists/birds.txt", "r").read().splitlines()
 gems = open("wordlists/gems.txt", "r").read().splitlines()
+space = open("wordlists/space.txt", "r").read().splitlines()
+stones = open("wordlists/stones.txt", "r").read().splitlines()
+cities = open("wordlists/cities.txt", "r").read().splitlines()
+colors = open("wordlists/colors.txt", "r").read().splitlines()
 
 # Function to receive time in the form of "100d10h10m10s" and return the time in seconds
 def time_to_seconds(time: str):
