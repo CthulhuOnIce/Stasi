@@ -355,7 +355,12 @@ class Case:
 
         await self.updateStatus(status)
 
-        await self.sendZipArchive()        
+        # await self.dispelWarrants()  # end all temporary warrants
+
+        # await self.executePunishments()  # execute all punishments
+
+        await self.sendZipArchive()
+
         
         log("Case", "CLOSE", f"{self} ({self.id}): {status}")
         return
