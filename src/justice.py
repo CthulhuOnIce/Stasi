@@ -396,7 +396,11 @@ class Justice(commands.Cog):
         await ctx.interaction.response.defer(ephemeral=True)
 
         await setActiveCase(ctx.author, case)
-        await case.addJuror(ctx.author)
+
+        if name := await cmui.jurorNameView(ctx, case):
+            await case.addJuror(ctx.author, name)
+        else:
+            await case.addJuror(ctx.author)
 
         return await ctx.respond(f"Joined case **{case}** (`{case.id}`) as a juror.", ephemeral=True)
     
@@ -515,19 +519,16 @@ class Justice(commands.Cog):
 
     @dbg.command(name='viewtest', description="Test whatever view is being debugged right now.")
     async def view_test(self, ctx: discord.ApplicationContext):
-        if not ctx.author.guild_permissions.administrator:
-            return await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         case = getActiveCase(ctx.author)
         if case is None:
-            return await ctx.respond("You do not have an active case.", ephemeral=True)
+            return await ctx.respond("Invalid case ID.", ephemeral=True)
         
-        # Start View below
+        await ctx.interaction.response.defer(ephemeral=True)
 
-        if not case.motion_in_consideration:
-            return await ctx.respond("This case does not have a motion in consideration.", ephemeral=True)
-        
-        response = await cmui.voteView(ctx, case.motion_in_consideration)
-        await ctx.respond(response, ephemeral=True)
+        name = await cmui.jurorNameView(ctx, case)
+
+        await ctx.interaction.edit_original_response(content=name)
+
 
 
     # TODO: remove when done debugging

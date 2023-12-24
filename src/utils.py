@@ -3,7 +3,13 @@ import base64
 
 nouns = open("wordlists/nouns.txt", "r").read().splitlines()
 adjectives = open("wordlists/adjectives.txt", "r").read().splitlines()
-elements = open("wordlists/elements.txt", "r").read().splitlines()
+elements = open("wordlists/elements.txt", "r").read().splitlines()  # used in warrants
+
+# used in juror names
+trees = open("wordlists/trees.txt", "r").read().splitlines()
+flowers = open("wordlists/flowers.txt", "r").read().splitlines()
+birds = open("wordlists/birds.txt", "r").read().splitlines()
+gems = open("wordlists/gems.txt", "r").read().splitlines()
 
 # Function to receive time in the form of "100d10h10m10s" and return the time in seconds
 def time_to_seconds(time: str):

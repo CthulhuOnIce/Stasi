@@ -1,10 +1,11 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
+import random
 
 import discord
 
 from ..stasilogging import discord_dynamic_timestamp
-from ..utils import twemojiPNG
+from ..utils import twemojiPNG, trees, gems, flowers, birds
 
 if TYPE_CHECKING:
     from ..casemanager import Motion, Case
@@ -229,3 +230,126 @@ async def caseInfoView(ctx: discord.ApplicationContext, case: "Case"):
                 self.remove_item(self.children[2])
         
     await ctx.respond(embed=front_page, view=caseinfoview(), ephemeral=True)
+
+async def jurorNameView(ctx: discord.ApplicationContext, case: "Case"):
+
+    desc =  "If you want to be in a jury, but don't want to be publicly known, you can use a pseudonym.\n"
+    desc += "If you choose this option, you must remember to use commands in DMs with the bot to avoid leaking your identity.\n"
+    desc += "It is not against the rules to reveal your identity, but your name cannot be changed or removed in the case file.\n"
+    desc += "\nWould you like to use a pseudonym?"
+
+    class firstView(discord.ui.View):
+
+        @discord.ui.button(label="Yes", style=discord.ButtonStyle.green, emoji="✅")
+        async def yes_click(self, button, interaction: discord.Interaction):
+            for child in self.children:
+                child.disabled = True
+            self.value = True
+            await ctx.interaction.edit_original_response(view=self)
+            await interaction.response.defer()
+            self.stop()
+
+        @discord.ui.button(label="No", style=discord.ButtonStyle.red, emoji="❎")
+        async def no_click(self, button, interaction: discord.Interaction):
+            for child in self.children:
+                child.disabled = True
+            self.value = False
+            await ctx.interaction.edit_original_response(view=self)
+            await interaction.response.defer()
+            self.stop()
+
+        def __init__(self, *args, **kwargs) -> None:
+            super().__init__(*args, **kwargs)
+            self.value = None
+    
+    view = firstView()
+    await ctx.interaction.edit_original_response(content=desc, view=view)
+    await view.wait()
+    pseudonym = view.value
+
+    if not pseudonym:
+        return None
+
+    def pseudonymEmbed(pseudonym):
+        embed = discord.Embed(title=f"Juror Pseudonym", description=f"You may be known as this for the case:", color=discord.Color.blurple())
+        embed.add_field(name="Pseudonym", value=pseudonym, inline=False)
+        embed.set_author(name=f"{case} ({case.id})", icon_url=twemojiPNG.label)
+        return embed
+    
+    all_names = trees + gems + flowers + birds
+
+    def generatePseudonym(source: list = None):
+        if not source:
+            source = all_names
+        while True:
+            pseudonym = f"Juror {random.choice(source).title()}"
+            for user in case.anonymization:
+                if pseudonym == case.anonymization[user]:
+                    continue
+            return pseudonym
+    
+
+    class generatePseudonymView(discord.ui.View):
+            
+            async def redraw(self, source: list = None):
+                pseudonym = generatePseudonym(source)
+                self.value = pseudonym
+                embed = pseudonymEmbed(pseudonym)
+                await ctx.interaction.edit_original_response(content=None, embed=embed, view=self)
+            
+            @discord.ui.button(label="Regenerate", style=discord.ButtonStyle.primary, emoji="🔀",row=1)
+            async def generate(self, button, interaction: discord.Interaction):
+                await interaction.response.defer()
+                await self.redraw()
+
+            @discord.ui.button(label="Trees", style=discord.ButtonStyle.green, emoji="🌲")
+            async def generate_tree(self, button, interaction: discord.Interaction):
+                await interaction.response.defer()
+                await self.redraw(trees)
+            
+            @discord.ui.button(label="Gems", style=discord.ButtonStyle.green, emoji="💎")
+            async def generate_gem(self, button, interaction: discord.Interaction):
+                await interaction.response.defer()
+                await self.redraw(gems)
+            
+            @discord.ui.button(label="Flowers", style=discord.ButtonStyle.green, emoji="🌸")
+            async def generate_flower(self, button, interaction: discord.Interaction):
+                await interaction.response.defer()
+                await self.redraw(flowers)
+            
+            @discord.ui.button(label="Birds", style=discord.ButtonStyle.green, emoji="🐦")
+            async def generate_bird(self, button, interaction: discord.Interaction):
+                await interaction.response.defer()
+                await self.redraw(birds)
+    
+            @discord.ui.button(label="Cancel", style=discord.ButtonStyle.grey, emoji="🚫", row=1)
+            async def cancel(self, button, interaction: discord.Interaction):
+                await interaction.response.defer()
+                for child in self.children:
+                    child.disabled = True
+                await ctx.interaction.edit_original_response(view=self)
+                self.value = None
+                self.stop()
+
+            @discord.ui.button(label="Accept", style=discord.ButtonStyle.green, emoji="✅", row=1)
+            async def accept(self, button, interaction: discord.Interaction):
+                await interaction.response.defer()
+                for child in self.children:
+                    child.disabled = True
+                await ctx.interaction.edit_original_response(view=self)
+                self.stop()
+    
+            def __init__(self, *args, **kwargs) -> None:
+                super().__init__(*args, **kwargs)
+                self.value = None
+
+    view = generatePseudonymView()
+    await view.redraw()
+    await view.wait()
+    pseudonym = view.value
+
+    if not pseudonym:
+        return None
+    
+    return pseudonym
+
