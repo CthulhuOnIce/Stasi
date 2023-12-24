@@ -1126,7 +1126,8 @@ class Case:
                 zip.writestr(f"admin/evidence/{evidence.id}/{evidence.id}.txt", evidence.alt_text)
                 zip.writestr(f"admin/evidence/{evidence.id}/{file_name}", file_bytes.read())
         
-        zip.writestr("evidence/evidence_manifest.txt", evidence_manifest)
+        if self.evidence:
+            zip.writestr("evidence/evidence_manifest.txt", evidence_manifest)
 
         if admin:
             zip.writestr("admin/evidence/evidence_manifest.txt", evidence_manifest_admin)
