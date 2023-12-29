@@ -1182,7 +1182,8 @@ class Case:
         for juror in self.jury_pool_ids:
             summary_txt_admin += f" - {self.nameUserByID(juror)}"
             if juror in self.anonymization:
-                summary_txt_admin += f" ({self.nameUserByID(juror)})"
+                deanon = self.nameUserByIDNoAnon(juror)
+                summary_txt_admin += f" ({deanon})"
             summary_txt_admin += f" [{juror}]\n"
 
         zip.writestr("summary.txt", summary_txt)
