@@ -2,12 +2,16 @@ import base64
 import datetime
 import os
 import sys
+import sentry_sdk
 
 import discord
 import asyncio
 
 from . import config
 from . import utils
+
+if "sentry" in config.C and config.C["sentry"]:
+    sentry_sdk.init(config.C["sentry"])
 
 
 def discord_dynamic_timestamp(timestamp: datetime.datetime, format_style: str = 'f') -> str:
@@ -64,6 +68,11 @@ def log(category_broad, category_fine, message, print_message=True, preserve_new
     if print_message: print(f"[{timestamp}] [{category_broad.upper()}] [{category_fine.upper()}] {print_msg}")
     with open(f"logs/{category_broad.lower()}.log", "a+", encoding='utf-8') as f:
         f.write(f"[{timestamp}] [{category_fine.upper()}] {message}\n")
+
+def custom_exception_handler(exception_type, exception, traceback):
+    sentry_sdk.capture_exception(exception)
+    error_raw = ''.join(traceback.format_exception(exception_type, exception, traceback))
+    log("runtimes", "error", f"Error {lid(exception)}: \n```\n{error_raw}\n```", False, True)
 
 def log_user(user):
     return f"{utils.normalUsername(user)} ({user.id})"
